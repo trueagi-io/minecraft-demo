@@ -267,6 +267,9 @@ class MissionXML:
     
     def setWorld(self, worldgenerator_xml):
         self.serverSection.handlers.worldgenerator = worldgenerator_xml
+    
+    def setTimeLimit(self, timeLimitMs):
+        self.serverSection.handlers.timeLimitMs = str(timeLimitMs)
         
     def addAgent(self, nCount=1, agentSections=None):
         if agentSections:
@@ -282,6 +285,9 @@ class MissionXML:
                 ag.agenthandlers.observations = observations
         else:
             self.agentSections[nAgent].agenthandlers.observations = observations
+    
+    def getAgentNames(self):
+        return [ag.name for ag in self.agentSections]
 
     def xml(self):
         _xml = '''<?xml version="1.0" encoding="UTF-8" ?>

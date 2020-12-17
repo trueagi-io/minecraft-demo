@@ -1,7 +1,9 @@
-import MalmoPython
+import json
 import uuid
 import time
 import sys
+
+import MalmoPython
 
 import tagilmo.utils.malmoutils as malmoutils
 from tagilmo.utils.mission_builder import MissionXML
@@ -27,6 +29,8 @@ class MalmoConnector:
         self.client_pool = MalmoPython.ClientPool()
         for x in range(10000, 10000 + nAgents):
             self.client_pool.add( MalmoPython.ClientInfo(serverIp, x) )
+        self.worldStates = [None]*nAgents
+        self.observe = [None]*nAgents
 
     def receivedArgument(self, arg):
         return self.agent_hosts[0].receivedArgument(arg)
@@ -87,3 +91,41 @@ class MalmoConnector:
                 return False
         return True
 
+    def observeProc(self, nAgent=None):
+        r = range(len(self.agent_hosts)) if nAgent is None else range(nAgent, nAgent+1)
+        for n in r:
+            self.worldStates[n] = self.agent_hosts[n].getWorldState()
+            obs = self.worldStates[n].observations
+            self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
+
+    def getFullStat(self, key, nAgent=0):
+        # keys (position): 'XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw'
+        # keys (status)  : 'Life', 'Food', 'Air', 'IsAlive'
+        # keys (more)    : 'XP', 'Score', 'Name', 'WorldTime', 'TotalTime', 'DistanceTravelled', 'TimeAlive', 'MobsKilled', 'PlayersKilled', 'DamageTaken', 'DamageDealt'
+        if (self.observe[nAgent] is not None) and (key in self.observe[nAgent]):
+            return self.observe[nAgent][key]
+        else:
+            return None
+
+    def getLineOfSight(self, key, nAgent=0):
+        # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
+        if (self.observe[nAgent] is not None) and ('LineOfSight' in self.observe[nAgent]) and (key in self.observe[nAgent]['LineOfSight']):
+            return self.observe[nAgent]['LineOfSight'][key]
+        else:
+            return None
+
+    #TODO? Extend API?
+    def getNearEntities(self, nAgent=0):
+        if (self.observe[nAgent] is not None) and ('ents_near' in self.observe[nAgent]):
+            return self.observe[nAgent]['ents_near']
+        else:
+            return None
+
+    #TODO? Extend API (e.g. convert to 3D array)?
+    def getNearGrid(self, nAgent=0):
+        if (self.observe[nAgent] is not None) and ('grid_near' in self.observe[nAgent]):
+            return self.observe[nAgent]['grid_near']
+        else:
+            return None
+
+        

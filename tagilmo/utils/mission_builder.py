@@ -84,25 +84,27 @@ def fileworld(uri2save, forceReset="false"):
 
 class ServerHandlers:
     
-    def __init__(self, worldgenerator_xml=defaultworld(), drawingdecorator_xml=None,
+    def __init__(self, worldgenerator_xml=defaultworld(), alldecorators_xml=None,
                  bQuitAnyAgent=False, timeLimitsMs_string=None):
         self.worldgenerator = worldgenerator_xml
-        self.drawingdecorator = drawingdecorator_xml
+        self.alldecorators = alldecorators_xml
         self.bQuitAnyAgent = bQuitAnyAgent
         self.timeLimitsMs = timeLimitsMs_string
 
     def xml(self):
         _xml = '<ServerHandlers>\n' + self.worldgenerator + '\n'
-        if self.drawingdecorator:
-            _xml += '<DrawingDecorator>\n' + self.drawingdecorator + '\n</DrawingDecorator>\n'
+        #if self.drawingdecorator:
+        #    _xml += '<DrawingDecorator>\n' + self.drawingdecorator + '\n</DrawingDecorator>\n'
+        #<BuildBattleDecorator> --
+        #<MazeDecorator> --
+        if self.alldecorators:
+            _xml += self.alldecorators + '\n'
         if self.bQuitAnyAgent:
             _xml += '<ServerQuitWhenAnyAgentFinishes />\n'
         if self.timeLimitsMs:
             _xml += '<ServerQuitFromTimeUp timeLimitMs="' + self.timeLimitsMs +\
                 '" description="Time limit" />\n'
         _xml += '</ServerHandlers>\n'
-        #<BuildBattleDecorator> --
-        #<MazeDecorator> --
         return _xml
 
 
@@ -142,6 +144,7 @@ class Commands:
         #<AbsoluteMovementCommands /> --
         #<MissionQuitCommands /> --
         #<HumanLevelCommands/> --
+        #<TurnBasedCommands/> --
         return _xml
 
 
@@ -164,30 +167,31 @@ class Observations:
         if (self.bAll or self.bHotBar) and not (self.bHotBar == False):
             _xml += "<ObservationFromHotBar />"
         if (self.bAll or self.bNearby) and not (self.bNearby == False):
+            # we don't need higher update_frequency; it seems we can get new observations in 0.1 with frequency=1
+            # we don't need <Range name="r_close" xrange="2" yrange="2" zrange="2" update_frequency="1" /> separately,
+            # because we can extract this information by ourselves and we don't need low frequency for distant entities
+            # entities include mobs and items
             _xml += '''
 <ObservationFromNearbyEntities>
-    <Range name="r_close" xrange="2" yrange="2" zrange="2" update_frequency="1" />
-    <Range name="r_far" xrange="20" yrange="10" zrange="20" update_frequency="100" />
+    <Range name="ents_near" xrange="15" yrange="10" zrange="15" update_frequency="1" />
 </ObservationFromNearbyEntities>'''
         if (self.bAll or self.bGrid) and not (self.bGrid == False):
+            # Grid doesn't take the agent's orientation into account, so it should be symmetric
+            # It rapidly becomes huge, so we have to limit our observations by a small grid
+            # TODO? We may add [-2, -5, -2]x[2, -3, 2] and [-2, 3, -2]x[2, 5, 2] grids
             _xml += '''
 <ObservationFromGrid>
-    <Grid name="g_nearby" absoluteCoords="false">
-        <min x="-1" y="-1" z="-1"/>
-        <max x="1" y="1" z="1"/>
-    </Grid>
-    <Grid name="g_far" absoluteCoords="false">
-        <min x="-10" y="-10" z="-10"/>
-        <max x="10" y="10" z="10"/>
-    </Grid>
-    <Grid name="very_far" absoluteCoords="false">
-        <min x="-40" y="-40" z="-40"/>
-        <max x="40" y="40" z="40"/>
+    <Grid name="grid_near" absoluteCoords="false">
+        <min x="-5" y="-2" z="-5"/>
+        <max x="5" y="2" z="5"/>
     </Grid>
 </ObservationFromGrid>
 '''
-        #<ObservationFromSubgoalPositionList> --
+        #<ObservationFromFullInventory/>
+        #<ObservationFromDiscreteCell/>
+        #<ObservationFromSubgoalPositionList>
         #<ObservationFromDistance><Marker name="Start" x="0.5" y="227" z="0.5"/></ObservationFromDistance>
+        #<ObservationFromTurnScheduler/> --
         return _xml
 
 
@@ -279,8 +283,8 @@ class MissionXML:
                 ag = AgentSection(name="Agent-"+str(len(self.agentSections)))
                 self.agentSections += [ag]
 
-    def setObservations(self, observations, nAgent=-1):
-        if nAgent==-1:
+    def setObservations(self, observations, nAgent=None):
+        if nAgent is None:
             for ag in self.agentSections:
                 ag.agenthandlers.observations = observations
         else:

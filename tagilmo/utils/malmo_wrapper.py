@@ -98,6 +98,12 @@ class MalmoConnector:
             obs = self.worldStates[n].observations
             self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
 
+    def getAgentPos(self, nAgent=0):
+        if (self.observe[nAgent] is not None) and ('XPos' in self.observe[nAgent]):
+            return [self.observe[nAgent][key] for key in ['XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw']]
+        else:
+            return None
+
     def getFullStat(self, key, nAgent=0):
         # keys (position): 'XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw'
         # keys (status)  : 'Life', 'Food', 'Air', 'IsAlive'
@@ -109,22 +115,25 @@ class MalmoConnector:
 
     def getLineOfSight(self, key, nAgent=0):
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
-        if (self.observe[nAgent] is not None) and ('LineOfSight' in self.observe[nAgent]) and (key in self.observe[nAgent]['LineOfSight']):
-            return self.observe[nAgent]['LineOfSight'][key]
+        if (self.observe[nAgent] is not None) and (u'LineOfSight' in self.observe[nAgent]) and (key in self.observe[nAgent][u'LineOfSight']):
+            return self.observe[nAgent][u'LineOfSight'][key]
         else:
             return None
+    
+    def sendCommand(self, command, nAgent=0):
+        self.agent_hosts[nAgent].sendCommand(command)
 
     #TODO? Extend API?
     def getNearEntities(self, nAgent=0):
-        if (self.observe[nAgent] is not None) and ('ents_near' in self.observe[nAgent]):
-            return self.observe[nAgent]['ents_near']
+        if (self.observe[nAgent] is not None) and (u'ents_near' in self.observe[nAgent]):
+            return self.observe[nAgent][u'ents_near']
         else:
             return None
 
     #TODO? Extend API (e.g. convert to 3D array)?
     def getNearGrid(self, nAgent=0):
-        if (self.observe[nAgent] is not None) and ('grid_near' in self.observe[nAgent]):
-            return self.observe[nAgent]['grid_near']
+        if (self.observe[nAgent] is not None) and (u'grid_near' in self.observe[nAgent]):
+            return self.observe[nAgent][u'grid_near']
         else:
             return None
 

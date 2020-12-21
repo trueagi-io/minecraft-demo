@@ -23,7 +23,7 @@ class About:
 class ServerInitialConditions:
     
     def __init__(self, day_always=False, time_start_string=None, time_pass_string=None,
-                 weather_string=None, spawning_string=None, allowedmobs_string=None):
+                 weather_string=None, spawning_string="true", allowedmobs_string=None):
         self.day_always = day_always
         self.time_start = time_start_string
         self.time_pass = time_pass_string
@@ -55,7 +55,7 @@ class ServerInitialConditions:
         if self.spawning:
             # "false" or "true"
             _xml += '<AllowSpawning>'+self.spawning+'</AllowSpawning>\n'
-            if allowedmobs_string:
+            if self.allowedmobs:
                 _xml += '<AllowedMobs>'+self.allowedmobs+'</AllowedMobs>\n' #e.g. "Pig Sheep"
         _xml += '</ServerInitialConditions>\n'
         return _xml
@@ -145,6 +145,7 @@ class Commands:
         #<MissionQuitCommands /> --
         #<HumanLevelCommands/> --
         #<TurnBasedCommands/> --
+        #<ObservationFromRecentCommands/> --
         return _xml
 
 

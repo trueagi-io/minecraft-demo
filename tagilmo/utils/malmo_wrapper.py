@@ -1,6 +1,7 @@
 import json
 import uuid
 import time
+import math
 import sys
 
 import MalmoPython
@@ -11,7 +12,12 @@ from tagilmo.utils.mission_builder import MissionXML
 
 class MalmoConnector:
 
+    @staticmethod
+    def yawDelta(yawRad):
+        return [-math.sin(yawRad), 0, math.cos(yawRad)]
+
     def __init__(self, missionXML, serverIp='127.0.0.1'):
+        self.missionDesc = missionXML
         self.mission = MalmoPython.MissionSpec(missionXML.xml(), True)
         self.mission_record = MalmoPython.MissionRecordSpec()
         nAgents = len(missionXML.agentSections)
@@ -113,9 +119,15 @@ class MalmoConnector:
         else:
             return None
 
+    def isLineOfSightAvailable(self, nAgent=0):
+        return not self.observe[nAgent] is None and 'LineOfSight' in self.observe[nAgent]
+
+    def isInventoryAvailable(self, nAgent=0):
+        return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]
+
     def getLineOfSight(self, key, nAgent=0):
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
-        if (self.observe[nAgent] is not None) and ('LineOfSight' in self.observe[nAgent]) and (key in self.observe[nAgent]['LineOfSight']):
+        if self.isLineOfSightAvailable(nAgent) and (key in self.observe[nAgent]['LineOfSight']):
             return self.observe[nAgent]['LineOfSight'][key]
         else:
             return None
@@ -123,18 +135,98 @@ class MalmoConnector:
     def sendCommand(self, command, nAgent=0):
         self.agent_hosts[nAgent].sendCommand(command)
 
-    #TODO? Extend API?
     def getNearEntities(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('ents_near' in self.observe[nAgent]):
             return self.observe[nAgent]['ents_near']
         else:
             return None
 
-    #TODO? Extend API (e.g. convert to 3D array)?
     def getNearGrid(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('grid_near' in self.observe[nAgent]):
             return self.observe[nAgent]['grid_near']
         else:
             return None
 
-        
+    def getGridBox(self, nAgent=0):
+        return self.missionDesc.agentSections[nAgent].agenthandlers.observations.gridNear
+
+    def getNearGrid3D(self, nAgent=0):
+        if (self.observe[nAgent] is not None) and ('grid_near' in self.observe[nAgent]):
+            grid = self.observe[nAgent]['grid_near']
+            gridBox = self.getGridBox(nAgent)
+            gridSz = [gridBox[i][1]-gridBox[i][0]+1 for i in range(3)]
+            return [[grid[(z+y*gridSz[2])*gridSz[0]:(z+1+y*gridSz[2])*gridSz[0]] for z in range(gridSz[2])] for y in range(gridSz[1])]
+        else:
+            return None
+
+    def getYawDeltas(self, nAgent=0):
+        pos = self.getAgentPos(nAgent)
+        if pos is not None:
+            return MalmoConnector.yawDelta(pos[4] * math.pi / 180.)
+        else:
+            return None
+    
+    def dirToPos(self, pos, nAgent=0):
+        aPos = self.getAgentPos(nAgent)
+        if aPos is None: return None
+        dx = pos[0] - aPos[0]
+        dz = pos[2] - aPos[2]
+        yaw = -math.atan2(dx, dz)
+        pitch = -math.atan2(pos[1] - aPos[1] - 1, math.sqrt(dx * dx + dz * dz))
+        return [pitch, yaw]
+
+    def gridIndexToPos(self, index, nAgent=0):
+        gridBox = self.getGridBox(nAgent)
+        gridSz = [gridBox[i][1]-gridBox[i][0]+1 for i in range(3)]
+        y = index // (gridSz[0] * gridSz[2])
+        index -= y * (gridSz[0] * gridSz[2])
+        y += gridBox[1][0]
+        z = index // gridSz[0] + gridBox[2][0]
+        x = index % gridSz[0] + gridBox[0][0]
+        return [x, y, z]
+
+
+    def gridIndexToAbsPos(self, index, nAgent=0):
+        [x, y, z] = self.gridIndexToPos(index, nAgent)
+        pos = self.getAgentPos(nAgent)
+        if pos is None: return None
+        # TODO? Round to the center of the block (0.5)?
+        return [x + pos[0], y + pos[1], z + pos[2]]
+
+    def gridInYaw(self, nAgent=0):
+        '''Vertical slice of the grid in the line-of-sight direction'''
+        grid3D = self.getNearGrid3D(nAgent)
+        deltas = self.getYawDeltas(nAgent)
+        pos = self.getAgentPos(nAgent)
+        if grid3D is None or deltas is None:
+            return None
+        dimX = len(grid3D[0][0])
+        dimZ = len(grid3D[0])
+        dimY = len(grid3D)
+        deltas[0] /= 4
+        deltas[2] /= 4
+        objs = []
+        for y in range(dimY):
+            grid2D = grid3D[y]
+            line = []
+            x = pos[0]
+            z = pos[2]
+            x0int = int(x)
+            z0int = int(z)
+            for t in range(dimX + dimZ):
+                if int(x + deltas[0]) != int(x) or int(z + deltas[2]) != int(z):
+                    dxGrid = int(x + deltas[0]) - x0int
+                    dzGrid = int(z + deltas[2]) - z0int
+                    # FixMe? Works for symmetric grids only
+                    if abs(dxGrid)*2+1 >= dimX or abs(dzGrid)*2+1 >= dimZ:
+                        break
+                    line += [grid2D[dzGrid+(dimZ-1)//2][dxGrid+(dimX-1)//2]]
+                x += deltas[0]
+                z += deltas[2]
+            objs += [line]
+        return objs
+
+    def filterInventoryItem(self, item, nAgent=0):
+        if not self.isInventoryAvailable(nAgent):
+            return None
+        return list(filter(lambda entry: entry['type']==item, self.observe[nAgent]['inventory']))

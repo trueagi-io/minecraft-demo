@@ -151,13 +151,14 @@ class Commands:
 
 class Observations:
 
-    def __init__(self, bAll=True, bRay=None, bFullStats=None, bHotBar=None, bNearby=None, bGrid=None):
+    def __init__(self, bAll=True, bRay=None, bFullStats=None, bInvent=None, bNearby=None, bGrid=None):
         self.bAll = bAll
         self.bRay = bRay
         self.bFullStats = bFullStats
-        self.bHotBar = bHotBar
+        self.bInvent = bInvent
         self.bNearby = bNearby
         self.bGrid = bGrid
+        self.gridNear = [[-5, 5], [-2, 2], [-5, 5]]
 
     def xml(self):
         _xml = ""
@@ -165,8 +166,9 @@ class Observations:
             _xml += "<ObservationFromRay />\n"
         if (self.bAll or self.bFullStats) and not (self.bFullStats == False):
             _xml += "<ObservationFromFullStats />\n"
-        if (self.bAll or self.bHotBar) and not (self.bHotBar == False):
-            _xml += "<ObservationFromHotBar />"
+        if (self.bAll or self.bInvent) and not (self.bInvent == False):
+            _xml += "<ObservationFromFullInventory  flat='false'/>\n"
+        # <ObservationFromHotBar /> --
         if (self.bAll or self.bNearby) and not (self.bNearby == False):
             # we don't need higher update_frequency; it seems we can get new observations in 0.1 with frequency=1
             # we don't need <Range name="r_close" xrange="2" yrange="2" zrange="2" update_frequency="1" /> separately,
@@ -183,8 +185,8 @@ class Observations:
             _xml += '''
 <ObservationFromGrid>
     <Grid name="grid_near" absoluteCoords="false">
-        <min x="-5" y="-2" z="-5"/>
-        <max x="5" y="2" z="5"/>
+        <min x="'''+str(self.gridNear[0][0])+'" y="'+str(self.gridNear[1][0])+'" z="'+str(self.gridNear[2][0])+'''"/>
+        <max x="'''+str(self.gridNear[0][1])+'" y="'+str(self.gridNear[1][1])+'" z="'+str(self.gridNear[2][1])+'''"/>
     </Grid>
 </ObservationFromGrid>
 '''

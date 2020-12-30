@@ -282,7 +282,6 @@ def mineStone(mc):
 # The skill that will most likely fail: it's not that easy to find iron ore and coal
 # without even looking around
 def mineIron(mc):
-    lookDir(mc, math.pi/4, 0.0)
     strafeCenterX(mc)
     while mc.getAgentPos() is None or mc.getAgentPos()[1] > 22.:
         mineWhileInRange(mc)
@@ -348,6 +347,11 @@ sleep(3)
 stopMove(mc)
 getSticks(mc)
 
+lookDir(mc, math.pi/4, 0.0)
 mineIron(mc)
-
 leaveShaft(mc)
+
+if not getInvSafe(mc, 'iron_pickaxe'):
+    lookDir(mc, math.pi/4, math.pi)
+    mineIron(mc)
+    leaveShaft(mc)

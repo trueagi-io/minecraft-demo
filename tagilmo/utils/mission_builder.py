@@ -200,14 +200,16 @@ class Observations:
 
 class AgentHandlers:
 
-    def __init__(self, commands=Commands(), observations=Observations()):
+    def __init__(self, commands=Commands(), observations=Observations(), all_str=''):
         self.commands = commands
         self.observations = observations
+        self.all_str = all_str
         
     def xml(self):
         _xml = '<AgentHandlers>\n'
         _xml += self.commands.xml()
         _xml += self.observations.xml()
+        _xml += self.all_str
         _xml += '</AgentHandlers>\n'
         # <VideoProducer want_depth=... viewpoint=...> --
         # <DepthProducer> --

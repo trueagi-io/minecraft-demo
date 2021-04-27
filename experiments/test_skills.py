@@ -15,22 +15,26 @@ from tagilmo.utils.malmo_wrapper import MalmoConnector
 import tagilmo.utils.mission_builder as mb
 from common import * 
  
-
+spiral = """
+   <DrawLine x1="3"  y1="45" z1="1"  x2="8" y2="45" z2="2" type="sandstone" />
+   <DrawLine x1="8"  y1="45" z1="2"  x2="10" y2="45" z2="4" type="sandstone" />         <!-- floor of the arena -->
+   <DrawLine x1="10"  y1="45" z1="4"  x2="14" y2="45" z2="7" type="sandstone" />
+   <DrawLine x1="14"  y1="45" z1="7"  x2="14" y2="45" z2="9" type="sandstone" />
+   <DrawLine x1="14"  y1="45" z1="9"  x2="10" y2="45" z2="11" type="sandstone" />
+   <DrawLine x1="10"  y1="45" z1="11"  x2="8" y2="45" z2="12" type="sandstone" />
+   <DrawLine x1="8"  y1="45" z1="12"  x2="6" y2="45" z2="14" type="sandstone" />
+   <DrawLine x1="6"  y1="45" z1="14"  x2="5" y2="45" z2="15" type="sandstone" />
+   <DrawLine x1="5"  y1="45" z1="15"  x2="3" y2="45" z2="13" type="sandstone" />
+"""
+  
 dec_xml = """
 <DrawingDecorator>
         <!-- coordinates for cuboid are inclusive -->
         <DrawCuboid x1="-2" y1="46" z1="-2" x2="17" y2="80" z2="18" type="air" />            <!-- limits of our arena -->
         <DrawCuboid x1="-2" y1="45" z1="-2" x2="17" y2="45" z2="18" type="lava" />           <!-- lava floor -->
-        <DrawLine x1="3"  y1="45" z1="1"  x2="8" y2="45" z2="2" type="sandstone" />
-        <DrawLine x1="8"  y1="45" z1="2"  x2="10" y2="45" z2="4" type="sandstone" />         <!-- floor of the arena -->
-        <DrawLine x1="10"  y1="45" z1="4"  x2="14" y2="45" z2="7" type="sandstone" />
-        <DrawLine x1="14"  y1="45" z1="7"  x2="14" y2="45" z2="9" type="sandstone" />
-        <DrawLine x1="14"  y1="45" z1="9"  x2="10" y2="45" z2="11" type="sandstone" />
-        <DrawLine x1="10"  y1="45" z1="11"  x2="8" y2="45" z2="12" type="sandstone" />
-        <DrawLine x1="8"  y1="45" z1="12"  x2="6" y2="45" z2="14" type="sandstone" />
-        <DrawLine x1="6"  y1="45" z1="14"  x2="5" y2="45" z2="15" type="sandstone" />
-        <DrawLine x1="5"  y1="45" z1="15"  x2="3" y2="45" z2="13" type="sandstone" />
-        {0}
+       {1}
+
+       {0}
         <DrawBlock   x="4"   y="45"  z="1"  type="cobblestone" />                           <!-- the starting marker -->
         <DrawBlock   x="4"   y="45"  z="12" type="lapis_block" />                           <!-- the destination marker -->
         <DrawBlock   x="0"   y="45"  z="12" type="lapis_block" />
@@ -38,8 +42,10 @@ dec_xml = """
         <DrawItem    x="0"   y="46"  z="12" type="wooden_sword" />
 </DrawingDecorator>
 """  
+
 modify_blocks = """
         <DrawLine x1="{0}"  y1="45" z1="5"  x2="4" y2="45" z2="0" type="sandstone"/>
+        <!--DrawLine x1="13"  y1="46" z1="8"  x2="-3" y2="46" z2="5" type="sandstone"/-->
         <DrawLine x1="{0}"  y1="45" z1="5"  x2="4" y2="45" z2="13" type="sandstone"/>
 """
 
@@ -54,7 +60,7 @@ mission_ending = """
 obs = mb.Observations()
 obs.gridNear = [[-1, 1], [-1, 1], [-1, 1]]
 
-current_xml = dec_xml.format(modify_blocks.format(4))
+current_xml = dec_xml.format(modify_blocks.format(4), '')
 handlers = mb.ServerHandlers(mb.flatworld("3;7,220*1,5*3,2;3;,biome_1"), alldecorators_xml=current_xml, bQuitAnyAgent=True)
 agent_handlers = mb.AgentHandlers(observations=obs, all_str=mission_ending)
 
@@ -122,6 +128,31 @@ def act(actions, mc):
         mc.sendCommand(str(act))
 
 
+def stop_motion(mc):
+    mc.sendCommand('move 0')
+    mc.sendCommand('strafe 0')
+    mc.sendCommand('pitch 0')
+    mc.sendCommand('turn 0')
+    mc.sendCommand('jump 0')
+
+
+def learn(agent, optimizer):
+    losses = []
+    for i in range(10):
+        optimizer.zero_grad()
+        loss = agent.compute_loss()
+        if loss is not None:
+            # Optimize the model
+            loss.backward()
+            optimizer.step()
+            losses.append(loss.cpu().detach())
+    if losses:
+        print('optimizing')
+        print('loss ', numpy.mean(losses))
+  
+    return losses
+
+
 def run_episode(agent, agent_host, eps, mc, optimizer):
     agent.train()
 
@@ -170,7 +201,7 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
         t += 1
         # target = search4blocks(mc, ['lapis_block'], run=False)
         reward = 0
-        time.sleep(0.4)
+        time.sleep(0.6)
         print('\n\n')
         pos = target[1:4]
         try:
@@ -178,6 +209,7 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
         except DeadException:
             agent.push_final(-100)
             reward = -100
+            learn(agent, optimizer)
             break
         if prev_pos is None:
             prev_pos = new_pos
@@ -189,6 +221,7 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
                 reward = -100
                 agent.push_final(reward)
                 running = False
+                learn(agent, optimizer)
                 break
             reward += (prev_target_dist - target_enc)[2] + (life - prev_life)
             if (prev_target_dist - target_enc)[2] <= -0.9:
@@ -211,18 +244,7 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
                 reward -= 0.5
             print("dist ", target_enc[2])
             print("current reward ", reward)
-            losses = []
-            for i in range(10):
-                optimizer.zero_grad()
-                loss = agent.compute_loss()
-                if loss is not None:
-                    # Optimize the model
-                    loss.backward()
-                    optimizer.step()
-                    losses.append(loss.cpu().detach())
-            if losses:
-                print('optimizing')
-                print('loss ', numpy.mean(losses))
+            learn(agent, optimizer)
             if not world_state.is_mission_running:
                 break
         data = dict(grid_vec=grid_enc, target=target_enc,
@@ -265,19 +287,22 @@ def simple_trainable_agent_test_remastered():
         my_simple_agent.load_state_dict(torch.load('agent.pth'))
     num_repeats = 54000
     cumulative_rewards = []
-    eps = 0.16
+    eps = 0.36
     eps_start = eps
     eps_end = 0.05
     eps_decay = 0.99
     optimizer = torch.optim.RMSprop(my_simple_agent.parameters(), lr=0.0005)
     p = 1 
-    for i in range(num_repeats):
-        # first 20 or so iterations are used to fill memory
-        if i < 5:
+    for i in range(0, num_repeats):
+        sp = ''
+        # train on simple environment first
+        if i < 100:
             p = random.choice([x for x in range(3, 7)])
         else:
             p = random.choice([-3, -2, -1] + [x for x in range(0, 13)])
-        current_xml = dec_xml.format(modify_blocks.format(p))
+            if random.choice([True, False]):
+                sp = spiral
+        current_xml = dec_xml.format(modify_blocks.format(p), sp)
         handlers = mb.ServerHandlers(mb.flatworld("3;7,220*1,5*3,2;3;,biome_1"), alldecorators_xml=current_xml, bQuitAnyAgent=True)
         agent_handlers = mb.AgentHandlers(observations=obs, all_str=mission_ending)
 

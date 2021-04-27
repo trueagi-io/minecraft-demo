@@ -16,10 +16,16 @@ class MalmoConnector:
     def yawDelta(yawRad):
         return [-math.sin(yawRad), 0, math.cos(yawRad)]
 
-    def __init__(self, missionXML, serverIp='127.0.0.1'):
+    def setMissionXML(self, missionXML):
         self.missionDesc = missionXML
         self.mission = MalmoPython.MissionSpec(missionXML.xml(), True)
         self.mission_record = MalmoPython.MissionRecordSpec()
+
+    def __init__(self, missionXML, serverIp='127.0.0.1'):
+        self.missionDesc = None
+        self.mission = None
+        self.mission_record = None
+        self.setMissionXML(missionXML)
         nAgents = len(missionXML.agentSections)
         self.agent_hosts = []
         self.agent_hosts += [MalmoPython.AgentHost() for n in range(nAgents)]
@@ -37,6 +43,7 @@ class MalmoConnector:
             self.client_pool.add( MalmoPython.ClientInfo(serverIp, x) )
         self.worldStates = [None]*nAgents
         self.observe = [None]*nAgents
+        self.isAlive = [True] * nAgents
 
     def receivedArgument(self, arg):
         return self.agent_hosts[0].receivedArgument(arg)
@@ -70,6 +77,9 @@ class MalmoConnector:
                         if used_attempts < max_attempts:
                             print("Will wait and retry.", max_attempts - used_attempts, "attempts left.")
                             time.sleep(2)
+                    elif errorCode == MalmoPython.MissionErrorCode.MISSION_ALREADY_RUNNING:
+                        print('The mission already running')
+                        return True
                     else:
                         print("Other error:", e.message)
                         return False
@@ -101,6 +111,7 @@ class MalmoConnector:
         r = range(len(self.agent_hosts)) if nAgent is None else range(nAgent, nAgent+1)
         for n in r:
             self.worldStates[n] = self.agent_hosts[n].getWorldState()
+            self.isAlive[n] = self.worldStates[n].is_mission_running
             obs = self.worldStates[n].observations
             self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
 
@@ -144,6 +155,12 @@ class MalmoConnector:
     def getNearGrid(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('grid_near' in self.observe[nAgent]):
             return self.observe[nAgent]['grid_near']
+        else:
+            return None
+
+    def getLife(self, nAgent=0):
+        if (self.observe[nAgent] is not None) and ('Life' in self.observe[nAgent]):
+            return self.observe[nAgent]['Life']
         else:
             return None
 

@@ -1,4 +1,5 @@
 import random
+import shutil
 import os
 import pickle
 import torch.nn.functional as F
@@ -65,16 +66,14 @@ class ContiniousActionAgent(nn.Module):
         super().__init__()
         num = 256
         self.actions = actions
-        # putting conv inside of grid_enc gives tensor of shape 1, 10, 1
-        # which can't be multiplied by 10xnum matrix
         self.grid_enc = nn.Sequential(
             nn.Linear(grid_w * grid_len, num),
             nn.LeakyReLU(),
-            nn.Linear(num, 10),
+            nn.Linear(num, 20),
             nn.LeakyReLU())
 
         self.trunk = nn.Sequential(
-            nn.Linear(10 + target_enc_len + pos_enc_len , num),
+            nn.Linear(20 + target_enc_len + pos_enc_len , num),
             nn.LeakyReLU(inplace=False),
 
             nn.Linear(num, num),
@@ -164,7 +163,7 @@ class ContiniousActionAgent(nn.Module):
 
 
 class DQN:
-    def __init__(self, gamma, batch_size, target_update, *args, capacity=300, **kwargs):
+    def __init__(self, gamma, batch_size, target_update, *args, capacity=500, **kwargs):
         self.policy_net = QNetwork(*args, **kwargs)
         self.target_net = QNetwork(*args, **kwargs)
         self.target_update = target_update
@@ -178,6 +177,8 @@ class DQN:
                 print('loading ', self.memory_path)
                 self.memory = pickle.load(f)
                 self.memory.capacity = capacity
+                self.memory.memory = [x for x in self.memory.memory if x is not None]
+                self.memory.position = random.randint(0, len(self.memory))
         self.gamma = gamma
         self.batch_size = batch_size
 
@@ -251,27 +252,31 @@ class DQN:
         expected_Q_values = (next_Q_values * self.gamma) + reward_batch
 
         # Compute Huber loss
+        #loss = F.smooth_l1_loss(Q_values, expected_Q_values, beta=101) 
         loss = F.mse_loss(Q_values, expected_Q_values) 
         self.iteration += 1
             # Update the target network, copying all weights and biases in DQN
         if self.iteration % self.target_update == 0:
             # save memory
-            with open(self.memory_path, 'wb') as f:
+            tmp_path = self.memory_path + 'tmp'
+            with open(tmp_path, 'wb') as f:
                 pickle.dump(self.memory, f)
+            shutil.move(tmp_path, self.memory_path)
             print('update target network')
             with torch.no_grad():
                 for pol_param, target_param in zip(self.policy_net.parameters(),
                                                    self.target_net.parameters()):
-                    mean = 0.8 * pol_param.detach().numpy() + 0.2 * target_param.detach().numpy()
+                    mean = 0.4 * pol_param.detach().numpy() + 0.6 * target_param.detach().numpy()
                     target_param[:] = torch.as_tensor(mean)
+                    # pol_param[:] = torch.as_tensor(mean)
         return loss
 
     def state_dict(self):
         return self.target_net.state_dict()
 
-    def load_state_dict(self, state_dict):
-        self.policy_net.load_state_dict(state_dict)
-        return self.target_net.load_state_dict(state_dict)
+    def load_state_dict(self, state_dict, strict=True):
+        self.policy_net.load_state_dict(state_dict, strict)
+        return self.target_net.load_state_dict(state_dict, strict)
 
 
 class QNetwork(ContiniousActionAgent):
@@ -337,9 +342,11 @@ class ReplayMemory:
 
     def push(self, *args):
         """Saves a transition."""
+        transition = Transition(*args)
         if len(self.memory) < self.capacity:
-            self.memory.append(None)
-        self.memory[self.position] = Transition(*args)
+            self.memory.append(transition)
+        else:
+            self.memory[self.position] =  transition
         self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):

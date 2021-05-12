@@ -45,7 +45,7 @@ dec_xml = """
 
 modify_blocks = """
         <DrawLine x1="{0}"  y1="45" z1="5"  x2="4" y2="45" z2="0" type="sandstone"/>
-        <!--DrawLine x1="13"  y1="46" z1="8"  x2="-3" y2="46" z2="5" type="sandstone"/-->
+        <DrawLine x1="15"  y1="46" z1="{2}"  x2="{1}" y2="46" z2="{2}" type="sandstone"/>
         <DrawLine x1="{0}"  y1="45" z1="5"  x2="4" y2="45" z2="13" type="sandstone"/>
 """
 
@@ -58,9 +58,9 @@ mission_ending = """
 """
 
 obs = mb.Observations()
-obs.gridNear = [[-1, 1], [-1, 1], [-1, 1]]
+obs.gridNear = [[-1, 1], [-2, 2], [-1, 1]]
 
-current_xml = dec_xml.format(modify_blocks.format(4), '')
+current_xml = dec_xml.format(modify_blocks.format(4, -3, 8), '')
 handlers = mb.ServerHandlers(mb.flatworld("3;7,220*1,5*3,2;3;,biome_1"), alldecorators_xml=current_xml, bQuitAnyAgent=True)
 agent_handlers = mb.AgentHandlers(observations=obs, all_str=mission_ending)
 
@@ -77,9 +77,6 @@ my_mission.setViewpoint(1)
 
 
 max_retries = 3
-agentID = 0
-expID = 'tabular_q_learning'
-
 my_mission_record = mc.mission_record 
 mc.safeStart()
 
@@ -94,6 +91,7 @@ class DeadException(RuntimeError):
 def collect_state(mc, target_pos):
     mc.observeProc()
     aPos = mc.getAgentPos()
+    print(aPos)
     while aPos is None:
         sleep(0.1)
         mc.observeProc()
@@ -102,8 +100,7 @@ def collect_state(mc, target_pos):
             raise DeadException()
     # grid
     grid = mc.getNearGrid()
-    grid_vec = grid_to_vec_walking(grid[:9])
-    print('grid ', grid[:9])
+    grid_vec = grid_to_vec_walking(grid[:27])
     # position encoding
     grid_enc = torch.as_tensor(grid_vec)
     # target
@@ -115,6 +112,7 @@ def collect_state(mc, target_pos):
     self_pitch = normAngle(aPos[3]*math.pi/180.)
     self_yaw = normAngle(aPos[4]*math.pi/180.)
     xpos, ypos, zpos = [_ % 1 for _ in aPos[0:3]]
+    print("%.2f" % xpos, "%.2f" % ypos, "%.2f" % zpos)
     self_pos_enc = torch.as_tensor([self_pitch, self_yaw, xpos, ypos, zpos])
     return grid_enc, target_enc, self_pos_enc
 
@@ -125,7 +123,11 @@ def action_state_to_vec(action_state):
 
 def act(actions, mc):
     for act in actions:
-        mc.sendCommand(str(act))
+        if act == 'jump_forward':
+            mc.sendCommand('move 0.4')
+            mc.sendCommand('jump 1')
+        else:
+            mc.sendCommand(str(act))
 
 
 def stop_motion(mc):
@@ -138,12 +140,13 @@ def stop_motion(mc):
 
 def learn(agent, optimizer):
     losses = []
-    for i in range(10):
+    for i in range(40):
         optimizer.zero_grad()
         loss = agent.compute_loss()
         if loss is not None:
             # Optimize the model
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(agent.parameters(), 2)
             optimizer.step()
             losses.append(loss.cpu().detach())
     if losses:
@@ -154,10 +157,11 @@ def learn(agent, optimizer):
 
 
 def run_episode(agent, agent_host, eps, mc, optimizer):
+    print('memory: ', agent.memory.position)
     agent.train()
 
     time.sleep(0.05)
-    max_t = 1000
+    max_t = 45 
     eps_start = eps
     eps_end = 0.05
     eps_decay = 0.99
@@ -195,18 +199,20 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
     prev_target_dist = None
     prev_life = 20 
 
-    target =  ['lapis_block', 4.5, 46, 13]
+    target =  ['lapis_block', 4.5, 46, 12.5]
     running = True
+    for i in range(5):
+        learn(agent, optimizer)
     while running and t < max_t:
         t += 1
         # target = search4blocks(mc, ['lapis_block'], run=False)
         reward = 0
-        time.sleep(0.6)
         print('\n\n')
         pos = target[1:4]
         try:
             grid_enc, target_enc, new_pos = collect_state(mc, pos)
         except DeadException:
+            stop_motion(mc)
             agent.push_final(-100)
             reward = -100
             learn(agent, optimizer)
@@ -219,6 +225,7 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
             print('current life ', life)
             if life == 0:
                 reward = -100
+                stop_motion(mc)
                 agent.push_final(reward)
                 running = False
                 learn(agent, optimizer)
@@ -228,7 +235,7 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
                 reward -= 10
             prev_life = life
             grid = mc.getNearGrid()
-            if target_enc[2] < 0.73 and grid[4] == 'lapis_block':
+            if target_enc[2] < 0.53:
                 reward = 100
                 agent.push_final(reward)
                 running = False
@@ -241,10 +248,8 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
                 agent.push_final(reward)
                 break 
             if reward == 0:
-                reward -= 0.5
-            print("dist ", target_enc[2])
+                reward -= 2.5
             print("current reward ", reward)
-            learn(agent, optimizer)
             if not world_state.is_mission_running:
                 break
         data = dict(grid_vec=grid_enc, target=target_enc,
@@ -253,9 +258,18 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
         eps = max(eps * eps_decay, eps_end)
         print('epsilon ', eps)
         act(new_actions, mc)
+        time.sleep(0.4)
+        stop_motion(mc)
+        time.sleep(0.1)
         prev_pos = new_pos
         prev_target_dist = target_enc
         world_state = agent_host.getWorldState()
+    if t == max_t:
+        print("too long")
+        stop_motion(mc)
+        agent.push_final(-10)
+        mc.sendCommand("quit")
+        learn(agent, optimizer)
     print("Final reward: %d" % reward)
     total_reward += reward 
 
@@ -276,33 +290,42 @@ def simple_trainable_agent_test_remastered():
                  network.BinaryAction('jump')] 
 
     # discreet actions
-    action_names = ["movenorth 1", "movesouth 1", "movewest 1", "moveeast 1"]
+    # "move -0.5" "jump_forward",
+    action_names = ["strafe 0.35", "strafe -0.35", "move 0.5", "jump_forward" ]
     actionSet = [network.CategoricalAction(action_names)]
 
-    my_simple_agent = network.DQN(0.95, 70, 40, actionSet,
-                                                    grid_len=9, grid_w=5,
+    my_simple_agent = network.DQN(0.9, 70, 450, actionSet, capacity=1000,
+                                                    grid_len=27, grid_w=5,
                                                     target_enc_len=3,
                                                     pos_enc_len=5)
     if os.path.exists('agent.pth'):
-        my_simple_agent.load_state_dict(torch.load('agent.pth'))
+        data = torch.load('agent.pth')
+        #name = 'action_output.6.weight'
+        #data.pop(name)
+        #data.pop('action_output.6.bias')
+        my_simple_agent.load_state_dict(data, strict=False)
     num_repeats = 54000
     cumulative_rewards = []
-    eps = 0.36
+    eps = 0.26
     eps_start = eps
-    eps_end = 0.05
+    eps_end = 0.09
     eps_decay = 0.99
-    optimizer = torch.optim.RMSprop(my_simple_agent.parameters(), lr=0.0005)
+    optimizer = torch.optim.AdamW(my_simple_agent.parameters(), lr=0.0005,
+                                    weight_decay=0.01)
     p = 1 
     for i in range(0, num_repeats):
         sp = ''
         # train on simple environment first
-        if i < 100:
-            p = random.choice([x for x in range(3, 7)])
+        if i < 200:
+            p = random.choice([x for x in range(2, 8)])
         else:
             p = random.choice([-3, -2, -1] + [x for x in range(0, 13)])
             if random.choice([True, False]):
                 sp = spiral
-        current_xml = dec_xml.format(modify_blocks.format(p), sp)
+        jump_block =  -3 
+        jump_block1 = random.choice(list(range(1, 11)))
+        print(jump_block, jump_block1)
+        current_xml = dec_xml.format(modify_blocks.format(p, jump_block, jump_block1), sp)
         handlers = mb.ServerHandlers(mb.flatworld("3;7,220*1,5*3,2;3;,biome_1"), alldecorators_xml=current_xml, bQuitAnyAgent=True)
         agent_handlers = mb.AgentHandlers(observations=obs, all_str=mission_ending)
 
@@ -314,7 +337,6 @@ def simple_trainable_agent_test_remastered():
 
 
         print("\nMission %d of %d:" % (i + 1, num_repeats))
-        # my_mission_record = malmoutils.get_default_recording_object(agent_host, "./save_%s-map%d-rep%d" % (expID, imap, i))
         mc.safeStart()
         print()
 

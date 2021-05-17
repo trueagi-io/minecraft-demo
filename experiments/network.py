@@ -1,3 +1,4 @@
+import logging
 import random
 import shutil
 import os
@@ -32,7 +33,7 @@ class ContiniousAction(Action):
         return x * (self.max - self.min) + self.min
 
     def inv_scale(self, x):
-        return (x - self.min) / (self.max - self.min) 
+        return (x - self.min) / (self.max - self.min)
 
 
 class BinaryAction(Action):
@@ -82,7 +83,7 @@ class ContiniousActionAgent(nn.Module):
             nn.Linear(num, num),
             nn.LeakyReLU(inplace=False)
         )
-        
+
         self.cont_actions = [x for x in actions if isinstance(x, ContiniousAction)]
         self.binary_actions = [x for x in actions if isinstance(x, BinaryAction)]
         self.categorical_actions = [x for x in actions if isinstance(x, CategoricalAction)]
@@ -113,7 +114,7 @@ class ContiniousActionAgent(nn.Module):
         # process grid
         grid_enc = self.grid_enc(grid_vec.to(params).flatten())
         # concat grid with other inputs
-        
+
         self.prev_actions = []
         self.prev_dist = []
         enc = torch.cat([grid_enc.squeeze(), target, pos], dim=0)
@@ -121,7 +122,7 @@ class ContiniousActionAgent(nn.Module):
 
         params = torch.abs(self.action_output(dense))
         len_cont = len(self.cont_actions) * 2
-        len_binary = len(self.binary_actions) 
+        len_binary = len(self.binary_actions)
         len_cat = len(self.categorical_actions)
         beta_params = params[:len_cont]
         binary_params = torch.sigmoid(params[len_cont: len_cont + len_binary])
@@ -158,7 +159,7 @@ class ContiniousActionAgent(nn.Module):
             loss = - dist.log_prob(action + eps) * reward + loss
             if torch.isinf(loss):
                 import pdb;pdb.set_trace()
-        print('loss ', loss)
+        logging.debug('loss ', loss)
         return loss
 
 
@@ -174,7 +175,7 @@ class DQN:
         self.memory_path = 'memory.pkl'
         if os.path.exists(self.memory_path):
             with open(self.memory_path, 'rb') as f:
-                print('loading ', self.memory_path)
+                logging.debug('loading %s', self.memory_path)
                 self.memory = pickle.load(f)
                 self.memory.capacity = capacity
                 self.memory.memory = [x for x in self.memory.memory if x is not None]
@@ -206,7 +207,7 @@ class DQN:
         with torch.no_grad():
             action = self.policy_net.sample(state, **kwargs)
         if self.prev_state is not None:
-            self.memory.push(self.prev_state, 
+            self.memory.push(self.prev_state,
                          self.prev_action, state, torch.as_tensor(reward))
         self.prev_state = state
         self.prev_action = action
@@ -252,8 +253,8 @@ class DQN:
         expected_Q_values = (next_Q_values * self.gamma) + reward_batch
 
         # Compute Huber loss
-        #loss = F.smooth_l1_loss(Q_values, expected_Q_values, beta=101) 
-        loss = F.mse_loss(Q_values, expected_Q_values) 
+        #loss = F.smooth_l1_loss(Q_values, expected_Q_values, beta=101)
+        loss = F.mse_loss(Q_values, expected_Q_values)
         self.iteration += 1
             # Update the target network, copying all weights and biases in DQN
         if self.iteration % self.target_update == 0:
@@ -262,7 +263,7 @@ class DQN:
             with open(tmp_path, 'wb') as f:
                 pickle.dump(self.memory, f)
             shutil.move(tmp_path, self.memory_path)
-            print('update target network')
+            logging.debug('update target network')
             with torch.no_grad():
                 for pol_param, target_param in zip(self.policy_net.parameters(),
                                                    self.target_net.parameters()):
@@ -282,7 +283,7 @@ class DQN:
 class QNetwork(ContiniousActionAgent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.n_actions = sum(len(x) for x in self.categorical_actions) 
+        self.n_actions = sum(len(x) for x in self.categorical_actions)
 
     def forward(self, data):
         """
@@ -301,8 +302,8 @@ class QNetwork(ContiniousActionAgent):
             grid_enc = grid_enc.unsqueeze(0)
             target = target.unsqueeze(0)
             pos = pos.unsqueeze(0)
-        enc = torch.cat([grid_enc, 
-                         target, 
+        enc = torch.cat([grid_enc,
+                         target,
                          pos], dim=1)
 
         x = self.trunk(enc)
@@ -313,10 +314,10 @@ class QNetwork(ContiniousActionAgent):
         num = random.random()
         with torch.no_grad():
              q_values = self(*args)
-    
+
         if num > epsilon:
             act = torch.argmax(q_values).unsqueeze(0)
-            print('argmax action')
+            logging.debug('argmax action')
         else:
             device = next(self.parameters()).device
             if q_values.min() < 0:
@@ -325,7 +326,7 @@ class QNetwork(ContiniousActionAgent):
             q_values[0, q_values.argmax()] /= 2
             act = Categorical(q_values).sample()
             # act = torch.tensor([random.randrange(self.n_actions)], device=device)
-            print('random action')
+            logging.debug('random action')
         return act
 
 
@@ -353,4 +354,4 @@ class ReplayMemory:
         return random.sample(self.memory, batch_size)
 
     def __len__(self):
-        return len(self.memory) 
+        return len(self.memory)

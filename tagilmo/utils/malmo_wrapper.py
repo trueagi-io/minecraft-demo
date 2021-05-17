@@ -108,6 +108,10 @@ class MalmoConnector:
                 return False
         return True
 
+    def is_mission_running(self, nAgent=0):
+        world_state = self.agent_hosts[nAgent].getWorldState()
+        return world_state.is_mission_running
+
     def observeProc(self, nAgent=None):
         r = range(len(self.agent_hosts)) if nAgent is None else range(nAgent, nAgent+1)
         self.pixels = [None for _ in r]

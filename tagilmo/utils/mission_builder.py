@@ -64,14 +64,16 @@ class ServerInitialConditions:
 def flatworld(generatorString, forceReset="false"):
     return '<FlatWorldGenerator generatorString="' + generatorString + '" forceReset="' + forceReset + '"/>'
 
-def defaultworld(seed=None, forceReset="false"):
-    str = '<DefaultWorldGenerator '
+def defaultworld(seed=None, forceReset=False):
+    if isinstance(forceReset, bool):
+        forceReset = 'true' if forceReset else 'false'
+    world_str = '<DefaultWorldGenerator '
     if seed:
-        str += 'seed="' + seed + '" '
+        world_str += 'seed="' + str(seed) + '" '
     if forceReset:
-        str += 'forceReset="' + forceReset + '" '
-    str += '/>'
-    return str
+        world_str += 'forceReset="' + forceReset + '" '
+    world_str += '/>'
+    return world_str
 
 def fileworld(uri2save, forceReset="false"):
     str = '<FileWorldGenerator '

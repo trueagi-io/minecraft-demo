@@ -61,8 +61,8 @@ class ServerInitialConditions:
         return _xml
 
 
-def flatworld(generatorString, forceReset="false"):
-    return '<FlatWorldGenerator generatorString="' + generatorString + '" forceReset="' + forceReset + '"/>'
+def flatworld(generatorString, forceReset="false", seed=''):
+    return '<FlatWorldGenerator generatorString="' + generatorString + '" forceReset="' + forceReset + '" seed="' + seed + '"/>'
 
 def defaultworld(seed=None, forceReset=False):
     if isinstance(forceReset, bool):
@@ -200,18 +200,35 @@ class Observations:
         return _xml
 
 
+class VideoProducer:
+    def __init__(self, height, width, want_depth=False):
+        self.height = height
+        self.width = width
+        self.want_depth = want_depth
+
+    def xml(self):
+        return '<VideoProducer want_depth="{0}"> \
+            <Width>{width}</Width> \
+            <Height>{height}</Height> \
+            </VideoProducer>'.format('true' if self.want_depth else 'false',
+                width=self.width, height=self.height)
+
+
 class AgentHandlers:
 
-    def __init__(self, commands=Commands(), observations=Observations(), all_str=''):
+    def __init__(self, commands=Commands(), observations=Observations(),
+                 all_str='', video_producer=None):
         self.commands = commands
         self.observations = observations
         self.all_str = all_str
-        
+        self.video_producer = video_producer
+
     def xml(self):
         _xml = '<AgentHandlers>\n'
         _xml += self.commands.xml()
         _xml += self.observations.xml()
         _xml += self.all_str
+        _xml += '' if self.video_producer is None else self.video_producer.xml()
         _xml += '</AgentHandlers>\n'
         # <VideoProducer want_depth=... viewpoint=...> --
         # <DepthProducer> --

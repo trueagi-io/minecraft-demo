@@ -203,14 +203,12 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
     solved = False
 
     target =  ['lapis_block', 4.5, 46, 12.5]
-    running = True
     mean_loss = numpy.mean([learn(agent, optimizer) for _ in range(5)])
     logging.info('loss %f', mean_loss)
-    while running:
+    while True:
         t += 1
         # target = search4blocks(mc, ['lapis_block'], run=False)
         reward = 0
-        logging.debug('\n\n')
         pos = target[1:4]
         try:
             grid_enc, target_enc, new_pos = collect_state(mc, pos)
@@ -218,6 +216,7 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
             stop_motion(mc)
             agent.push_final(-100)
             reward = -100
+            logging.debug("failed at step %i", t)
             learn(agent, optimizer)
             break
         if prev_pos is None:
@@ -230,32 +229,29 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
                 reward = -100
                 stop_motion(mc)
                 agent.push_final(reward)
-                running = False
                 learn(agent, optimizer)
                 break
-            reward += (prev_target_dist - target_enc)[2] + (life - prev_life)
-            if (prev_target_dist - target_enc)[2] <= -0.9:
-                reward -= 10
+            reward += (prev_target_dist - target_enc)[2] + (life - prev_life) * 2
             prev_life = life
             grid = mc.getNearGrid()
             if target_enc[2] < 0.53:
                 reward = 100
                 agent.push_final(reward)
-                running = False
+                logging.debug('solved in %i steps', t)
                 mc.sendCommand("quit")
                 solved = True
                 break
             world_state = agent_host.getWorldState()
             if not world_state.is_mission_running:
-                running = False
+                logging.debug('failed in %i steps', t)
                 reward = -100
                 agent.push_final(reward)
                 break
             if reward == 0:
-                reward -= 2.5
-            logging.debug("current reward %f", reward)
+                reward -= 2
             if not world_state.is_mission_running:
                 break
+        logging.debug("current reward %f", reward)
         data = dict(grid_vec=grid_enc, target=target_enc,
                 pos=new_pos)
         new_actions = agent(data, reward=reward, epsilon=eps)
@@ -277,6 +273,8 @@ def run_episode(agent, agent_host, eps, mc, optimizer):
             learn(agent, optimizer)
             break
         total_reward += reward
+    # in termial state reward is not added due loop breaking
+    total_reward += reward
     logging.debug("Final reward: %d" % reward)
 
     return total_reward, t, solved

@@ -61,7 +61,7 @@ mission_ending = """
 """
 
 
-def load_agent_cliff():
+def load_agent_cliff(path):
     # possible actions are
     # move[-1, 1],
     # strafe[-1, 1]
@@ -79,15 +79,12 @@ def load_agent_cliff():
     action_names = ["turn 0.15", "turn -0.15", "move 0.5", "jump_forward" ]
     actionSet = [network.CategoricalAction(action_names)]
 
-    my_simple_agent = network.DQN(0.9, 70, 450, actionSet, capacity=2000,
-                                                    grid_len=27, grid_w=5,
-                                                    target_enc_len=3,
-                                                    pos_enc_len=5)
-    if os.path.exists('agent.pth'):
-        data = torch.load('agent.pth')
-        #name = 'action_output.6.weight'
-        #data.pop(name)
-        #data.pop('action_output.6.bias')
+    policy_net = network.QNetwork(actionSet, grid_len=27, grid_w=5, target_enc_len=3, pos_enc_len=5)
+    target_net = network.QNetwork(actionSet, grid_len=27, grid_w=5, target_enc_len=3, pos_enc_len=5)
+ 
+    my_simple_agent = network.DQN(policy_net, target_net, 0.9, 70, 450, capacity=2000)
+    if os.path.exists(path):
+        data = torch.load(path)
         my_simple_agent.load_state_dict(data, strict=False)
 
     return my_simple_agent
@@ -109,7 +106,7 @@ class Trainer:
         aPos = mc.getAgentPos()
         logging.debug(aPos)
         while aPos is None:
-            sleep(0.1)
+            time.sleep(0.05)
             mc.observeProc()
             aPos = mc.getAgentPos()
             if not all(mc.isAlive):
@@ -141,7 +138,6 @@ class Trainer:
         logging.debug('memory: %i', self.agent.memory.position)
         self.agent.train()
     
-        time.sleep(0.05)
         max_t = 80
         eps_start = self.eps
         eps_end = 0.05

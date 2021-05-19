@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 from torch.distributions.beta import Beta
 from torch.distributions.categorical import Categorical
+from pyramidpooling import PyramidPooling
 
 
 def init_weights_xavier(m):
@@ -62,48 +63,13 @@ class CategoricalAction(Action):
 
 
 class ContiniousActionAgent(nn.Module):
-    def __init__(self, actions, grid_len, grid_w,
-                 target_enc_len, pos_enc_len):
+    def __init__(self, actions):
         super().__init__()
-        num = 256
         self.actions = actions
-        self.grid_enc = nn.Sequential(
-            nn.Linear(grid_w * grid_len, num),
-            nn.LeakyReLU(),
-            nn.Linear(num, 20),
-            nn.LeakyReLU())
-
-        self.trunk = nn.Sequential(
-            nn.Linear(20 + target_enc_len + pos_enc_len , num),
-            nn.LeakyReLU(inplace=False),
-
-            nn.Linear(num, num),
-            nn.LeakyReLU(inplace=False),
-
-            nn.Linear(num, num),
-            nn.LeakyReLU(inplace=False)
-        )
-
         self.cont_actions = [x for x in actions if isinstance(x, ContiniousAction)]
         self.binary_actions = [x for x in actions if isinstance(x, BinaryAction)]
         self.categorical_actions = [x for x in actions if isinstance(x, CategoricalAction)]
-        self.action_output = nn.Sequential(
-            nn.Linear(num, num),
-            nn.LeakyReLU(inplace=False),
-
-            nn.Linear(num, num),
-            nn.LeakyReLU(inplace=False),
-
-            nn.Linear(num, num),
-            nn.LeakyReLU(inplace=False),
-
-            # continious actions are modeled by Beta distribution which requires two parameters
-            # binary actions are modeled by categorical distribution, which requires one parameter
-            nn.Linear(num, len(self.cont_actions) * 2 + len(self.binary_actions) + sum(len(x) for x in self.categorical_actions) )
-            )
-        self.prev_dist = []
-        self.prev_actions = []
-        self.apply(init_weights_xavier)
+        self.n_actions = len(self.cont_actions) + len(self.binary_actions) +  sum(len(x) for x in self.categorical_actions)
 
     def forward(self, data):
         grid_vec = data['grid_vec']
@@ -162,11 +128,30 @@ class ContiniousActionAgent(nn.Module):
         logging.debug('loss ', loss)
         return loss
 
+    def sample(self, *args, epsilon=0.05):
+        num = random.random()
+        with torch.no_grad():
+             q_values = self(*args)
+
+        if num > epsilon:
+            act = torch.argmax(q_values).unsqueeze(0)
+            logging.debug('argmax action')
+        else:
+            device = next(self.parameters()).device
+            if q_values.min() < 0:
+                q_values -= q_values.min()
+            # make action different from argmax
+            q_values[0, q_values.argmax()] /= 2
+            act = Categorical(q_values).sample()
+            # act = torch.tensor([random.randrange(self.n_actions)], device=device)
+            logging.debug('random action')
+        return act
+
 
 class DQN:
-    def __init__(self, gamma, batch_size, target_update, *args, capacity=500, **kwargs):
-        self.policy_net = QNetwork(*args, **kwargs)
-        self.target_net = QNetwork(*args, **kwargs)
+    def __init__(self, policy_net, target_net, gamma, batch_size, target_update, capacity=500):
+        self.policy_net = policy_net
+        self.target_net = target_net
         self.target_update = target_update
         self.iteration = 0
         self.prev_state = None
@@ -280,10 +265,159 @@ class DQN:
         return self.target_net.load_state_dict(state_dict, strict)
 
 
+class QVisualNetwork(ContiniousActionAgent):
+    def __init__(self, actions, pos_enc_len, n_channels=1, activation=nn.ReLU(), batchnorm=True):
+        super().__init__(actions)
+        self.activation = activation
+        stride = 1
+        kernel = (3, 3)
+        self.conv1a = nn.Conv2d(n_channels, 64, kernel_size=kernel,
+                        stride=stride, padding=1)
+
+        self.conv1b = nn.Conv2d(64, 64, kernel_size=kernel,
+                        stride=stride, padding=1)
+
+        self.conv2a = nn.Conv2d(64, 64, kernel_size=kernel,
+                        stride=stride, padding=1)
+
+        self.conv2b = nn.Conv2d(64, 64, kernel_size=kernel,
+                        stride=stride, padding=1)
+
+        self.conv3a = nn.Conv2d(64, 128, kernel_size=kernel,
+                        stride=stride, padding=1)
+
+        self.conv3b = nn.Conv2d(128, 128, kernel_size=kernel,
+                        stride=stride, padding=1)
+
+        self.conv4a = nn.Conv2d(128, 128, kernel_size=kernel,
+                        stride=stride, padding=1)
+
+        self.conv4b = nn.Conv2d(128, 28, kernel_size=kernel,
+                        stride=stride, padding=1)
+        self.pool = nn.MaxPool2d((2, 2))
+
+        num = 128
+        # position embedding
+        self.pos_emb = nn.Sequential(
+            # prev and current position
+            nn.Linear(pos_enc_len * 2, num),
+            nn.LeakyReLU(inplace=False),
+
+            nn.Linear(num, num),
+            nn.LeakyReLU(inplace=False),
+
+            nn.Linear(num, num),
+            nn.LeakyReLU(inplace=False)
+        )
+        # fully connected
+        self.q_value = nn.Sequential(
+            nn.Linear(num + (28 * 8 * 8 + 28 * 4 * 4 + 28), num),
+            self.activation,
+            nn.Linear(num, num),
+            self.activation,
+            nn.Linear(num, self.n_actions))
+        self.pooling = PyramidPooling((8, 4, 1))
+
+        if batchnorm:
+            self.batchnorm0 = nn.BatchNorm2d(64)
+            self.batchnorm1 = nn.BatchNorm2d(64)
+            self.batchnorm2 = nn.BatchNorm2d(64)
+            self.batchnorm3 = nn.BatchNorm2d(64)
+            self.batchnorm4 = nn.BatchNorm2d(128)
+            self.batchnorm5 = nn.BatchNorm2d(128)
+            self.batchnorm6 = nn.BatchNorm2d(128)
+            self.batchnorm7 = nn.BatchNorm2d(28)
+        else:
+            l = lambda x: x
+            self.batchnorm0 = l
+            self.batchnorm1 = l
+            self.batchnorm2 = l
+            self.batchnorm3 = l
+            self.batchnorm4 = l
+            self.batchnorm5 = l
+            self.batchnorm6 = l
+            self.batchnorm7 = l
+
+    def superblock(self, x, conv1, conv2, batch1, batch2, skip=False):
+        x = conv1(x)
+        x = self.activation(x)
+        x = batch1(x)
+        x = conv2(x)
+        x = self.activation(x)
+        x = batch2(x)
+        return x
+
+    def vgg(self, x):
+        x = self.superblock(x, self.conv1a, self.conv1b, self.batchnorm0, self.batchnorm1)
+        x = self.pool(x)
+        x = self.superblock(x, self.conv2a, self.conv2b, self.batchnorm2, self.batchnorm3)
+        x = self.pool(x)
+        x = self.superblock(x, self.conv3a, self.conv3b, self.batchnorm4, self.batchnorm5)
+        x = self.pool(x)
+        x = self.superblock(x, self.conv4a, self.conv4b, self.batchnorm6, self.batchnorm7)
+        return x
+
+    def forward(self, data):
+        x = data['image']
+        if len(x.shape) == 3:
+            x = x.unsqueeze(0)
+        pos = data['position']
+        prev_pos = data['prev_pos']
+        x = self.vgg(x)
+        visual_data = self.pooling(x) 
+        
+        if len(pos.shape) == 1:
+            pos = pos.unsqueeze(0)
+            prev_pos = prev_pos.unsqueeze(0)
+        pos_data = torch.cat([pos, prev_pos], dim=1)
+        if len(pos_data.shape) == 1:
+            pos_data = pos_data.unsqueeze(0)
+        pos_emb = self.pos_emb(pos_data)
+        visual_pos_emb = torch.cat([visual_data, pos_emb], dim=1)
+        return self.q_value(visual_pos_emb) 
+
+
+    
 class QNetwork(ContiniousActionAgent):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.n_actions = sum(len(x) for x in self.categorical_actions)
+    def __init__(self, actions, grid_len, grid_w,
+                 target_enc_len, pos_enc_len):
+        super().__init__(actions)
+        num = 256
+        self.grid_enc = nn.Sequential(
+            nn.Linear(grid_w * grid_len, num),
+            nn.LeakyReLU(),
+            nn.Linear(num, 20),
+            nn.LeakyReLU())
+
+        self.trunk = nn.Sequential(
+            nn.Linear(20 + target_enc_len + pos_enc_len , num),
+            nn.LeakyReLU(inplace=False),
+
+            nn.Linear(num, num),
+            nn.LeakyReLU(inplace=False),
+
+            nn.Linear(num, num),
+            nn.LeakyReLU(inplace=False)
+        )
+
+        self.action_output = nn.Sequential(
+            nn.Linear(num, num),
+            nn.LeakyReLU(inplace=False),
+
+            nn.Linear(num, num),
+            nn.LeakyReLU(inplace=False),
+
+            nn.Linear(num, num),
+            nn.LeakyReLU(inplace=False),
+
+            # continious actions are modeled by Beta distribution which requires two parameters
+            # binary actions are modeled by categorical distribution, which requires one parameter
+            nn.Linear(num, len(self.cont_actions) * 2 + len(self.binary_actions) + sum(len(x) for x in self.categorical_actions) )
+            )
+        self.prev_dist = []
+        self.prev_actions = []
+
+        self.apply(init_weights_xavier)
 
     def forward(self, data):
         """
@@ -309,25 +443,6 @@ class QNetwork(ContiniousActionAgent):
         x = self.trunk(enc)
         q_values = self.action_output(x)
         return q_values
-
-    def sample(self, *args, epsilon=0.05):
-        num = random.random()
-        with torch.no_grad():
-             q_values = self(*args)
-
-        if num > epsilon:
-            act = torch.argmax(q_values).unsqueeze(0)
-            logging.debug('argmax action')
-        else:
-            device = next(self.parameters()).device
-            if q_values.min() < 0:
-                q_values -= q_values.min()
-            # make action different from argmax
-            q_values[0, q_values.argmax()] /= 2
-            act = Categorical(q_values).sample()
-            # act = torch.tensor([random.randrange(self.n_actions)], device=device)
-            logging.debug('random action')
-        return act
 
 
 Transition = namedtuple('Transition',

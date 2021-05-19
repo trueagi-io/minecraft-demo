@@ -1,5 +1,5 @@
 """
-source https://github.com/revidee/pytorch-pyramid-pooling
+adapted from https://github.com/revidee/pytorch-pyramid-pooling
 """
 
 import math
@@ -60,12 +60,12 @@ class PyramidPooling(nn.Module):
             padded_input = F.pad(input=previous_conv, pad=[w_pad1, w_pad2, h_pad1, h_pad2],
                                  mode='constant', value=0)
             if mode == "max":
-                pool = nn.MaxPool2d((h_kernel, w_kernel), stride=(h_kernel, w_kernel), padding=(0, 0))
+                pool = nn.functional.max_pool2d
             elif mode == "avg":
-                pool = nn.AvgPool2d((h_kernel, w_kernel), stride=(h_kernel, w_kernel), padding=(0, 0))
+                pool = nn.functional.avg_pool2d
             else:
                 raise RuntimeError("Unknown pooling type: %s, please use \"max\" or \"avg\".")
-            x = pool(padded_input)
+            x = pool(padded_input, (h_kernel, w_kernel), stride=(h_kernel, w_kernel), padding=(0, 0))
             if i == 0:
                 spp = x.view(num_sample, -1)
             else:

@@ -54,4 +54,4 @@ def train_tree():
 if __name__ == '__main__':
     setup_logger('train.log')
     train_tree()
-    #train_cliff()
+    train_cliff()

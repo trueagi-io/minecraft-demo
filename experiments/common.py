@@ -126,7 +126,7 @@ def stop_motion(mc):
 
 def learn(agent, optimizer):
     losses = []
-    for i in range(1):
+    for i in range(40):
         optimizer.zero_grad()
         loss = agent.compute_loss()
         if loss is not None:

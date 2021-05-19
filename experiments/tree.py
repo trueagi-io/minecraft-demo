@@ -222,6 +222,5 @@ class Trainer:
             mc = MalmoConnector(miss)
         else:
             mc.setMissionXML(miss)
-        mc.safeStart()
         return mc 
 

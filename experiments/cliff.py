@@ -68,14 +68,15 @@ def load_agent_cliff(path):
     # pitch[-1, 1]
     # turn[-1, 1]
     # jump 0/1
-    actionSet = [network.ContiniousAction('move', -1, 1),
-                 network.ContiniousAction('strafe', -1, 1),
-                 network.ContiniousAction('pitch', -1, 1),
-                 network.ContiniousAction('turn', -1, 1),
-                 network.BinaryAction('jump')]
+
+    # for example: 
+    # actionSet = [network.ContiniousAction('move', -1, 1),
+    #              network.ContiniousAction('strafe', -1, 1),
+    #              network.ContiniousAction('pitch', -1, 1),
+    #              network.ContiniousAction('turn', -1, 1),
+    #              network.BinaryAction('jump')]
 
     # discreet actions
-    # "move -0.5" "jump_forward",
     action_names = ["turn 0.15", "turn -0.15", "move 0.5", "jump_forward" ]
     actionSet = [network.CategoricalAction(action_names)]
 

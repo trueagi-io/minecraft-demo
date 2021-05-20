@@ -14,7 +14,8 @@ import numpy
 
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector
-from common import learn, stop_motion, grid_to_vec_walking, \
+import common
+from common import stop_motion, grid_to_vec_walking, \
     direction_to_target, normAngle
 
 
@@ -51,25 +52,22 @@ def load_agent_tree(path):
     my_simple_agent = network.DQN(policy_net, target_net, 0.9, batch_size, 450, capacity=2000)
 
     if os.path.exists('agent_tree.pth'):
-        data = torch.load('agent_tree.pth')
-        #name = 'action_output.6.weight'
-        #data.pop(name)
-        #data.pop('action_output.6.bias')
+        location = 'cuda' if torch.cuda.is_available() else 'cpu'
+        logging.info('loading model from agent_tree.pth')
+        data = torch.load('agent_tree.pth', map_location=location)
         my_simple_agent.load_state_dict(data, strict=False)
 
     return my_simple_agent
 
 
-
-class Trainer:
-    def __init__(self, agent, mc, optimizer, eps):
+class Trainer(common.Trainer):
+    def __init__(self, agent, mc, optimizer, eps, train=True):
+        super().__init__(train)
         self.agent = agent
         self.mc = mc
         self.optimizer = optimizer
         self.eps = eps
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.agent.to(self.device)
-        logging.info('using device {0}'.format(self.device))
 
     def is_tree_visible(self):
         logging.debug(self.mc.getLineOfSight('type'))
@@ -130,7 +128,7 @@ class Trainer:
         prev_life = 20
         solved = False
 
-        mean_loss = numpy.mean([learn(self.agent, self.optimizer) for _ in range(5)])
+        mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(5)])
         logging.info('loss %f', mean_loss)
         while True:
             t += 1
@@ -141,10 +139,10 @@ class Trainer:
                 target = self.is_tree_visible()
             except DeadException:
                 stop_motion(mc)
-                self.agent.push_final(-100)
-                reward = -100
-                logging.debug("failed at step %i", t)
-                learn(self.agent, self.optimizer)
+                # should not die is this mission
+                # so don't add this event to the replay buffer
+                reward = 0
+                logging.warning("died at step %i", t)
                 break
             if prev_pos is None:
                 prev_pos = new_pos
@@ -153,11 +151,8 @@ class Trainer:
                 life = mc.getLife()
                 logging.debug('current life %f', life)
                 if life == 0:
-                    reward = -100
-                    stop_motion(mc)
-                    self.agent.push_final(reward)
-                    learn(self.agent, self.optimizer)
-                    break
+                    # should not die is this mission
+                    continue
                 reward += (life - prev_life) * 2
                 prev_life = life
                 if target is not None:
@@ -170,11 +165,6 @@ class Trainer:
                         break
                     elif target[0] == 'leaves':
                         reward = 1
-                if not mc.is_mission_running():
-                    logging.info('failed in %i steps', t)
-                    reward = -100
-                    self.agent.push_final(reward)
-                    break
                 if reward == 0:
                     reward -= 2
             data['prev_pos'] = prev_pos
@@ -193,7 +183,7 @@ class Trainer:
                 reward = -10
                 self.agent.push_final(-10)
                 self.mc.sendCommand("quit")
-                learn(self.agent, self.optimizer)
+                self.learn(self.agent, self.optimizer)
                 break
             total_reward += reward
         # in termial state reward is not added due loop breaking

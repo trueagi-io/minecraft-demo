@@ -8,7 +8,7 @@ import sys
 import time
 
 
-def train_agent(agent, Trainer, save_path):
+def train_agent(agent, Trainer, save_path, train=True):
     num_repeats = 400
     eps = 0.26
     eps_start = eps
@@ -24,7 +24,7 @@ def train_agent(agent, Trainer, save_path):
         mc.safeStart()
 
         # -- run the agent in the world -- #
-        trainer = Trainer(agent, mc, optimizer, eps)
+        trainer = Trainer(agent, mc, optimizer, eps, train)
         comulative_reward, steps, solved = trainer.run_episode() 
         logging.info('episode %i: solved %i: comulative reward: %f', i, solved, comulative_reward)
         logging.debug("eps: %f", eps)
@@ -41,17 +41,17 @@ def train_cliff():
     from cliff import load_agent_cliff, Trainer
     path = 'agent_cliff.pth'
     agent = load_agent_cliff(path)
-    train_agent(agent, Trainer, path)
+    train_agent(agent, Trainer, path, True)
 
 
 def train_tree():
     from tree import load_agent_tree, Trainer
     path = 'agent_tree.pth'
     agent = load_agent_tree(path)
-    train_agent(agent, Trainer, path)
+    train_agent(agent, Trainer, path, True)
 
 
 if __name__ == '__main__':
     setup_logger('train.log')
+    #train_cliff()
     train_tree()
-    train_cliff()

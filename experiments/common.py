@@ -139,3 +139,33 @@ def learn(agent, optimizer):
         logging.debug('optimizing')
         logging.debug('loss %f', numpy.mean(losses))
     return numpy.mean(losses)
+
+
+class Trainer:
+    def __init__(self, train=True):
+        self.train = train
+        if not self.train:
+            logging.info('evaluation mode')
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        logging.info('using device {0}'.format(self.device))
+
+    def collect_state(self):
+        raise NotImplementedError()
+
+    def run_episode(self):
+        """ Deep Q-Learning episode
+        """
+        raise NotImplementedError() 
+
+    def learn(self, *args, **kwargs):
+        if self.train:
+            return learn(*args, **kwargs)
+        return 0
+
+    def act(self, actions):
+        raise NotImplementedError() 
+
+    @classmethod
+    def init_mission(i, mc):
+        raise NotImplementedError() 
+

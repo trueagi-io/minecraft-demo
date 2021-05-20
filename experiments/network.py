@@ -168,6 +168,10 @@ class DQN:
         self.gamma = gamma
         self.batch_size = batch_size
 
+    def to(self, arg):
+        self.policy_net.to(arg)
+        self.target_net.to(arg)
+
     def parameters(self):
         return self.policy_net.parameters()
 
@@ -228,14 +232,14 @@ class DQN:
         for k in non_final_next_states[0].keys():
             non_final_state[k] = torch.stack([data[k] for data in non_final_next_states])
 
-
-        next_Q_values = torch.zeros(len(non_final_mask))
+        device = next(self.target_net.parameters()).device
+        next_Q_values = torch.zeros(len(non_final_mask)).to(device)
 
         # argmax a' Q(s', a')
         next_Q_values[non_final_mask] = self.target_net(non_final_state).max(1)[0].detach()
 
         # E[r + gamma argmax a' Q(s', a', theta)]
-        expected_Q_values = (next_Q_values * self.gamma) + reward_batch
+        expected_Q_values = (next_Q_values * self.gamma) + reward_batch.to(device)
 
         # Compute Huber loss
         #loss = F.smooth_l1_loss(Q_values, expected_Q_values, beta=101)
@@ -252,9 +256,8 @@ class DQN:
             with torch.no_grad():
                 for pol_param, target_param in zip(self.policy_net.parameters(),
                                                    self.target_net.parameters()):
-                    mean = 0.4 * pol_param.detach().numpy() + 0.6 * target_param.detach().numpy()
-                    target_param[:] = torch.as_tensor(mean)
-                    # pol_param[:] = torch.as_tensor(mean)
+                    mean = 0.4 * pol_param.detach().cpu().numpy() + 0.6 * target_param.detach().cpu().numpy()
+                    target_param[:] = torch.as_tensor(mean).to(pol_param)
         return loss
 
     def state_dict(self):
@@ -358,26 +361,26 @@ class QVisualNetwork(ContiniousActionAgent):
         return x
 
     def forward(self, data):
-        x = data['image']
+        x = data['image'].to(next(self.conv1a.parameters()))
         if len(x.shape) == 3:
             x = x.unsqueeze(0)
         pos = data['position']
         prev_pos = data['prev_pos']
         x = self.vgg(x)
-        visual_data = self.pooling(x) 
-        
+        visual_data = self.pooling(x)
+
         if len(pos.shape) == 1:
             pos = pos.unsqueeze(0)
             prev_pos = prev_pos.unsqueeze(0)
-        pos_data = torch.cat([pos, prev_pos], dim=1)
+        pos_data = torch.cat([pos, prev_pos], dim=1).to(next(self.conv1a.parameters()))
         if len(pos_data.shape) == 1:
             pos_data = pos_data.unsqueeze(0)
         pos_emb = self.pos_emb(pos_data)
         visual_pos_emb = torch.cat([visual_data, pos_emb], dim=1)
-        return self.q_value(visual_pos_emb) 
+        return self.q_value(visual_pos_emb)
 
 
-    
+
 class QNetwork(ContiniousActionAgent):
     def __init__(self, actions, grid_len, grid_w,
                  target_enc_len, pos_enc_len):

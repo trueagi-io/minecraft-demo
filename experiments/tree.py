@@ -47,8 +47,8 @@ def load_agent_tree(path):
 
     policy_net = network.QVisualNetwork(actionSet, 2, n_channels=3, activation=nn.ReLU(), batchnorm=True)
     target_net = network.QVisualNetwork(actionSet, 2, n_channels=3, activation=nn.ReLU(), batchnorm=True)
-
-    my_simple_agent = network.DQN(policy_net, target_net, 0.9, 20, 450, capacity=2000)
+    batch_size = 20
+    my_simple_agent = network.DQN(policy_net, target_net, 0.9, batch_size, 450, capacity=2000)
 
     if os.path.exists('agent_tree.pth'):
         data = torch.load('agent_tree.pth')
@@ -67,13 +67,16 @@ class Trainer:
         self.mc = mc
         self.optimizer = optimizer
         self.eps = eps
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.agent.to(self.device)
+        logging.info('using device {0}'.format(self.device))
 
     def is_tree_visible(self):
         logging.debug(self.mc.getLineOfSight('type'))
         if self.mc.getLineOfSight('type') in ['log', 'leaves']:
-            return [self.mc.getLineOfSight('type'), 
-                    self.mc.getLineOfSight('x'), 
-                    self.mc.getLineOfSight('y'), 
+            return [self.mc.getLineOfSight('type'),
+                    self.mc.getLineOfSight('x'),
+                    self.mc.getLineOfSight('y'),
                     self.mc.getLineOfSight('z')]
         return None
 
@@ -99,34 +102,34 @@ class Trainer:
         self.act(["pitch {0}".format(pitch)])
         time.sleep(0.5)
         stop_motion(self.mc)
-        
+
     def run_episode(self):
         """ Deep Q-Learning episode
         """
         self.agent.clear_state()
-        mc = self.mc 
+        mc = self.mc
         # apply random turn and pitch
         self._random_turn()
         logging.debug('memory: %i', self.agent.memory.position)
         self.agent.train()
-    
+
         max_t = 50
         eps_start = self.eps
         eps_end = 0.05
         eps_decay = 0.99
-    
+
         eps = eps_start
-    
+
         total_reward = 0
-    
+
         t = 0
-    
+
         # pitch, yaw, xpos, ypos, zpos
         prev_pos = None
         prev_target_dist = None
         prev_life = 20
         solved = False
-    
+
         mean_loss = numpy.mean([learn(self.agent, self.optimizer) for _ in range(5)])
         logging.info('loss %f', mean_loss)
         while True:
@@ -196,7 +199,7 @@ class Trainer:
         # in termial state reward is not added due loop breaking
         total_reward += reward
         logging.info("Final reward: %d" % reward)
-    
+
         return total_reward, t, solved
 
     def act(self, actions):
@@ -208,7 +211,7 @@ class Trainer:
                 mc.sendCommand('jump 1')
             else:
                 mc.sendCommand(str(act))
-   
+
     @staticmethod
     def init_mission(i, mc):
         miss = mb.MissionXML()
@@ -223,10 +226,10 @@ class Trainer:
         logging.info('starting at ({0}, {1})'.format(start_x, start_y))
         miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
                  agenthandlers=agent_handlers,
-                                          #    depth   
+                                          #    depth
                  agentstart=mb.AgentStart([start_x, 30.0, start_y, 1]))])
 
-        miss.setWorld(mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", 
+        miss.setWorld(mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake",
             seed='43',
             forceReset="false"))
         miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
@@ -235,5 +238,5 @@ class Trainer:
             mc = MalmoConnector(miss)
         else:
             mc.setMissionXML(miss)
-        return mc 
+        return mc
 

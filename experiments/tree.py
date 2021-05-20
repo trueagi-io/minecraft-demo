@@ -1,3 +1,6 @@
+"""
+Environment and agent for the task of turning towards a tree
+"""
 import logging
 import math
 import random
@@ -45,7 +48,7 @@ def load_agent_tree(path):
     policy_net = network.QVisualNetwork(actionSet, 2, n_channels=3, activation=nn.ReLU(), batchnorm=True)
     target_net = network.QVisualNetwork(actionSet, 2, n_channels=3, activation=nn.ReLU(), batchnorm=True)
 
-    my_simple_agent = network.DQN(policy_net, target_net, 0.9, 3, 450, capacity=2000)
+    my_simple_agent = network.DQN(policy_net, target_net, 0.9, 20, 450, capacity=2000)
 
     if os.path.exists('agent_tree.pth'):
         data = torch.load('agent_tree.pth')
@@ -66,7 +69,7 @@ class Trainer:
         self.eps = eps
 
     def is_tree_visible(self):
-        logging.info(self.mc.getLineOfSight('type'))
+        logging.debug(self.mc.getLineOfSight('type'))
         if self.mc.getLineOfSight('type') in ['log', 'leaves']:
             return [self.mc.getLineOfSight('type'), 
                     self.mc.getLineOfSight('x'), 
@@ -89,11 +92,21 @@ class Trainer:
             else:
                 time.sleep(0.05)
 
+    def _random_turn(self):
+        turn = numpy.random.random() * random.choice([-1, 1])
+        pitch = numpy.random.random() * random.choice([-1, 1])
+        self.act(["turn {0}".format(turn)])
+        self.act(["pitch {0}".format(pitch)])
+        time.sleep(0.5)
+        stop_motion(self.mc)
+        
     def run_episode(self):
         """ Deep Q-Learning episode
         """
         self.agent.clear_state()
         mc = self.mc 
+        # apply random turn and pitch
+        self._random_turn()
         logging.debug('memory: %i', self.agent.memory.position)
         self.agent.train()
     
@@ -162,7 +175,7 @@ class Trainer:
                 if reward == 0:
                     reward -= 2
             data['prev_pos'] = prev_pos
-            logging.info("current reward %f", reward)
+            logging.debug("current reward %f", reward)
             new_actions = self.agent(data, reward=reward, epsilon=eps)
             eps = max(eps * eps_decay, eps_end)
             logging.debug('epsilon %f', eps)
@@ -189,7 +202,7 @@ class Trainer:
     def act(self, actions):
         mc = self.mc
         for act in actions:
-            logging.info('action %s', act)
+            logging.debug('action %s', act)
             if act == 'jump_forward':
                 mc.sendCommand('move 0.4')
                 mc.sendCommand('jump 1')

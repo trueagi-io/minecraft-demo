@@ -271,28 +271,28 @@ class QVisualNetwork(ContiniousActionAgent):
         self.activation = activation
         stride = 1
         kernel = (3, 3)
-        self.conv1a = nn.Conv2d(n_channels, 64, kernel_size=kernel,
+        self.conv1a = nn.Conv2d(n_channels, 32, kernel_size=kernel,
                         stride=stride, padding=1)
 
-        self.conv1b = nn.Conv2d(64, 64, kernel_size=kernel,
+        self.conv1b = nn.Conv2d(32, 32, kernel_size=kernel,
                         stride=stride, padding=1)
 
-        self.conv2a = nn.Conv2d(64, 64, kernel_size=kernel,
+        self.conv2a = nn.Conv2d(32, 32, kernel_size=kernel,
                         stride=stride, padding=1)
 
-        self.conv2b = nn.Conv2d(64, 64, kernel_size=kernel,
+        self.conv2b = nn.Conv2d(32, 32, kernel_size=kernel,
                         stride=stride, padding=1)
 
-        self.conv3a = nn.Conv2d(64, 128, kernel_size=kernel,
+        self.conv3a = nn.Conv2d(32, 64, kernel_size=kernel,
                         stride=stride, padding=1)
 
-        self.conv3b = nn.Conv2d(128, 128, kernel_size=kernel,
+        self.conv3b = nn.Conv2d(64, 64, kernel_size=kernel,
                         stride=stride, padding=1)
 
-        self.conv4a = nn.Conv2d(128, 128, kernel_size=kernel,
+        self.conv4a = nn.Conv2d(64, 64, kernel_size=kernel,
                         stride=stride, padding=1)
 
-        self.conv4b = nn.Conv2d(128, 28, kernel_size=kernel,
+        self.conv4b = nn.Conv2d(64, 28, kernel_size=kernel,
                         stride=stride, padding=1)
         self.pool = nn.MaxPool2d((2, 2))
 
@@ -319,13 +319,13 @@ class QVisualNetwork(ContiniousActionAgent):
         self.pooling = PyramidPooling((8, 4, 1))
 
         if batchnorm:
-            self.batchnorm0 = nn.BatchNorm2d(64)
-            self.batchnorm1 = nn.BatchNorm2d(64)
-            self.batchnorm2 = nn.BatchNorm2d(64)
-            self.batchnorm3 = nn.BatchNorm2d(64)
-            self.batchnorm4 = nn.BatchNorm2d(128)
-            self.batchnorm5 = nn.BatchNorm2d(128)
-            self.batchnorm6 = nn.BatchNorm2d(128)
+            self.batchnorm0 = nn.BatchNorm2d(32)
+            self.batchnorm1 = nn.BatchNorm2d(32)
+            self.batchnorm2 = nn.BatchNorm2d(32)
+            self.batchnorm3 = nn.BatchNorm2d(32)
+            self.batchnorm4 = nn.BatchNorm2d(64)
+            self.batchnorm5 = nn.BatchNorm2d(64)
+            self.batchnorm6 = nn.BatchNorm2d(64)
             self.batchnorm7 = nn.BatchNorm2d(28)
         else:
             l = lambda x: x

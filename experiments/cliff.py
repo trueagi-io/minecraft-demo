@@ -1,3 +1,6 @@
+"""
+cliff-walking environment and agent
+"""
 import logging
 import random
 import time

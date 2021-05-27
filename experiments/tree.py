@@ -32,7 +32,7 @@ class DeadException(RuntimeError):
         super().__init__("it's dead")
 
 
-def load_agent_tree(path):
+def load_agent(path):
     # possible actions are
     # move[-1, 1],
     # strafe[-1, 1]
@@ -42,8 +42,9 @@ def load_agent_tree(path):
 
     # discreet actions
     # "move -0.5" "jump_forward",
-    action_names = ["turn 0.15", "turn -0.15", "turn 0.05",
-                   "turn 0.05", 'pitch 0.1', 'pitch -0.1']
+    action_names = ["turn 0.15", "turn -0.15", "turn 0.01",
+                    "turn 0.01", 'pitch 0.1', 'pitch -0.1',
+                    'pitch 0.01', 'pitch -0.01']
     actionSet = [network.CategoricalAction(action_names)]
 
     policy_net = network.QVisualNetwork(actionSet, 2, n_channels=3, activation=nn.ReLU(), batchnorm=True)
@@ -205,14 +206,15 @@ class Trainer(common.Trainer):
     @staticmethod
     def init_mission(i, mc):
         miss = mb.MissionXML()
-        video_producer = mb.VideoProducer(width=320, height=240)
+        video_producer = mb.VideoProducer(width=320, height=240, want_depth=False)
 
         obs = mb.Observations()
         agent_handlers = mb.AgentHandlers(observations=obs,
             all_str=mission_ending, video_producer=video_producer)
         # a tree is at -18, 15
-        start_x = random.choice(numpy.arange(-22, -8))
-        start_y = random.choice(numpy.arange(7, 21))
+        start_x = random.choice(numpy.arange(-28, -2))
+        start_y = random.choice(numpy.arange(1, 27))
+
         logging.info('starting at ({0}, {1})'.format(start_x, start_y))
         miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
                  agenthandlers=agent_handlers,

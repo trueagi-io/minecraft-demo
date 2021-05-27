@@ -12,7 +12,8 @@ import math
 
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector
-from common import learn, stop_motion, grid_to_vec_walking, \
+import common
+from common import stop_motion, grid_to_vec_walking, \
     direction_to_target, normAngle
 
 
@@ -64,7 +65,7 @@ mission_ending = """
 """
 
 
-def load_agent_cliff(path):
+def load_agent(path):
     # possible actions are
     # move[-1, 1],
     # strafe[-1, 1]
@@ -95,8 +96,9 @@ def load_agent_cliff(path):
 
 
 
-class Trainer:
-    def __init__(self, agent, mc, optimizer, eps):
+class Trainer(common.Trainer):
+    def __init__(self, agent, mc, optimizer, eps, train=True):
+        super().__init__(train)
         self.agent = agent
         self.mc = mc
         self.optimizer = optimizer
@@ -159,7 +161,7 @@ class Trainer:
         prev_life = 20
         solved = False
     
-        mean_loss = numpy.mean([learn(self.agent, self.optimizer) for _ in range(5)])
+        mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(5)])
         logging.info('loss %f', mean_loss)
         while True:
             t += 1
@@ -174,7 +176,7 @@ class Trainer:
                 self.agent.push_final(-100)
                 reward = -100
                 logging.debug("failed at step %i", t)
-                learn(self.agent, self.optimizer)
+                self.learn(self.agent, self.optimizer)
                 break
             if prev_pos is None:
                 prev_pos = new_pos
@@ -186,7 +188,7 @@ class Trainer:
                     reward = -100
                     stop_motion(mc)
                     self.agent.push_final(reward)
-                    learn(self.agent, self.optimizer)
+                    self.learn(self.agent, self.optimizer)
                     break
                 reward += (prev_target_dist - target_enc)[2] + (life - prev_life) * 2
                 prev_life = life
@@ -221,7 +223,7 @@ class Trainer:
                 reward = -10
                 self.agent.push_final(-10)
                 self.mc.sendCommand("quit")
-                learn(self.agent, self.optimizer)
+                self.learn(self.agent, self.optimizer)
                 break
             total_reward += reward
         # in termial state reward is not added due loop breaking
@@ -244,7 +246,7 @@ class Trainer:
     def init_mission(i, mc):
         sp = ''
         # train on simple environment first
-        if i < 10:
+        if i < 200:
             p = random.choice([x for x in range(2, 8)])
         else:
             p = random.choice([-2, -1] + [x for x in range(0, 12)])

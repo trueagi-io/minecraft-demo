@@ -6,6 +6,7 @@ import sys
 
 import MalmoPython
 
+import numpy
 import tagilmo.utils.malmoutils as malmoutils
 from tagilmo.utils.mission_builder import MissionXML
 
@@ -107,13 +108,25 @@ class MalmoConnector:
                 return False
         return True
 
+    def is_mission_running(self, nAgent=0):
+        world_state = self.agent_hosts[nAgent].getWorldState()
+        return world_state.is_mission_running
+
     def observeProc(self, nAgent=None):
         r = range(len(self.agent_hosts)) if nAgent is None else range(nAgent, nAgent+1)
+        self.pixels = [None for _ in r]
         for n in r:
             self.worldStates[n] = self.agent_hosts[n].getWorldState()
             self.isAlive[n] = self.worldStates[n].is_mission_running
             obs = self.worldStates[n].observations
             self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
+            # might need to wait for a new frame
+            frames = self.worldStates[n].video_frames
+            if frames:
+                self.pixels[n] = numpy.frombuffer(frames[0].pixels, dtype=numpy.uint8)
+
+    def getImage(self, nAgent=0):
+        return self.pixels[nAgent]
 
     def getAgentPos(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('XPos' in self.observe[nAgent]):

@@ -1,3 +1,5 @@
+import logging
+import torch
 import math
 import numpy
 from time import sleep
@@ -6,6 +8,7 @@ from time import sleep
 passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass', 
                   'reeds', 'red_flower', 'yellow_flower', 'flowing_lava',
                   'cobblestone', 'stone', 'sandstone', 'lapis_block']
+
 
 block_id_cliff_walking = {'air': 0,
             'water': 1,
@@ -111,4 +114,58 @@ def direction_to_target(mc, pos):
     yaw = normAngle(yaw - aPos[4]*math.pi/180.)
     dist = math.sqrt((aPos[0] - pos[0]) * (aPos[0] - pos[0]) + (aPos[2] - pos[2]) * (aPos[2] - pos[2]))
     return pitch, yaw, dist
+
+
+def stop_motion(mc):
+    mc.sendCommand('move 0')
+    mc.sendCommand('strafe 0')
+    mc.sendCommand('pitch 0')
+    mc.sendCommand('turn 0')
+    mc.sendCommand('jump 0')
+
+
+def learn(agent, optimizer):
+    losses = []
+    for i in range(40):
+        optimizer.zero_grad()
+        loss = agent.compute_loss()
+        if loss is not None:
+            # Optimize the model
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(agent.parameters(), 2)
+            optimizer.step()
+            losses.append(loss.cpu().detach())
+    if losses:
+        logging.debug('optimizing')
+        logging.debug('loss %f', numpy.mean(losses))
+    return numpy.mean(losses)
+
+
+class Trainer:
+    def __init__(self, train=True):
+        self.train = train
+        if not self.train:
+            logging.info('evaluation mode')
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        logging.info('using device {0}'.format(self.device))
+
+    def collect_state(self):
+        raise NotImplementedError()
+
+    def run_episode(self):
+        """ Deep Q-Learning episode
+        """
+        raise NotImplementedError() 
+
+    def learn(self, *args, **kwargs):
+        if self.train:
+            return learn(*args, **kwargs)
+        return 0
+
+    def act(self, actions):
+        raise NotImplementedError() 
+
+    @classmethod
+    def init_mission(i, mc):
+        raise NotImplementedError() 
 

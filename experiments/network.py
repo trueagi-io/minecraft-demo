@@ -341,6 +341,8 @@ class QVisualNetwork(ContiniousActionAgent):
             self.batchnorm6 = l
             self.batchnorm7 = l
 
+        self.apply(init_weights_xavier)
+
     def superblock(self, x, conv1, conv2, batch1, batch2, skip=False):
         x = conv1(x)
         x = self.activation(x)

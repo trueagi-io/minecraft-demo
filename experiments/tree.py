@@ -62,6 +62,8 @@ def load_agent(path):
 
 
 class Trainer(common.Trainer):
+    want_depth = False
+
     def __init__(self, agent, mc, optimizer, eps, train=True):
         super().__init__(train)
         self.agent = agent
@@ -88,7 +90,7 @@ class Trainer(common.Trainer):
                 self_pitch = normAngle(aPos[3]*math.pi/180.)
                 self_yaw = normAngle(aPos[4]*math.pi/180.)
 
-                data = data.reshape((240, 320, 3)).transpose(2, 0, 1) / 255.
+                data = data.reshape((240, 320, 3 + self.want_depth)).transpose(2, 0, 1) / 255.
                 pitch_yaw = torch.as_tensor([self_pitch, self_yaw])
                 return dict(image=torch.as_tensor(data).float(), position=pitch_yaw)
             else:
@@ -203,10 +205,10 @@ class Trainer(common.Trainer):
             else:
                 mc.sendCommand(str(act))
 
-    @staticmethod
-    def init_mission(i, mc):
+    @classmethod
+    def init_mission(cls, i, mc):
         miss = mb.MissionXML()
-        video_producer = mb.VideoProducer(width=320, height=240, want_depth=False)
+        video_producer = mb.VideoProducer(width=320, height=240, want_depth=cls.want_depth)
 
         obs = mb.Observations()
         agent_handlers = mb.AgentHandlers(observations=obs,

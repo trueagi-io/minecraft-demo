@@ -184,11 +184,16 @@ if __name__ == '__main__':
     from goodpoint import GoodPoint
     import torch.optim as optim
     device = 'cpu'
-    data_set = MinecraftImageDataset(max_size=400, transform=transform_item)
+    train_depth = False
+    batch_size = 20
+
+    data_set = MinecraftImageDataset(max_size=700, transform=transform_item)
     from torch.utils.data import DataLoader
-    loader = DataLoader(data_set, batch_size=2, shuffle=False)
-    net = GoodPoint(8, len(common.visible_blocks) + 1, n_channels=3).to('cpu')
-    net.load_state_dict(torch.load('goodpoint.pt')['model'])
+    loader = DataLoader(data_set, batch_size=batch_size, shuffle=False)
+    # +1 for None
+    net = GoodPoint(8, len(common.visible_blocks) + 1, n_channels=3, depth=train_depth).to('cpu')
+    model_weights = torch.load('goodpoint.pt')['model']
+    net.load_checkpoint(model_weights)
     net.train()
     lr = 0.005
     epochs = 20
@@ -200,22 +205,32 @@ if __name__ == '__main__':
     water = common.visible_block_num['water']
     lava = common.visible_block_num['lava']
 
-    show = True 
+    show = False
 
-    #for ep in episode_files:
-    #    add_episode(data_set, ep)
+    for ep in episode_files:
+        add_episode(data_set, ep)
+        if data_set.size() == len(data_set):
+            break
 
     for epoch in range(epochs):
         ep = episode_files[epoch % len(episode_files)]
-        ep = 'episode_test.pkl'
         print(ep)
         add_episode(data_set, ep)
         for j, batch in enumerate(loader):
             optimizer.zero_grad()
             imgs, (points, depth) = batch
             prediction = net(imgs)
-            logprob = torch.log(prediction + eps)
-            loss = - logprob[points.nonzero(as_tuple=True)].mean()
+            if train_depth:
+                blocks, p_depth = prediction
+            else:
+                blocks = prediction
+            logprob = torch.log(blocks + eps)
+            loss_blocks = - logprob[points.nonzero(as_tuple=True)].mean()
+            loss = loss_blocks
+            if train_depth:
+                w = 10
+                loss_depth = ((depth.unsqueeze(1) * w - p_depth * w ) ** 2).mean()
+                loss += loss_depth
             loss.backward()
             optimizer.step()
             for i in range(1):
@@ -228,13 +243,16 @@ if __name__ == '__main__':
                     cv2.imshow('label-lava', points[i][lava].numpy().astype(numpy.uint8) * 255)
                     cv2.imshow('depth', (depth[i].numpy() * 255).astype(numpy.uint8))
                     # show grass, leaves, log
-                    cv2.imshow('water', (prediction[i][water] * 255).detach().numpy().astype(numpy.uint8))
-                    cv2.imshow('lava', (prediction[i][lava] * 255).detach().numpy().astype(numpy.uint8))
-                    cv2.imshow('leaves', (prediction[i][leaves] * 255).detach().numpy().astype(numpy.uint8))
-                    cv2.imshow('log', (prediction[i][log] * 255).detach().numpy().astype(numpy.uint8))
+                    cv2.imshow('water', (blocks[i][water] * 255).detach().numpy().astype(numpy.uint8))
+                    cv2.imshow('depth_p', (p_depth[i][0] * 255).detach().numpy().astype(numpy.uint8))
+                    cv2.imshow('lava', (blocks[i][lava] * 255).detach().numpy().astype(numpy.uint8))
+                    cv2.imshow('leaves', (blocks[i][leaves] * 255).detach().numpy().astype(numpy.uint8))
+                    cv2.imshow('log', (blocks[i][log] * 255).detach().numpy().astype(numpy.uint8))
                     cv2.waitKey(200)
             if j % 10:
-                print(loss)
+                print('loss_blocks', loss)
+                if train_depth:
+                    print('loss_depth', loss_depth)
         snap = dict()
         snap['model'] = net.state_dict()
         snap['optimizer'] = optimizer.state_dict()

@@ -1,3 +1,4 @@
+import logging
 import torch
 import numpy
 from torch import nn
@@ -5,14 +6,18 @@ from torch import nn
 from network import init_weights_xavier
 from depth import DepthToSpace
 
+logger = logging.getLogger()
 
 class GoodPoint(nn.Module):
-    def __init__(self, grid_size, n_blocks, n_channels=1, activation=nn.ReLU(),
-                 batchnorm=True):
+    def __init__(self, grid_size, n_blocks, n_channels=1,
+                 activation=nn.ReLU(),
+                 batchnorm=True,
+                 depth=False):
         super().__init__()
         self.activation = activation
         stride = 1
         kernel = (3, 3)
+        self.depth = depth
         self.n_blocks = n_blocks
         self.conv1a = nn.Conv2d(n_channels, 64, kernel_size=kernel,
                         stride=stride, padding=1)
@@ -41,7 +46,7 @@ class GoodPoint(nn.Module):
 
         # Detector head
         self.convPa = torch.nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
-        self.convPb = torch.nn.Conv2d(256, 64 * n_blocks, kernel_size=1, stride=1, padding=0)
+        self.convPb = torch.nn.Conv2d(256, 64 * (n_blocks + depth), kernel_size=1, stride=1, padding=0)
 
         if batchnorm:
             self.batchnorm0 = nn.BatchNorm2d(64)
@@ -53,7 +58,7 @@ class GoodPoint(nn.Module):
             self.batchnorm6 = nn.BatchNorm2d(128)
             self.batchnorm7 = nn.BatchNorm2d(128)
             self.batchnormPa = nn.BatchNorm2d(256)
-            self.batchnormPb = nn.BatchNorm2d(64 * n_blocks)
+            self.batchnormPb = nn.BatchNorm2d(64 * (n_blocks + depth))
         else:
             l = lambda x: x
             self.batchnorm0 = l
@@ -105,7 +110,36 @@ class GoodPoint(nn.Module):
 
         # prob_blocks = nn.functional.softmax(none_blocks, dim=1)
         # prob_water = nn.functional.softmax(none_water, dim=1)
-        prob_blocks = nn.functional.softmax(result, dim=1)
+        if self.depth:
+            blocks = result[:, :-1]
+            depth = torch.sigmoid(result[:, -1]).unsqueeze(1)
+            prob_blocks = nn.functional.softmax(blocks, dim=1)
+            return prob_blocks, depth
+        else:
+            prob_blocks = nn.functional.softmax(result, dim=1)
         # mean_none = prob_blocks[:, 0] * 0.5 + prob_water[:, 0] * 0.5
         # result = torch.cat([mean_none.unsqueeze(1), prob_water[:, 1].unsqueeze(1), prob_blocks[:, 1:]], dim=1)
         return prob_blocks
+
+    def load_checkpoint(self, state_dict: dict) -> bool:
+        """
+        Handles size mismatch
+
+        adapted from
+        https://github.com/PyTorchLightning/pytorch-lightning/issues/4690
+        """
+        model_state_dict = self.state_dict()
+        is_changed = False
+        for k in state_dict:
+            if k in model_state_dict:
+                if state_dict[k].shape != model_state_dict[k].shape:
+                    logger.info(f"Skip loading parameter: {k}, "
+                                f"required shape: {model_state_dict[k].shape}, "
+                                f"loaded shape: {state_dict[k].shape}")
+                    state_dict[k] = model_state_dict[k]
+                    is_changed = True
+            else:
+                logger.info(f"Dropping parameter {k}")
+                is_changed = True
+        self.load_state_dict(state_dict)
+        return is_changed

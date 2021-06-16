@@ -28,3 +28,5 @@ class MinecraftImageDataset(Dataset):
         label = item[1:]
         return image, label
 
+    def size(self):
+        return len(self.items)

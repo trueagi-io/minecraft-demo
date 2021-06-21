@@ -183,22 +183,24 @@ if __name__ == '__main__':
     from dataset import MinecraftImageDataset
     from goodpoint import GoodPoint
     import torch.optim as optim
-    device = 'cpu'
+    device = 'cuda'
     train_depth = False
     batch_size = 20
 
-    data_set = MinecraftImageDataset(max_size=700, transform=transform_item)
+    data_set = MinecraftImageDataset(max_size=900, transform=transform_item)
     from torch.utils.data import DataLoader
     loader = DataLoader(data_set, batch_size=batch_size, shuffle=False)
     # +1 for None
     net = GoodPoint(8, len(common.visible_blocks) + 1, n_channels=3, depth=train_depth).to('cpu')
     model_weights = torch.load('goodpoint.pt')['model']
     net.load_checkpoint(model_weights)
+    net.to(device)
     net.train()
-    lr = 0.005
-    epochs = 20
+    lr = 0.003
+    epochs = 30
     eps = 0.0000001
     optimizer = optim.AdamW(net.parameters(), lr=lr)
+    optimizer.load_state_dict(torch.load('goodpoint.pt')['optimizer'])
     episode_files = os.listdir('episodes')
     leaves = common.visible_block_num['leaves']
     log = common.visible_block_num['log']
@@ -219,12 +221,17 @@ if __name__ == '__main__':
         for j, batch in enumerate(loader):
             optimizer.zero_grad()
             imgs, (points, depth) = batch
-            prediction = net(imgs)
+            prediction = net(imgs.to(device))
             if train_depth:
                 blocks, p_depth = prediction
             else:
                 blocks = prediction
             logprob = torch.log(blocks + eps)
+            block_count = points.sum(dim=(0, 2, 3))
+            block_sum = block_count.sum()
+            ratio = block_count / block_sum
+            weights = torch.as_tensor([1 if x == 0 else 1 / x for x in ratio])
+            logprob *= weights.unsqueeze(0).unsqueeze(2).unsqueeze(3).to(logprob)
             loss_blocks = - logprob[points.nonzero(as_tuple=True)].mean()
             loss = loss_blocks
             if train_depth:

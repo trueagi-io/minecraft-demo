@@ -1,6 +1,7 @@
 """
 Environment and agent for the task of turning towards a tree
 """
+import copy
 import logging
 import math
 import random
@@ -45,23 +46,23 @@ def load_agent(path):
 
     # discreet actions
     # "move -0.5" "jump_forward",
-    action_names = ["turn 0.15", "turn -0.15", "turn 0.01",
+    action_names = ["turn 0.20", "turn -0.20", "turn 0.01",
                     "turn 0.01", 'pitch 0.1', 'pitch -0.1',
                     'pitch 0.01', 'pitch -0.01']
     actionSet = [network.CategoricalAction(action_names)]
-    n_channels =  len(common.visible_blocks) + 1
+    n_out =  len(common.visible_blocks) + 1
 
     location = 'cuda' if torch.cuda.is_available() else 'cpu'
-    net = GoodPoint(8, len(common.visible_blocks) + 1, 
+    net = GoodPoint(8, n_out,
                     n_channels=3, depth=False)
-    model_weights = torch.load('goodpoint.pt')['model']
+    model_weights = torch.load('goodpoint.pt', map_location=location)['model']
     net.load_checkpoint(model_weights)
     net.to(location)
 
-    policy_net = SearchTree(actionSet, 2, n_channels=n_channels, 
-                            activation=nn.ReLU(), block_net=net)
-    target_net = SearchTree(actionSet, 2, n_channels=n_channels, 
-                            activation=nn.ReLU(), block_net=net)
+    policy_net = SearchTree(actionSet, 2, n_channels=3,
+                            activation=nn.LeakyReLU(), block_net=net)
+    target_net = SearchTree(actionSet, 2, n_channels=3,
+                            activation=nn.LeakyReLU(), block_net=net)
 
     batch_size = 20
     my_simple_agent = network.DQN(policy_net, target_net, 0.9, batch_size, 450, capacity=2000)
@@ -75,7 +76,7 @@ def load_agent(path):
 
 
 class Trainer(common.Trainer):
-    want_depth = False
+    want_depth = True
 
     def __init__(self, agent, mc, optimizer, eps, train=True):
         super().__init__(train)
@@ -103,7 +104,7 @@ class Trainer(common.Trainer):
                 self_pitch = normAngle(aPos[3]*math.pi/180.)
                 self_yaw = normAngle(aPos[4]*math.pi/180.)
 
-                data = data.reshape((240, 160, 3 + self.want_depth)).transpose(2, 0, 1) / 255.
+                data = data.reshape((240, 320, 3 + self.want_depth)).transpose(2, 0, 1) / 255.
                 pitch_yaw = torch.as_tensor([self_pitch, self_yaw])
                 return dict(image=torch.as_tensor(data).float(), position=pitch_yaw)
             else:
@@ -127,7 +128,7 @@ class Trainer(common.Trainer):
         logging.debug('memory: %i', self.agent.memory.position)
         self.agent.train()
 
-        max_t = 50
+        max_t = 60
         eps_start = self.eps
         eps_end = 0.05
         eps_decay = 0.99
@@ -180,9 +181,9 @@ class Trainer(common.Trainer):
                         solved = True
                         break
                     elif target[0] == 'leaves':
-                        reward = 1
+                        reward = -0.05
                 if reward == 0:
-                    reward -= 2
+                    reward -= 1
             data['prev_pos'] = prev_pos
             logging.debug("current reward %f", reward)
             new_actions = self.agent(data, reward=reward, epsilon=eps)
@@ -221,14 +222,16 @@ class Trainer(common.Trainer):
     @classmethod
     def init_mission(cls, i, mc):
         miss = mb.MissionXML()
-        video_producer = mb.VideoProducer(width=160, height=240, want_depth=cls.want_depth)
+        video_producer = mb.VideoProducer(width=320, height=240, want_depth=cls.want_depth)
 
         obs = mb.Observations()
         agent_handlers = mb.AgentHandlers(observations=obs,
             all_str=mission_ending, video_producer=video_producer)
         # a tree is at -18, 15
-        start_x = random.choice(numpy.arange(-19, 7))
-        start_y = random.choice(numpy.arange(10, 18))
+        start_x = random.choice(numpy.arange(-18, 6))
+        start_y = random.choice(numpy.arange(11, 17))
+        #start_x = -17
+        #start_y = 13
 
         logging.info('starting at ({0}, {1})'.format(start_x, start_y))
         miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
@@ -249,25 +252,40 @@ class Trainer(common.Trainer):
 
 
 class SearchTree(network.ContiniousActionAgent, VGG):
-    def __init__(self, actions, pos_enc_len, n_channels=1, activation=nn.ReLU(), block_net=None):
+    def __init__(self, actions, pos_enc_len, n_channels=1, activation=nn.LeakyReLU(), block_net=None):
         super().__init__(actions)
         stride = 1
         kernel = (3, 3)
-        self.block_net = block_net
-        self.conv1a = nn.Conv2d(n_channels, 16, kernel_size=kernel,
+        # exclude from parameters
+        self.block_net = [block_net]
+        self.conv1a = nn.Conv2d(n_channels, 32, kernel_size=kernel,
                         stride=stride, padding=1)
 
-        self.conv1b = nn.Conv2d(16, 16, kernel_size=kernel,
+        self.conv1b = nn.Conv2d(32, 32, kernel_size=kernel,
                         stride=stride, padding=1)
 
-        self.conv2a = nn.Conv2d(16, 16, kernel_size=kernel,
+        self.conv2a = nn.Conv2d(32, 64, kernel_size=kernel,
                         stride=stride, padding=1)
 
-        self.conv2b = nn.Conv2d(16, 16, kernel_size=kernel,
+        self.conv2b = nn.Conv2d(64, 64, kernel_size=kernel,
+                        stride=stride, padding=1)
+        self.conv3a = nn.Conv2d(64, 64, kernel_size=kernel,
+                        stride=stride, padding=1)
+        self.conv3b = nn.Conv2d(64, 16, kernel_size=kernel,
                         stride=stride, padding=1)
         self.pool = nn.MaxPool2d((2, 2))
         self.pooling = PyramidPooling((8, 4, 1))
-        self.activation = activation 
+        self.activation = activation
+
+        self.batchnorm0 = nn.BatchNorm2d(32)
+        self.batchnorm1 = nn.BatchNorm2d(32)
+        self.batchnorm2 = nn.BatchNorm2d(64)
+        self.batchnorm3 = nn.BatchNorm2d(64)
+        self.batchnorm4 = nn.BatchNorm2d(64)
+        self.batchnorm5 = nn.BatchNorm2d(16)
+        self.batchnorm6 = nn.BatchNorm2d(128)
+        self.batchnorm7 = nn.BatchNorm2d(128)
+
 
         num = 128
         # position embedding
@@ -295,9 +313,16 @@ class SearchTree(network.ContiniousActionAgent, VGG):
         """
         generate feature vector
         """
+        log = common.visible_block_num['log']
+        leaves = common.visible_block_num['leaves']
         with torch.no_grad():
-            blocks = self.block_net(x)
-        x = self.vgg(blocks) 
+            blocks = self.block_net[0](x[:, :3])
+
+        depth = x[:, 3]
+        leaves_block = blocks[:, leaves]
+        log_block = blocks[:, log]
+        stack = torch.stack((log_block, leaves_block, depth), dim=1)
+        x = self.vgg(stack)
         x = self.pooling(x)
         return x
 
@@ -307,7 +332,7 @@ class SearchTree(network.ContiniousActionAgent, VGG):
             x = x.unsqueeze(0)
         pos = data['position']
         prev_pos = data['prev_pos']
-        visual_data = self.process_image(x) 
+        visual_data = self.process_image(x)
 
         if len(pos.shape) == 1:
             pos = pos.unsqueeze(0)

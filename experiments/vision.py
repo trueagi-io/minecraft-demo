@@ -172,20 +172,18 @@ class Trainer(tree.Trainer):
         agent_handlers = mb.AgentHandlers(observations=obs,
             all_str=tree.mission_ending, video_producer=video_producer)
         # a tree is at -18, 15
-        start_x = -20
-        start_y = 15
+        start_x = -17
+        start_y = 13
 
         logging.info('starting at ({0}, {1})'.format(start_x, start_y))
         miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
-                 agenthandlers=agent_handlers)])
+                 agenthandlers=agent_handlers,
                                           #    depth
-                 #agentstart=mb.AgentStart([start_x, 30.0, start_y, 1]))])
+                 agentstart=mb.AgentStart([start_x, 30.0, start_y, 1]))])
 
         miss.setWorld(mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake",
-            seed='22',
-            forceReset="true"))
-        #miss.setWorld(mb.defaultworld(seed=43, forceReset=True))
-
+            seed='43',
+            forceReset="false"))
         miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
 
         if mc is None:

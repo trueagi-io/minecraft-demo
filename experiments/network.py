@@ -11,6 +11,7 @@ import torch.nn as nn
 from torch.distributions.beta import Beta
 from torch.distributions.categorical import Categorical
 from pyramidpooling import PyramidPooling
+from vgg import VGG
 
 
 def init_weights_xavier(m):
@@ -229,8 +230,9 @@ class DQN:
                                                 if s is not None]
 
         non_final_state = dict()
-        for k in non_final_next_states[0].keys():
-            non_final_state[k] = torch.stack([data[k] for data in non_final_next_states])
+        if non_final_next_states:
+            for k in non_final_next_states[0].keys():
+                non_final_state[k] = torch.stack([data[k] for data in non_final_next_states])
 
         device = next(self.target_net.parameters()).device
         next_Q_values = torch.zeros(len(non_final_mask)).to(device)
@@ -268,7 +270,7 @@ class DQN:
         return self.target_net.load_state_dict(state_dict, strict)
 
 
-class QVisualNetwork(ContiniousActionAgent):
+class QVisualNetwork(ContiniousActionAgent, VGG):
     def __init__(self, actions, pos_enc_len, n_channels=1, activation=nn.ReLU(), batchnorm=True):
         super().__init__(actions)
         self.activation = activation
@@ -342,25 +344,6 @@ class QVisualNetwork(ContiniousActionAgent):
             self.batchnorm7 = l
 
         self.apply(init_weights_xavier)
-
-    def superblock(self, x, conv1, conv2, batch1, batch2, skip=False):
-        x = conv1(x)
-        x = self.activation(x)
-        x = batch1(x)
-        x = conv2(x)
-        x = self.activation(x)
-        x = batch2(x)
-        return x
-
-    def vgg(self, x):
-        x = self.superblock(x, self.conv1a, self.conv1b, self.batchnorm0, self.batchnorm1)
-        x = self.pool(x)
-        x = self.superblock(x, self.conv2a, self.conv2b, self.batchnorm2, self.batchnorm3)
-        x = self.pool(x)
-        x = self.superblock(x, self.conv3a, self.conv3b, self.batchnorm4, self.batchnorm5)
-        x = self.pool(x)
-        x = self.superblock(x, self.conv4a, self.conv4b, self.batchnorm6, self.batchnorm7)
-        return x
 
     def forward(self, data):
         x = data['image'].to(next(self.conv1a.parameters()))

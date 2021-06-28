@@ -47,18 +47,17 @@ def load_agent(path):
                     'pitch 0.01', 'pitch -0.01']
     actionSet = [network.CategoricalAction(action_names)]
 
-    policy_net = network.QVisualNetwork(actionSet, 2, n_channels=3, activation=nn.ReLU(), batchnorm=True)
-    target_net = network.QVisualNetwork(actionSet, 2, n_channels=3, activation=nn.ReLU(), batchnorm=True)
+    policy_net = network.QVisualNetwork(actionSet, 2, 20, n_channels=3, activation=nn.ReLU(), batchnorm=True)
+    target_net = network.QVisualNetwork(actionSet, 2, 20, n_channels=3, activation=nn.ReLU(), batchnorm=True)
     batch_size = 20
     my_simple_agent = network.DQN(policy_net, target_net, 0.9, batch_size, 450, capacity=2000)
-
-    if os.path.exists('agent_tree.pth'):
-        location = 'cuda' if torch.cuda.is_available() else 'cpu'
-        logging.info('loading model from agent_tree.pth')
-        data = torch.load('agent_tree.pth', map_location=location)
+    location = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if os.path.exists(path):
+        logging.info('loading model from %s', path)
+        data = torch.load(path, map_location=location)
         my_simple_agent.load_state_dict(data, strict=False)
 
-    return my_simple_agent
+    return my_simple_agent.to(location)
 
 
 class Trainer(common.Trainer):
@@ -130,6 +129,13 @@ class Trainer(common.Trainer):
         prev_target_dist = None
         prev_life = 20
         solved = False
+        target_vec = torch.zeros(20)
+        current_target = random.choice([0, 1])
+        possible_targets = 'log', 'water', 'sand', 'grass', 'leaves', 'water'
+        current_target = random.choice(possible_targets)
+
+        logging.info('current target %s', current_target)
+        target_vec[common.visible_block_num[current_target]] = 1
 
         mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(5)])
         logging.info('loss %f', mean_loss)
@@ -138,6 +144,7 @@ class Trainer(common.Trainer):
             reward = 0
             try:
                 data = self.collect_state()
+                data['state'] = target_vec
                 new_pos = data['position']
                 target = self.is_tree_visible()
             except DeadException:
@@ -159,17 +166,16 @@ class Trainer(common.Trainer):
                 reward += (life - prev_life) * 2
                 prev_life = life
                 if target is not None:
-                    if target[0] == 'log':
+                    if common.visible_block_num[target[0]] == common.visible_block_num[current_target]:
                         reward = 100
                         self.agent.push_final(reward)
+                        logging.debug('current target %s', target_str)
                         logging.debug('solved in %i steps', t)
                         mc.sendCommand("quit")
                         solved = True
                         break
-                    elif target[0] == 'leaves':
-                        reward = 1
                 if reward == 0:
-                    reward -= 2
+                    reward -= 1
             data['prev_pos'] = prev_pos
             logging.debug("current reward %f", reward)
             new_actions = self.agent(data, reward=reward, epsilon=eps)
@@ -214,10 +220,11 @@ class Trainer(common.Trainer):
         agent_handlers = mb.AgentHandlers(observations=obs,
             all_str=mission_ending, video_producer=video_producer)
         # a tree is at -18, 15
-        center_x = -18
-        center_y = 15
-        start_x = center_x + random.choice(numpy.arange(-29, 29))
-        start_y = center_y + random.choice(numpy.arange(-29, 29))
+        # stay between tree and pond
+        center_x = -23.5
+        center_y = 12.5
+        start_x = center_x + random.choice(numpy.arange(-2, 2))
+        start_y = center_y + random.choice(numpy.arange(-5, 5))
 
         logging.info('starting at ({0}, {1})'.format(start_x, start_y))
         miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',

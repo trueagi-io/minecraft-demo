@@ -1,6 +1,7 @@
 """
 Environment and agent for the task of turning towards a tree
 """
+import cv2
 import copy
 import logging
 import math
@@ -150,6 +151,7 @@ class Trainer(common.Trainer):
         while True:
             t += 1
             reward = 0
+            import pdb;pdb.set_trace()
             try:
                 data = self.collect_state()
                 new_pos = data['position']
@@ -251,7 +253,7 @@ class Trainer(common.Trainer):
         return mc
 
 
-class SearchTree(network.ContiniousActionAgent, VGG):
+class SearchTree(network.ContiniousActionAgent, VGG, common.BaseLoader):
     def __init__(self, actions, pos_enc_len, n_channels=1, activation=nn.LeakyReLU(), block_net=None):
         super().__init__(actions)
         stride = 1
@@ -321,6 +323,8 @@ class SearchTree(network.ContiniousActionAgent, VGG):
         depth = x[:, 3]
         leaves_block = blocks[:, leaves]
         log_block = blocks[:, log]
+        cv2.imshow('log', log_block[0].numpy())
+        cv2.waitKey(100)
         stack = torch.stack((log_block, leaves_block, depth), dim=1)
         x = self.vgg(stack)
         x = self.pooling(x)

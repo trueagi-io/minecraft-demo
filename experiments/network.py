@@ -4,6 +4,7 @@ import shutil
 import os
 import pickle
 import torch.nn.functional as F
+from collections import deque
 import numpy
 from collections import namedtuple
 import torch
@@ -11,6 +12,8 @@ import torch.nn as nn
 from torch.distributions.beta import Beta
 from torch.distributions.categorical import Categorical
 from pyramidpooling import PyramidPooling
+from vgg import VGG
+import common
 
 
 def init_weights_xavier(m):
@@ -171,6 +174,7 @@ class DQN:
     def to(self, arg):
         self.policy_net.to(arg)
         self.target_net.to(arg)
+        return self
 
     def parameters(self):
         return self.policy_net.parameters()
@@ -229,8 +233,9 @@ class DQN:
                                                 if s is not None]
 
         non_final_state = dict()
-        for k in non_final_next_states[0].keys():
-            non_final_state[k] = torch.stack([data[k] for data in non_final_next_states])
+        if non_final_next_states:
+            for k in non_final_next_states[0].keys():
+                non_final_state[k] = torch.stack([data[k] for data in non_final_next_states])
 
         device = next(self.target_net.parameters()).device
         next_Q_values = torch.zeros(len(non_final_mask)).to(device)
@@ -264,12 +269,12 @@ class DQN:
         return self.target_net.state_dict()
 
     def load_state_dict(self, state_dict, strict=True):
-        self.policy_net.load_state_dict(state_dict, strict)
-        return self.target_net.load_state_dict(state_dict, strict)
+        self.policy_net.load_checkpoint(state_dict, strict)
+        return self.target_net.load_checkpoint(state_dict, strict)
 
 
-class QVisualNetwork(ContiniousActionAgent):
-    def __init__(self, actions, pos_enc_len, n_channels=1, activation=nn.ReLU(), batchnorm=True):
+class QVisualNetwork(ContiniousActionAgent, VGG, common.BaseLoader):
+    def __init__(self, actions, pos_enc_len, state_len=0, n_channels=1, activation=nn.ReLU(), batchnorm=True):
         super().__init__(actions)
         self.activation = activation
         stride = 1
@@ -303,7 +308,7 @@ class QVisualNetwork(ContiniousActionAgent):
         # position embedding
         self.pos_emb = nn.Sequential(
             # prev and current position
-            nn.Linear(pos_enc_len * 2, num),
+            nn.Linear(pos_enc_len * 2 + state_len, num),
             nn.LeakyReLU(inplace=False),
 
             nn.Linear(num, num),
@@ -341,24 +346,7 @@ class QVisualNetwork(ContiniousActionAgent):
             self.batchnorm6 = l
             self.batchnorm7 = l
 
-    def superblock(self, x, conv1, conv2, batch1, batch2, skip=False):
-        x = conv1(x)
-        x = self.activation(x)
-        x = batch1(x)
-        x = conv2(x)
-        x = self.activation(x)
-        x = batch2(x)
-        return x
-
-    def vgg(self, x):
-        x = self.superblock(x, self.conv1a, self.conv1b, self.batchnorm0, self.batchnorm1)
-        x = self.pool(x)
-        x = self.superblock(x, self.conv2a, self.conv2b, self.batchnorm2, self.batchnorm3)
-        x = self.pool(x)
-        x = self.superblock(x, self.conv3a, self.conv3b, self.batchnorm4, self.batchnorm5)
-        x = self.pool(x)
-        x = self.superblock(x, self.conv4a, self.conv4b, self.batchnorm6, self.batchnorm7)
-        return x
+        self.apply(init_weights_xavier)
 
     def forward(self, data):
         x = data['image'].to(next(self.conv1a.parameters()))
@@ -372,7 +360,11 @@ class QVisualNetwork(ContiniousActionAgent):
         if len(pos.shape) == 1:
             pos = pos.unsqueeze(0)
             prev_pos = prev_pos.unsqueeze(0)
-        pos_data = torch.cat([pos, prev_pos], dim=1).to(next(self.conv1a.parameters()))
+        if 'state' in data:
+            state = data['state']
+            if len(state.shape) == 1:
+                state = state.unsqueeze(0)
+        pos_data = torch.cat([pos, prev_pos] + ([state] if 'state' in data else []), dim=1).to(next(self.conv1a.parameters()))
         if len(pos_data.shape) == 1:
             pos_data = pos_data.unsqueeze(0)
         pos_emb = self.pos_emb(pos_data)
@@ -381,7 +373,7 @@ class QVisualNetwork(ContiniousActionAgent):
 
 
 
-class QNetwork(ContiniousActionAgent):
+class QNetwork(ContiniousActionAgent, common.BaseLoader):
     def __init__(self, actions, grid_len, grid_w,
                  target_enc_len, pos_enc_len):
         super().__init__(actions)
@@ -394,6 +386,9 @@ class QNetwork(ContiniousActionAgent):
 
         self.trunk = nn.Sequential(
             nn.Linear(20 + target_enc_len + pos_enc_len , num),
+            nn.LeakyReLU(inplace=False),
+
+            nn.Linear(num, num),
             nn.LeakyReLU(inplace=False),
 
             nn.Linear(num, num),
@@ -458,6 +453,9 @@ class ReplayMemory:
         self.capacity = capacity
         self.memory = []
         self.position = 0
+        self.episode_stats = dict()
+        # (start, target) -> [avg reward, avg length]
+        self.failed_queue = deque([], maxlen=10)
 
     def push(self, *args):
         """Saves a transition."""

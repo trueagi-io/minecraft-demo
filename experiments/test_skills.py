@@ -34,7 +34,7 @@ def train_agent(agent, Trainer, save_path, train=True):
         time.sleep(0.5)  # (let the Mod reset)
 
         if i % 14 == 0:
-            torch.save(agent.state_dict(), save_path)
+            torch.save(agent.state_dict(), save_path, _use_new_zipfile_serialization=False)
 
 
 def train_cliff():

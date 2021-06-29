@@ -100,6 +100,14 @@ def iterative_avg(current, new):
     return current + 0.01 * (new - current)
 
 
+def inverse_priority_sample(weights: numpy.array):
+    weights = weights - weights.min() + 0.0001
+    r = numpy.random.random(len(weights))
+    w_new = r ** (1 / weights)
+    idx = numpy.argmin(w_new)
+    return idx
+
+
 class Trainer(common.Trainer):
     want_depth = False
 
@@ -115,7 +123,7 @@ class Trainer(common.Trainer):
         self.episode_stats = agent.memory.episode_stats
         self.failed_queue = agent.memory.failed_queue
         if self.episode_stats:
-            logging.info('average reward in episode stats {0}'.format(numpy.mean([v[1] for v in self.episode_stats.values()])))
+            logging.info('average reward in episode stats {0}'.format(numpy.mean([v[0] for v in self.episode_stats.values()])))
     
     def collect_state(self):
         mc = self.mc
@@ -166,7 +174,11 @@ class Trainer(common.Trainer):
                 start_y = y + random.choice(numpy.arange(-20, 20))
                 logging.info('evaluating from queue {0}, {1}'.format(start, end))
             else:
-                start, end = random.choice(list(self.episode_stats.keys()))
+                pairs = list(self.episode_stats.items())
+                r = numpy.asarray([p[1][0] for p in pairs]) 
+                idx = inverse_priority_sample(r)
+                logging.debug('prority sample idx=%i', idx)
+                start, end = pairs[idx][0] 
                 logging.info('evaluating from stats {0}, {1}'.format(start, end))
                 start_x, start_y = start
             # start somewhere near end

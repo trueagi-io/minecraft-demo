@@ -88,7 +88,7 @@ def load_agent(path):
     policy_net = network.QNetwork(actionSet, grid_len=36, grid_w=5, target_enc_len=3, pos_enc_len=5)
     target_net = network.QNetwork(actionSet, grid_len=36, grid_w=5, target_enc_len=3, pos_enc_len=5)
  
-    my_simple_agent = network.DQN(policy_net, target_net, 0.9, 70, 450, capacity=2000)
+    my_simple_agent = network.DQN(policy_net, target_net, 0.9, 120, 450, capacity=2000)
     if os.path.exists(path):
         logging.info('loading agent from %s', path)
         data = torch.load(path)
@@ -152,6 +152,8 @@ class Trainer(common.Trainer):
         self_pitch = normAngle(aPos[3] * math.pi/180.)
         self_yaw = normAngle(aPos[4] * math.pi/180.)
         xpos, ypos, zpos = [_ % 1 for _ in aPos[0:3]]
+        # use relative height
+        ypos = 30 - aPos[1]
         logging.debug("%.2f %.2f %.2f ", xpos, ypos, zpos)
         self_pos_enc = torch.as_tensor([self_pitch, self_yaw, xpos, ypos, zpos])
         data = dict(grid_vec=grid_enc, target=target_enc, pos=self_pos_enc)
@@ -208,7 +210,7 @@ class Trainer(common.Trainer):
         max_t = self.dist * 4 
         eps_start = self.eps
         eps_end = 0.05
-        eps_decay = 0.99
+        eps_decay = 0.9999
     
         eps = eps_start
     
@@ -257,10 +259,13 @@ class Trainer(common.Trainer):
                 prev_life = life
                 grid = mc.getNearGrid()
                 if target_enc[2] < 0.58:
-                    reward = 1 
-                    self.agent.push_final(reward)
-                    logging.debug('solved in %i steps', t)
+                    time.sleep(1)
+                    mc.observeProc()
+                    life = mc.getLife()
                     mc.sendCommand("quit")
+                    if life == prev_life:
+                        self.agent.push_final(reward)
+                    logging.debug('solved in %i steps', t)
                     solved = True
                     break
                 if not mc.is_mission_running():

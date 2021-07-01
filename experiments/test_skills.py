@@ -49,6 +49,12 @@ def train_cliff_v1():
     agent = load_agent(path)
     train_agent(agent, Trainer, path, True)
 
+def train_cliff_v2():
+    from cliff_v2 import load_agent, Trainer
+    path = 'agent_cliff_v2.pth'
+    agent = load_agent(path)
+    train_agent(agent, Trainer, path, True)
+
 def train_tree():
     from tree import load_agent, Trainer
     path = 'agent_tree.pth'

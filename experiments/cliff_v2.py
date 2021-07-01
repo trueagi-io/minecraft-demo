@@ -5,6 +5,7 @@ import logging
 import random
 import time
 import torch
+from torch import nn
 import os
 import network
 import numpy
@@ -85,15 +86,17 @@ def load_agent(path):
     action_names = ["turn 0.15", "turn -0.15", "move 0.9", "jump_forward" ]
     actionSet = [network.CategoricalAction(action_names)]
 
-    policy_net = network.QNetwork(actionSet, grid_len=36, grid_w=5, target_enc_len=3, pos_enc_len=5 * 2)
-    target_net = network.QNetwork(actionSet, grid_len=36, grid_w=5, target_enc_len=3, pos_enc_len=5 * 2)
-    print('starting cliff_v1') 
-    my_simple_agent = network.DQN(policy_net, target_net, 0.9, 120, 450, capacity=2000)
+    policy_net = network.QVisualNetwork(actionSet, 5, 3, n_channels=4, activation=nn.LeakyReLU(), batchnorm=True)
+    target_net = network.QVisualNetwork(actionSet, 5, 3, n_channels=4, activation=nn.LeakyReLU(), batchnorm=True)
+    batch_size = 22
+    my_simple_agent = network.DQN(policy_net, target_net, 0.9, batch_size, 450, capacity=2000)
+    location = 'cuda' if torch.cuda.is_available() else 'cpu'
     if os.path.exists(path):
-        logging.info('loading agent from %s', path)
-        data = torch.load(path)
+        logging.info('loading model from %s', path)
+        data = torch.load(path, map_location=location)
         my_simple_agent.load_state_dict(data, strict=False)
-    return my_simple_agent
+
+    return my_simple_agent.to(location)
 
 
 def iterative_avg(current, new):
@@ -109,7 +112,7 @@ def inverse_priority_sample(weights: numpy.array):
 
 
 class Trainer(common.Trainer):
-    want_depth = False
+    want_depth = True 
 
     def __init__(self, agent, mc, optimizer, eps, train=True):
         super().__init__(train)
@@ -131,11 +134,13 @@ class Trainer(common.Trainer):
         target_pos = target[1:4]
         mc.observeProc()
         aPos = mc.getAgentPos()
+        img_data = self.mc.getImage()
         logging.debug(aPos)
-        while aPos is None:
+        while aPos is None or (img_data is None):
             time.sleep(0.05)
             mc.observeProc()
             aPos = mc.getAgentPos()
+            img_data = self.mc.getImage()
             if not all(mc.isAlive):
                 raise DeadException()
         # grid
@@ -156,7 +161,11 @@ class Trainer(common.Trainer):
         ypos = 30 - aPos[1]
         logging.debug("%.2f %.2f %.2f ", xpos, ypos, zpos)
         self_pos_enc = torch.as_tensor([self_pitch, self_yaw, xpos, ypos, zpos])
-        data = dict(grid_vec=grid_enc, target=target_enc, pos=self_pos_enc)
+        data = dict(grid_vec=grid_enc, target=target_enc, state=target_enc, pos=self_pos_enc)
+
+        img = img_data.reshape((240, 320, 3 + self.want_depth)).transpose(2, 0, 1) / 255.
+        data['image'] = torch.as_tensor(img).float()
+
         return data
 
     def run_episode(self):
@@ -224,7 +233,7 @@ class Trainer(common.Trainer):
         prev_life = 20
         solved = False
     
-        mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(10)])
+        mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(5)])
         logging.info('loss %f', mean_loss)
         while True:
             t += 1
@@ -275,6 +284,7 @@ class Trainer(common.Trainer):
                 reward -= 0.5 
             logging.debug("current reward %f", reward)
             data['prev_pos'] = prev_pos
+            data['position'] = data['pos']
             new_actions = self.agent(data, reward=reward, epsilon=eps)
             eps = max(eps * eps_decay, eps_end)
             logging.debug('epsilon %f', eps)

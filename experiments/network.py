@@ -349,6 +349,14 @@ class QVisualNetwork(ContiniousActionAgent, VGG, common.BaseLoader):
         self.apply(init_weights_xavier)
 
     def forward(self, data):
+        """
+        data: dict
+        expected fields:
+        image
+        position
+        prev_pos - same as position
+        state - optional - can be used as e.g. target description
+        """
         x = data['image'].to(next(self.conv1a.parameters()))
         if len(x.shape) == 3:
             x = x.unsqueeze(0)
@@ -428,6 +436,9 @@ class QNetwork(ContiniousActionAgent, common.BaseLoader):
 
         target = data['target']
         pos = data['pos']
+        if 'prev_pos' in data:
+            prev_pos = data['prev_pos']
+            pos = torch.cat([pos, prev_pos], dim=-1)
 
         # concat grid with other inputs
         if len(grid_enc.shape) == 1:

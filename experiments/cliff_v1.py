@@ -85,9 +85,9 @@ def load_agent(path):
     action_names = ["turn 0.15", "turn -0.15", "move 0.9", "jump_forward" ]
     actionSet = [network.CategoricalAction(action_names)]
 
-    policy_net = network.QNetwork(actionSet, grid_len=36, grid_w=5, target_enc_len=3, pos_enc_len=5)
-    target_net = network.QNetwork(actionSet, grid_len=36, grid_w=5, target_enc_len=3, pos_enc_len=5)
- 
+    policy_net = network.QNetwork(actionSet, grid_len=36, grid_w=5, target_enc_len=3, pos_enc_len=5 * 2)
+    target_net = network.QNetwork(actionSet, grid_len=36, grid_w=5, target_enc_len=3, pos_enc_len=5 * 2)
+    print('starting cliff_v1') 
     my_simple_agent = network.DQN(policy_net, target_net, 0.9, 120, 450, capacity=2000)
     if os.path.exists(path):
         logging.info('loading agent from %s', path)
@@ -224,7 +224,7 @@ class Trainer(common.Trainer):
         prev_life = 20
         solved = False
     
-        mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(20)])
+        mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(10)])
         logging.info('loss %f', mean_loss)
         while True:
             t += 1
@@ -274,6 +274,7 @@ class Trainer(common.Trainer):
             if reward == 0:
                 reward -= 0.5 
             logging.debug("current reward %f", reward)
+            data['prev_pos'] = prev_pos
             new_actions = self.agent(data, reward=reward, epsilon=eps)
             eps = max(eps * eps_decay, eps_end)
             logging.debug('epsilon %f', eps)

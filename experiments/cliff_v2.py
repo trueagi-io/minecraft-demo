@@ -75,7 +75,7 @@ def load_agent(path):
     # turn[-1, 1]
     # jump 0/1
 
-    # for example: 
+    # for example:
     # actionSet = [network.ContiniousAction('move', -1, 1),
     #              network.ContiniousAction('strafe', -1, 1),
     #              network.ContiniousAction('pitch', -1, 1),
@@ -89,7 +89,7 @@ def load_agent(path):
     policy_net = network.QVisualNetwork(actionSet, 5, 3, n_channels=4, activation=nn.LeakyReLU(), batchnorm=True)
     target_net = network.QVisualNetwork(actionSet, 5, 3, n_channels=4, activation=nn.LeakyReLU(), batchnorm=True)
     batch_size = 22
-    my_simple_agent = network.DQN(policy_net, target_net, 0.9, batch_size, 450, capacity=2000)
+    my_simple_agent = network.DQN(policy_net, target_net, 0.9, batch_size, 450, capacity=3000)
     location = 'cuda' if torch.cuda.is_available() else 'cpu'
     if os.path.exists(path):
         logging.info('loading model from %s', path)
@@ -112,7 +112,7 @@ def inverse_priority_sample(weights: numpy.array):
 
 
 class Trainer(common.Trainer):
-    want_depth = True 
+    want_depth = True
 
     def __init__(self, agent, mc, optimizer, eps, train=True):
         super().__init__(train)
@@ -122,12 +122,12 @@ class Trainer(common.Trainer):
         self.eps = eps
         self.target_x = 4.5
         self.target_y = 12.5
-        self.dist = 55 
+        self.dist = 55
         self.episode_stats = agent.memory.episode_stats
         self.failed_queue = agent.memory.failed_queue
         if self.episode_stats:
             logging.info('average reward in episode stats {0}'.format(numpy.mean([v[0] for v in self.episode_stats.values()])))
-    
+
     def collect_state(self):
         mc = self.mc
         target =  ['lapis_block', self.target_x, 30, self.target_y]
@@ -145,6 +145,7 @@ class Trainer(common.Trainer):
                 raise DeadException()
         # grid
         grid = mc.getNearGrid()
+
         grid_vec = grid_to_vec_walking(grid[:36])
         # position encoding
         grid_enc = torch.as_tensor(grid_vec)
@@ -165,6 +166,24 @@ class Trainer(common.Trainer):
 
         img = img_data.reshape((240, 320, 3 + self.want_depth)).transpose(2, 0, 1) / 255.
         data['image'] = torch.as_tensor(img).float()
+        # depth
+        visible = self.mc.getLineOfSight('type')
+        if visible is not None:
+            coords = [self.mc.getLineOfSight('x'),
+                      self.mc.getLineOfSight('y'),
+                      self.mc.getLineOfSight('z')]
+            height = 1.6025
+            coords1 = aPos[:3]
+            coords1[1] += height
+            dist = numpy.linalg.norm(numpy.asarray(coords) - numpy.asarray(coords1))
+        else:
+            dist = 200
+
+        depth = data['image'][-1]
+        h, w = [_ // 2 for _ in depth.shape]
+        img_depth = img[-1][h, w]
+        norm_depth = (depth * (dist / img_depth))
+        data['image'][-1] = norm_depth
 
         return data
 
@@ -186,16 +205,16 @@ class Trainer(common.Trainer):
                 logging.info('evaluating from queue {0}, {1}'.format(start, end))
             else:
                 pairs = list(self.episode_stats.items())
-                r = numpy.asarray([p[1][0] for p in pairs]) 
+                r = numpy.asarray([p[1][0] for p in pairs])
                 idx = inverse_priority_sample(r)
                 logging.debug('prority sample idx=%i', idx)
-                start, end = pairs[idx][0] 
+                start, end = pairs[idx][0]
                 logging.info('evaluating from stats {0}, {1}'.format(start, end))
                 start_x, start_y = start
             # start somewhere near end
             self.mc = self.init_mission(0, self.mc, start_x=start_x, start_y=start_y)
             self.mc.safeStart()
-            self.target_x, self.target_y = end 
+            self.target_x, self.target_y = end
         else:
             self.mc.observeProc()
             aPos = self.mc.getAgentPos()
@@ -203,7 +222,7 @@ class Trainer(common.Trainer):
                 time.sleep(0.05)
                 self.mc.observeProc()
                 aPos = self.mc.getAgentPos()
-            
+
             XPos, _, YPos = aPos[:3]
             self.target_x = XPos + random.choice(numpy.arange(-self.dist, self.dist))
             self.target_y = YPos + random.choice(numpy.arange(-self.dist, self.dist))
@@ -212,27 +231,27 @@ class Trainer(common.Trainer):
             end = self.target_x, self.target_y
         logging.info('current target (%i, %i)', self.target_x, self.target_y)
 
-        mc = self.mc 
+        mc = self.mc
         logging.debug('memory: %i', self.agent.memory.position)
         self.agent.train()
-    
-        max_t = self.dist * 4 
+
+        max_t = self.dist * 4
         eps_start = self.eps
         eps_end = 0.05
         eps_decay = 0.9999
-    
+
         eps = eps_start
-    
+
         total_reward = 0
-    
+
         t = 0
-    
+
         # pitch, yaw, xpos, ypos, zpos
         prev_pos = None
         prev_target_dist = None
         prev_life = 20
         solved = False
-    
+
         mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(5)])
         logging.info('loss %f', mean_loss)
         while True:
@@ -253,7 +272,6 @@ class Trainer(common.Trainer):
             if prev_pos is None:
                 prev_pos = new_pos
             else:
-                # use only dist change for now
                 life = mc.getLife()
                 logging.debug('current life %f', life)
                 if life == 0:
@@ -281,7 +299,10 @@ class Trainer(common.Trainer):
                     logging.debug('failed in %i steps', t)
                     reward = -100
             if reward == 0:
-                reward -= 0.5 
+                reward -= 0.5
+            median_depth = numpy.median(data['image'][-1])
+            if median_depth < 2:
+                reward -= 1
             logging.debug("current reward %f", reward)
             data['prev_pos'] = prev_pos
             data['position'] = data['pos']
@@ -318,7 +339,7 @@ class Trainer(common.Trainer):
                 pass
             else:
                 logging.info('from queue run succeeded')
-                self.episode_stats[(start, end)] = [0, 0]                
+                self.episode_stats[(start, end)] = [0, 0]
         else:
             if (start, end) in self.episode_stats:
                 r, l = self.episode_stats[(start, end)]
@@ -340,7 +361,7 @@ class Trainer(common.Trainer):
                 mc.sendCommand('jump 1')
             else:
                 mc.sendCommand(str(act))
-  
+
     @classmethod
     def init_mission(cls, i, mc, start_x=None, start_y=None):
         miss = mb.MissionXML()
@@ -376,6 +397,9 @@ class Trainer(common.Trainer):
             seed='43',
             forceReset="false"))
         miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
+        # uncomment to disable passage of time:
+        # miss.serverSection.initial_conditions.time_pass = 'false'
+        # miss.serverSection.initial_conditions.time_start = "1000"
 
         if mc is None:
             mc = MalmoConnector(miss)

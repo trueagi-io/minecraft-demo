@@ -86,10 +86,10 @@ def load_agent(path):
     action_names = ["turn 0.15", "turn -0.15", "move 0.9", "jump_forward" ]
     actionSet = [network.CategoricalAction(action_names)]
 
-    policy_net = network.QVisualNetwork(actionSet, 5, 3, n_channels=4, activation=nn.LeakyReLU(), batchnorm=True)
-    target_net = network.QVisualNetwork(actionSet, 5, 3, n_channels=4, activation=nn.LeakyReLU(), batchnorm=True)
+    policy_net = network.QVisualNetwork(actionSet, 5, 3, n_channels=3, activation=nn.LeakyReLU(), batchnorm=True)
+    target_net = network.QVisualNetwork(actionSet, 5, 3, n_channels=3, activation=nn.LeakyReLU(), batchnorm=True)
     batch_size = 22
-    my_simple_agent = network.DQN(policy_net, target_net, 0.9, batch_size, 450, capacity=3000)
+    my_simple_agent = network.DQN(policy_net, target_net, 0.99, batch_size, 450, capacity=4000)
     location = 'cuda' if torch.cuda.is_available() else 'cpu'
     if os.path.exists(path):
         logging.info('loading model from %s', path)
@@ -112,7 +112,7 @@ def inverse_priority_sample(weights: numpy.array):
 
 
 class Trainer(common.Trainer):
-    want_depth = True
+    want_depth = False
 
     def __init__(self, agent, mc, optimizer, eps, train=True):
         super().__init__(train)
@@ -175,16 +175,17 @@ class Trainer(common.Trainer):
             height = 1.6025
             coords1 = aPos[:3]
             coords1[1] += height
-            dist = numpy.linalg.norm(numpy.asarray(coords) - numpy.asarray(coords1))
+            dist = min(200, numpy.linalg.norm(numpy.asarray(coords) - numpy.asarray(coords1)))
         else:
             dist = 200
-
-        depth = data['image'][-1]
-        h, w = [_ // 2 for _ in depth.shape]
-        img_depth = img[-1][h, w]
-        norm_depth = (depth * (dist / img_depth))
-        data['image'][-1] = norm_depth
-
+        if self.want_depth:
+            depth = data['image'][-1]
+            h, w = [_ // 2 for _ in depth.shape]
+            img_depth = img[-1][h, w]
+            norm_depth = (depth * (dist / img_depth))
+            data['image'][-1] = norm_depth
+        for key, value in data.items():
+            assert not torch.isnan(value).any()
         return data
 
     def run_episode(self):
@@ -193,7 +194,7 @@ class Trainer(common.Trainer):
         from_queue = False
         self.agent.clear_state()
 
-        if random.random() < 0.4 and (self.failed_queue or self.episode_stats):
+        if random.random() < 0.5 and (self.failed_queue or self.episode_stats):
             self.mc.sendCommand("quit")
             time.sleep(1)
             if self.failed_queue:
@@ -282,7 +283,8 @@ class Trainer(common.Trainer):
                     self.learn(self.agent, self.optimizer)
                     break
                 logging.debug('distance %f', target_enc[2])
-                reward += (prev_target_dist - target_enc)[2] + (life - prev_life) * 2
+                dist_diff = (prev_target_dist - target_enc)[2]
+                reward += dist_diff + (life - prev_life) * 2
                 prev_life = life
                 grid = mc.getNearGrid()
                 if target_enc[2] < 0.58:
@@ -291,6 +293,7 @@ class Trainer(common.Trainer):
                     life = mc.getLife()
                     mc.sendCommand("quit")
                     if life == prev_life:
+                        reward += 25
                         self.agent.push_final(reward)
                     logging.debug('solved in %i steps', t)
                     solved = True
@@ -300,9 +303,9 @@ class Trainer(common.Trainer):
                     reward = -100
             if reward == 0:
                 reward -= 0.5
-            median_depth = numpy.median(data['image'][-1])
-            if median_depth < 2:
-                reward -= 1
+            #median_depth = numpy.median(data['image'][-1])
+            #if median_depth < 2:
+            #    reward -= 1
             logging.debug("current reward %f", reward)
             data['prev_pos'] = prev_pos
             data['position'] = data['pos']
@@ -316,6 +319,7 @@ class Trainer(common.Trainer):
             prev_pos = new_pos
             prev_target_dist = target_enc
             if t == max_t:
+                reward -= 10
                 logging.debug("too long")
                 stop_motion(mc)
                 self.agent.push_final(reward)
@@ -398,8 +402,8 @@ class Trainer(common.Trainer):
             forceReset="false"))
         miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
         # uncomment to disable passage of time:
-        # miss.serverSection.initial_conditions.time_pass = 'false'
-        # miss.serverSection.initial_conditions.time_start = "1000"
+        miss.serverSection.initial_conditions.time_pass = 'false'
+        miss.serverSection.initial_conditions.time_start = "1000"
 
         if mc is None:
             mc = MalmoConnector(miss)

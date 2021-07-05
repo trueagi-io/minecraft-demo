@@ -128,6 +128,9 @@ class ContiniousActionAgent(nn.Module):
             loss = - dist.log_prob(action + eps) * reward + loss
             if torch.isinf(loss):
                 import pdb;pdb.set_trace()
+            if torch.isnan(loss):
+                import pdb;pdb.set_trace()
+
         logging.debug('loss ', loss)
         return loss
 
@@ -145,8 +148,8 @@ class ContiniousActionAgent(nn.Module):
                 q_values -= q_values.min()
             # make action different from argmax
             q_values[0, q_values.argmax()] /= 2
-            act = Categorical(q_values).sample()
-            # act = torch.tensor([random.randrange(self.n_actions)], device=device)
+            # act = Categorical(q_values).sample()
+            act = torch.tensor([random.randrange(self.n_actions)], device=device)
             logging.debug('random action')
         return act
 
@@ -249,6 +252,8 @@ class DQN:
         # Compute Huber loss
         #loss = F.smooth_l1_loss(Q_values, expected_Q_values, beta=101)
         loss = F.mse_loss(Q_values, expected_Q_values)
+        if torch.isnan(loss):
+            import pdb;pdb.set_trace()
         self.iteration += 1
             # Update the target network, copying all weights and biases in DQN
         if self.iteration % self.target_update == 0:
@@ -377,8 +382,11 @@ class QVisualNetwork(ContiniousActionAgent, VGG, common.BaseLoader):
             pos_data = pos_data.unsqueeze(0)
         pos_emb = self.pos_emb(pos_data)
         visual_pos_emb = torch.cat([visual_data, pos_emb], dim=1)
-        return self.q_value(visual_pos_emb)
+        result = self.q_value(visual_pos_emb)
+        if torch.isnan(result).any().item():
+            import pdb;pdb.set_trace()
 
+        return result
 
 
 class QNetwork(ContiniousActionAgent, common.BaseLoader):

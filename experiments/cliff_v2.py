@@ -83,7 +83,7 @@ def load_agent(path):
     #              network.BinaryAction('jump')]
 
     # discreet actions
-    action_names = ["turn 0.15", "turn -0.15", "move 0.9", "jump_forward" ]
+    action_names = ["turn 0.1", "turn -0.1", "move 0.9", "jump_forward" ]
     actionSet = [network.CategoricalAction(action_names)]
 
     policy_net = network.QVisualNetwork(actionSet, 5, 3, n_channels=3, activation=nn.LeakyReLU(), batchnorm=True)
@@ -112,10 +112,11 @@ def inverse_priority_sample(weights: numpy.array):
 
 
 class Trainer(common.Trainer):
-    want_depth = False
+    want_depth = False 
 
     def __init__(self, agent, mc, optimizer, eps, train=True):
         super().__init__(train)
+        self.write_visualization = False
         self.agent = agent
         self.mc = mc
         self.optimizer = optimizer
@@ -125,6 +126,7 @@ class Trainer(common.Trainer):
         self.dist = 55
         self.episode_stats = agent.memory.episode_stats
         self.failed_queue = agent.memory.failed_queue
+        self.img_num = 0
         if self.episode_stats:
             logging.info('average reward in episode stats {0}'.format(numpy.mean([v[0] for v in self.episode_stats.values()])))
 
@@ -165,6 +167,36 @@ class Trainer(common.Trainer):
         data = dict(grid_vec=grid_enc, target=target_enc, state=target_enc, pos=self_pos_enc)
 
         img = img_data.reshape((240, 320, 3 + self.want_depth)).transpose(2, 0, 1) / 255.
+        if self.write_visualization:
+            import cv2
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            bottomLeftCornerOfText = (40,40)
+            fontScale              = 0.9
+            fontColor              = (15, 15, 15)
+            lineType               = 2
+            img_draw = (img * 255).astype(numpy.uint8) 
+            img_draw = cv2.putText(img_draw.transpose(1,2,0), 'distance {0:.1f}'.format(dist),bottomLeftCornerOfText, font,fontScale,fontColor,lineType)
+            #img_draw = cv2.putText(img_draw, 'yaw {0:.1f}'.format(yaw),
+            #                       (10, 80), 
+            #                       font,fontScale,fontColor,lineType)
+            c_x = 260
+            c_y = 200
+            r = 20
+            img_draw = cv2.circle(img_draw,
+                                  (c_x, c_y), 
+                                  r, 
+                                  (0,255,255), 2)
+            cos_x = numpy.cos(yaw + numpy.pi / 2) * r
+            sin_y = numpy.sin(yaw + numpy.pi / 2) * r
+            img_draw = cv2.line(img_draw,
+                               (c_x, c_y),
+                               (round(c_x - cos_x), 
+                                round(c_y - sin_y)), (0, 255, 255), 2)
+            cv2.imwrite('episodes/img{0}.png'.format(self.img_num), img_draw)
+            self.img_num += 1
+            #cv2.imshow('1', img_draw)
+            #cv2.waitKey(100)
+
         data['image'] = torch.as_tensor(img).float()
         # depth
         visible = self.mc.getLineOfSight('type')
@@ -236,7 +268,7 @@ class Trainer(common.Trainer):
         logging.debug('memory: %i', self.agent.memory.position)
         self.agent.train()
 
-        max_t = self.dist * 4
+        max_t = self.dist ** 2 
         eps_start = self.eps
         eps_end = 0.05
         eps_decay = 0.9999

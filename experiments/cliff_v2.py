@@ -116,6 +116,7 @@ class Trainer(common.Trainer):
 
     def __init__(self, agent, mc, optimizer, eps, train=True):
         super().__init__(train)
+        self.from_queue = False
         self.write_visualization = False
         self.agent = agent
         self.mc = mc
@@ -229,21 +230,16 @@ class Trainer(common.Trainer):
                 assert not torch.isnan(value).any()
         return data
 
-    def run_episode(self):
-        """ Deep Q-Learning episode
-        """
-        from_queue = False
-        self.agent.clear_state()
-
+    def _start(self):
         if random.random() < 0.6 and (self.failed_queue or self.episode_stats):
             self.mc.sendCommand("quit")
             time.sleep(1)
             if self.failed_queue:
-                from_queue = True
+                self.from_queue = True
                 start, end = self.failed_queue.pop()
                 x, y = end
-                start_x = x + random.choice(numpy.arange(-15, 15))
-                start_y = y + random.choice(numpy.arange(-15, 15))
+                start_x = x + random.choice((-15, 15))
+                start_y = y + random.choice((-15, 15))
                 logging.info('evaluating from queue {0}, {1}'.format(start, end))
             else:
                 pairs = list(self.episode_stats.items())
@@ -271,6 +267,42 @@ class Trainer(common.Trainer):
 
             start = (XPos, YPos)
             end = self.target_x, self.target_y
+        return start, end
+
+    def _end(self, start, end, solved, t, total_reward):
+        if self.from_queue:
+
+            """
+            If episode failed check length, if 15 < t
+                start from a different point near the target
+                if success add to episode_stats
+            """
+            # failed
+            if not solved:
+                pass
+            else:
+                logging.info('from queue run succeeded')
+                self.episode_stats[(start, end)] = [0, 0]
+        else:
+            if (start, end) in self.episode_stats:
+                r, l = self.episode_stats[(start, end)]
+                logging.info('old stats ({0}, {1})'.format(r, l))
+                r = iterative_avg(r, total_reward)
+                l = iterative_avg(l, t)
+                self.episode_stats[(start, end)] = (r, l)
+                logging.info('new episode stats reward {0} length {1}'.format(r, l))
+            elif 10 < t and not solved:
+                self.failed_queue.append((start, end))
+                logging.info('adding to failed queue {0}, {1}'.format(start, end))
+        if random.random() < 0.2:
+            mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(20)])
+            logging.info('loss %f', mean_loss)
+
+    def run_episode(self):
+        """ Deep Q-Learning episode
+        """
+        self.agent.clear_state()
+        start, end = self._start()
         self._random_turn()
         logging.info('current target (%i, %i)', self.target_x, self.target_y)
 
@@ -383,34 +415,7 @@ class Trainer(common.Trainer):
         # in termial state reward is not added due loop breaking
         total_reward += reward
         logging.debug("Final reward: %f", reward)
-
-        if from_queue:
-
-            """
-            If episode failed check length, if 15 < t
-                start from a different point near the target
-                if success add to episode_stats
-            """
-            # failed
-            if not solved:
-                pass
-            else:
-                logging.info('from queue run succeeded')
-                self.episode_stats[(start, end)] = [0, 0]
-        else:
-            if (start, end) in self.episode_stats:
-                r, l = self.episode_stats[(start, end)]
-                logging.info('old stats ({0}, {1})'.format(r, l))
-                r = iterative_avg(r, total_reward)
-                l = iterative_avg(l, t)
-                self.episode_stats[(start, end)] = (r, l)
-                logging.info('new episode stats reward {0} length {1}'.format(r, l))
-            elif 10 < t and not solved:
-                self.failed_queue.append((start, end))
-                logging.info('adding to failed queue {0}, {1}'.format(start, end))
-        if random.random() < 0.2:
-            mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(20)])
-            logging.info('loss %f', mean_loss)
+        self._end(start, end, solved, t, total_reward)
         return total_reward, t, solved
 
     def act(self, actions):

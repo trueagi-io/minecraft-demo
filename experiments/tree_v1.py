@@ -1,6 +1,8 @@
 """
 Environment and agent for the task of turning towards a tree
 """
+import cv2
+import copy
 import logging
 import math
 import random
@@ -17,6 +19,9 @@ from tagilmo.utils.malmo_wrapper import MalmoConnector
 import common
 from common import stop_motion, grid_to_vec_walking, \
     direction_to_target, normAngle
+from vgg import VGG
+from goodpoint import GoodPoint
+from pyramidpooling import PyramidPooling
 
 
 mission_ending = """
@@ -42,27 +47,37 @@ def load_agent(path):
 
     # discreet actions
     # "move -0.5" "jump_forward",
-    action_names = ["turn 0.15", "turn -0.15", "turn 0.01",
+    action_names = ["turn 0.20", "turn -0.20", "turn 0.01",
                     "turn 0.01", 'pitch 0.1', 'pitch -0.1',
                     'pitch 0.01', 'pitch -0.01']
     actionSet = [network.CategoricalAction(action_names)]
+    n_out =  len(common.visible_blocks) + 1
 
-    policy_net = network.QVisualNetwork(actionSet, 2, n_channels=3, activation=nn.ReLU(), batchnorm=True)
-    target_net = network.QVisualNetwork(actionSet, 2, n_channels=3, activation=nn.ReLU(), batchnorm=True)
+    location = 'cuda' if torch.cuda.is_available() else 'cpu'
+    net = GoodPoint(8, n_out,
+                    n_channels=3, depth=False)
+    model_weights = torch.load('goodpoint.pt', map_location=location)['model']
+    net.load_checkpoint(model_weights)
+    net.to(location)
+
+    policy_net = SearchTree(actionSet, 2, n_channels=3,
+                            activation=nn.LeakyReLU(), block_net=net)
+    target_net = SearchTree(actionSet, 2, n_channels=3,
+                            activation=nn.LeakyReLU(), block_net=net)
+
     batch_size = 20
     my_simple_agent = network.DQN(policy_net, target_net, 0.9, batch_size, 450, capacity=2000)
 
-    if os.path.exists('agent_tree.pth'):
-        location = 'cuda' if torch.cuda.is_available() else 'cpu'
-        logging.info('loading model from agent_tree.pth')
-        data = torch.load('agent_tree.pth', map_location=location)
+    if os.path.exists(path):
+        logging.info('loading model from ' + path)
+        data = torch.load(path, map_location=location)
         my_simple_agent.load_state_dict(data, strict=False)
 
     return my_simple_agent
 
 
 class Trainer(common.Trainer):
-    want_depth = False
+    want_depth = True
 
     def __init__(self, agent, mc, optimizer, eps, train=True):
         super().__init__(train)
@@ -98,7 +113,7 @@ class Trainer(common.Trainer):
 
     def _random_turn(self):
         turn = numpy.random.random() * random.choice([-1, 1])
-        pitch = numpy.random.random() * random.choice([-1, 1])
+        pitch = numpy.random.random() * random.choice([-0.5, 0.5])
         self.act(["turn {0}".format(turn)])
         self.act(["pitch {0}".format(pitch)])
         time.sleep(0.5)
@@ -114,7 +129,7 @@ class Trainer(common.Trainer):
         logging.debug('memory: %i', self.agent.memory.position)
         self.agent.train()
 
-        max_t = 50
+        max_t = 60
         eps_start = self.eps
         eps_end = 0.05
         eps_decay = 0.99
@@ -136,6 +151,7 @@ class Trainer(common.Trainer):
         while True:
             t += 1
             reward = 0
+            import pdb;pdb.set_trace()
             try:
                 data = self.collect_state()
                 new_pos = data['position']
@@ -167,9 +183,9 @@ class Trainer(common.Trainer):
                         solved = True
                         break
                     elif target[0] == 'leaves':
-                        reward = 1
+                        reward = -0.05
                 if reward == 0:
-                    reward -= 2
+                    reward -= 1
             data['prev_pos'] = prev_pos
             logging.debug("current reward %f", reward)
             new_actions = self.agent(data, reward=reward, epsilon=eps)
@@ -214,10 +230,10 @@ class Trainer(common.Trainer):
         agent_handlers = mb.AgentHandlers(observations=obs,
             all_str=mission_ending, video_producer=video_producer)
         # a tree is at -18, 15
-        center_x = -18
-        center_y = 15
-        start_x = center_x + random.choice(numpy.arange(-29, 29))
-        start_y = center_y + random.choice(numpy.arange(-29, 29))
+        start_x = random.choice(numpy.arange(-18, 6))
+        start_y = random.choice(numpy.arange(11, 17))
+        #start_x = -17
+        #start_y = 13
 
         logging.info('starting at ({0}, {1})'.format(start_x, start_y))
         miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
@@ -236,3 +252,98 @@ class Trainer(common.Trainer):
             mc.setMissionXML(miss)
         return mc
 
+
+class SearchTree(network.ContiniousActionAgent, VGG, common.BaseLoader):
+    def __init__(self, actions, pos_enc_len, n_channels=1, activation=nn.LeakyReLU(), block_net=None):
+        super().__init__(actions)
+        stride = 1
+        kernel = (3, 3)
+        # exclude from parameters
+        self.block_net = [block_net]
+        self.conv1a = nn.Conv2d(n_channels, 32, kernel_size=kernel,
+                        stride=stride, padding=1)
+
+        self.conv1b = nn.Conv2d(32, 32, kernel_size=kernel,
+                        stride=stride, padding=1)
+
+        self.conv2a = nn.Conv2d(32, 64, kernel_size=kernel,
+                        stride=stride, padding=1)
+
+        self.conv2b = nn.Conv2d(64, 64, kernel_size=kernel,
+                        stride=stride, padding=1)
+        self.conv3a = nn.Conv2d(64, 64, kernel_size=kernel,
+                        stride=stride, padding=1)
+        self.conv3b = nn.Conv2d(64, 16, kernel_size=kernel,
+                        stride=stride, padding=1)
+        self.pool = nn.MaxPool2d((2, 2))
+        self.pooling = PyramidPooling((8, 4, 1))
+        self.activation = activation
+
+        self.batchnorm0 = nn.BatchNorm2d(32)
+        self.batchnorm1 = nn.BatchNorm2d(32)
+        self.batchnorm2 = nn.BatchNorm2d(64)
+        self.batchnorm3 = nn.BatchNorm2d(64)
+        self.batchnorm4 = nn.BatchNorm2d(64)
+        self.batchnorm5 = nn.BatchNorm2d(16)
+        self.batchnorm6 = nn.BatchNorm2d(128)
+        self.batchnorm7 = nn.BatchNorm2d(128)
+
+
+        num = 128
+        # position embedding
+        self.pos_emb = nn.Sequential(
+            # prev and current position
+            nn.Linear(pos_enc_len * 2, num),
+            nn.LeakyReLU(inplace=False),
+
+            nn.Linear(num, num),
+            nn.LeakyReLU(inplace=False),
+
+            nn.Linear(num, num),
+            nn.LeakyReLU(inplace=False)
+        )
+
+        # fully connected
+        self.q_value = nn.Sequential(
+            nn.Linear(num + (16 * 8 * 8 + 16 * 4 * 4 + 16), num),
+            self.activation,
+            nn.Linear(num, num),
+            self.activation,
+            nn.Linear(num, self.n_actions))
+
+    def process_image(self, x):
+        """
+        generate feature vector
+        """
+        log = common.visible_block_num['log']
+        leaves = common.visible_block_num['leaves']
+        with torch.no_grad():
+            blocks = self.block_net[0](x[:, :3])
+
+        depth = x[:, 3]
+        leaves_block = blocks[:, leaves]
+        log_block = blocks[:, log]
+        cv2.imshow('log', log_block[0].numpy())
+        cv2.waitKey(100)
+        stack = torch.stack((log_block, leaves_block, depth), dim=1)
+        x = self.vgg(stack)
+        x = self.pooling(x)
+        return x
+
+    def forward(self, data):
+        x = data['image'].to(next(self.conv1a.parameters()))
+        if len(x.shape) == 3:
+            x = x.unsqueeze(0)
+        pos = data['position']
+        prev_pos = data['prev_pos']
+        visual_data = self.process_image(x)
+
+        if len(pos.shape) == 1:
+            pos = pos.unsqueeze(0)
+            prev_pos = prev_pos.unsqueeze(0)
+        pos_data = torch.cat([pos, prev_pos], dim=1).to(next(self.conv1a.parameters()))
+        if len(pos_data.shape) == 1:
+            pos_data = pos_data.unsqueeze(0)
+        pos_emb = self.pos_emb(pos_data)
+        visual_pos_emb = torch.cat([visual_data, pos_emb], dim=1)
+        return self.q_value(visual_pos_emb)

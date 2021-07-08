@@ -9,6 +9,7 @@ import os
 import network
 import numpy
 import math
+from collections import deque, defaultdict
 
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector
@@ -81,32 +82,52 @@ def load_agent(path):
     #              network.BinaryAction('jump')]
 
     # discreet actions
-    action_names = ["turn 0.15", "turn -0.15", "move 0.5", "jump_forward" ]
+    action_names = ["turn 0.15", "turn -0.15", "move 0.9", "jump_forward" ]
     actionSet = [network.CategoricalAction(action_names)]
 
-    policy_net = network.QNetwork(actionSet, grid_len=27, grid_w=5, target_enc_len=3, pos_enc_len=5)
-    target_net = network.QNetwork(actionSet, grid_len=27, grid_w=5, target_enc_len=3, pos_enc_len=5)
- 
-    my_simple_agent = network.DQN(policy_net, target_net, 0.9, 70, 450, capacity=2000)
+    policy_net = network.QNetwork(actionSet, grid_len=36, grid_w=5, target_enc_len=3, pos_enc_len=5 * 2)
+    target_net = network.QNetwork(actionSet, grid_len=36, grid_w=5, target_enc_len=3, pos_enc_len=5 * 2)
+    print('starting cliff_v1') 
+    my_simple_agent = network.DQN(policy_net, target_net, 0.9, 120, 450, capacity=2000)
     if os.path.exists(path):
+        logging.info('loading agent from %s', path)
         data = torch.load(path)
         my_simple_agent.load_state_dict(data, strict=False)
-
     return my_simple_agent
 
 
+def iterative_avg(current, new):
+    return current + 0.01 * (new - current)
+
+
+def inverse_priority_sample(weights: numpy.array):
+    weights = weights - weights.min() + 0.0001
+    r = numpy.random.random(len(weights))
+    w_new = r ** (1 / weights)
+    idx = numpy.argmin(w_new)
+    return idx
+
 
 class Trainer(common.Trainer):
+    want_depth = False
+
     def __init__(self, agent, mc, optimizer, eps, train=True):
         super().__init__(train)
         self.agent = agent
         self.mc = mc
         self.optimizer = optimizer
         self.eps = eps
-
+        self.target_x = 4.5
+        self.target_y = 12.5
+        self.dist = 55 
+        self.episode_stats = agent.memory.episode_stats
+        self.failed_queue = agent.memory.failed_queue
+        if self.episode_stats:
+            logging.info('average reward in episode stats {0}'.format(numpy.mean([v[0] for v in self.episode_stats.values()])))
+    
     def collect_state(self):
         mc = self.mc
-        target =  ['lapis_block', 4.5, 46, 12.5]
+        target =  ['lapis_block', self.target_x, 30, self.target_y]
         target_pos = target[1:4]
         mc.observeProc()
         aPos = mc.getAgentPos()
@@ -119,7 +140,7 @@ class Trainer(common.Trainer):
                 raise DeadException()
         # grid
         grid = mc.getNearGrid()
-        grid_vec = grid_to_vec_walking(grid[:27])
+        grid_vec = grid_to_vec_walking(grid[:36])
         # position encoding
         grid_enc = torch.as_tensor(grid_vec)
         # target
@@ -128,9 +149,11 @@ class Trainer(common.Trainer):
         # 'XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw'
         # take pitch, yaw
         # take XPos, YPos, ZPos modulo 1
-        self_pitch = normAngle(aPos[3]*math.pi/180.)
-        self_yaw = normAngle(aPos[4]*math.pi/180.)
+        self_pitch = normAngle(aPos[3] * math.pi/180.)
+        self_yaw = normAngle(aPos[4] * math.pi/180.)
         xpos, ypos, zpos = [_ % 1 for _ in aPos[0:3]]
+        # use relative height
+        ypos = 30 - aPos[1]
         logging.debug("%.2f %.2f %.2f ", xpos, ypos, zpos)
         self_pos_enc = torch.as_tensor([self_pitch, self_yaw, xpos, ypos, zpos])
         data = dict(grid_vec=grid_enc, target=target_enc, pos=self_pos_enc)
@@ -139,15 +162,55 @@ class Trainer(common.Trainer):
     def run_episode(self):
         """ Deep Q-Learning episode
         """
+        from_queue = False
         self.agent.clear_state()
+
+        if random.random() < 0.4 and (self.failed_queue or self.episode_stats):
+            self.mc.sendCommand("quit")
+            time.sleep(1)
+            if self.failed_queue:
+                from_queue = True
+                start, end = self.failed_queue.pop()
+                x, y = end
+                start_x = x + random.choice(numpy.arange(-20, 20))
+                start_y = y + random.choice(numpy.arange(-20, 20))
+                logging.info('evaluating from queue {0}, {1}'.format(start, end))
+            else:
+                pairs = list(self.episode_stats.items())
+                r = numpy.asarray([p[1][0] for p in pairs]) 
+                idx = inverse_priority_sample(r)
+                logging.debug('prority sample idx=%i', idx)
+                start, end = pairs[idx][0] 
+                logging.info('evaluating from stats {0}, {1}'.format(start, end))
+                start_x, start_y = start
+            # start somewhere near end
+            self.mc = self.init_mission(0, self.mc, start_x=start_x, start_y=start_y)
+            self.mc.safeStart()
+            self.target_x, self.target_y = end 
+        else:
+            self.mc.observeProc()
+            aPos = self.mc.getAgentPos()
+            while aPos is None:
+                time.sleep(0.05)
+                self.mc.observeProc()
+                aPos = self.mc.getAgentPos()
+            
+            XPos, _, YPos = aPos[:3]
+            self.target_x = XPos + random.choice(numpy.arange(-self.dist, self.dist))
+            self.target_y = YPos + random.choice(numpy.arange(-self.dist, self.dist))
+
+            start = (XPos, YPos)
+            end = self.target_x, self.target_y
+        logging.info('current target (%i, %i)', self.target_x, self.target_y)
+
         mc = self.mc 
         logging.debug('memory: %i', self.agent.memory.position)
         self.agent.train()
     
-        max_t = 80
+        max_t = self.dist * 4 
         eps_start = self.eps
         eps_end = 0.05
-        eps_decay = 0.99
+        eps_decay = 0.9999
     
         eps = eps_start
     
@@ -161,7 +224,7 @@ class Trainer(common.Trainer):
         prev_life = 20
         solved = False
     
-        mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(5)])
+        mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(10)])
         logging.info('loss %f', mean_loss)
         while True:
             t += 1
@@ -187,27 +250,31 @@ class Trainer(common.Trainer):
                 if life == 0:
                     reward = -100
                     stop_motion(mc)
-                    self.agent.push_final(reward)
+                    if t > 2:
+                        self.agent.push_final(reward)
                     self.learn(self.agent, self.optimizer)
                     break
+                logging.debug('distance %f', target_enc[2])
                 reward += (prev_target_dist - target_enc)[2] + (life - prev_life) * 2
                 prev_life = life
                 grid = mc.getNearGrid()
-                if target_enc[2] < 0.53:
-                    reward = 100
-                    self.agent.push_final(reward)
-                    logging.debug('solved in %i steps', t)
+                if target_enc[2] < 0.58:
+                    time.sleep(1)
+                    mc.observeProc()
+                    life = mc.getLife()
                     mc.sendCommand("quit")
+                    if life == prev_life:
+                        self.agent.push_final(reward)
+                    logging.debug('solved in %i steps', t)
                     solved = True
                     break
                 if not mc.is_mission_running():
                     logging.debug('failed in %i steps', t)
                     reward = -100
-                    self.agent.push_final(reward)
-                    break
-                if reward == 0:
-                    reward -= 2
+            if reward == 0:
+                reward -= 0.5 
             logging.debug("current reward %f", reward)
+            data['prev_pos'] = prev_pos
             new_actions = self.agent(data, reward=reward, epsilon=eps)
             eps = max(eps * eps_decay, eps_end)
             logging.debug('epsilon %f', eps)
@@ -220,57 +287,89 @@ class Trainer(common.Trainer):
             if t == max_t:
                 logging.debug("too long")
                 stop_motion(mc)
-                reward = -10
-                self.agent.push_final(-10)
+                self.agent.push_final(reward)
                 self.mc.sendCommand("quit")
                 self.learn(self.agent, self.optimizer)
                 break
             total_reward += reward
         # in termial state reward is not added due loop breaking
         total_reward += reward
-        logging.debug("Final reward: %d" % reward)
-    
-        return total_reward, t, solved
+        logging.debug("Final reward: %f", reward)
 
+        if from_queue:
+
+            """
+            If episode failed check length, if 15 < t
+                start from a different point near the target
+                if success add to episode_stats
+            """
+            # failed
+            if not solved:
+                pass
+            else:
+                logging.info('from queue run succeeded')
+                self.episode_stats[(start, end)] = [0, 0]                
+        else:
+            if (start, end) in self.episode_stats:
+                r, l = self.episode_stats[(start, end)]
+                r = iterative_avg(r, total_reward)
+                l = iterative_avg(l, t)
+                self.episode_stats[(start, end)] = (r, l)
+                logging.info('new episode stats reward {0} length {1}'.format(r, l))
+            elif 10 < t and not solved:
+                self.failed_queue.append((start, end))
+                logging.info('adding to failed queue {0}, {1}'.format(start, end))
+        return total_reward, t, solved
 
     def act(self, actions):
         mc = self.mc
         for act in actions:
+            logging.debug('action %s', act)
             if act == 'jump_forward':
                 mc.sendCommand('move 0.4')
                 mc.sendCommand('jump 1')
             else:
                 mc.sendCommand(str(act))
-   
-    @staticmethod
-    def init_mission(i, mc):
-        sp = ''
-        # train on simple environment first
-        if i < 200:
-            p = random.choice([x for x in range(2, 8)])
-        else:
-            p = random.choice([-2, -1] + [x for x in range(0, 12)])
-            if random.choice([True, False]):
-                sp = spiral
-        jump_block =  -3
-        jump_block1 = random.choice(list(range(2, 11)))
-        logging.debug('%i, %i', jump_block, jump_block1)
-        current_xml = dec_xml.format(modify_blocks.format(p, jump_block, jump_block1), sp)
-        handlers = mb.ServerHandlers(mb.flatworld("3;7,220*1,5*3,2;3;,biome_1"), alldecorators_xml=current_xml, bQuitAnyAgent=True)
-        video_producer = mb.VideoProducer(width=320, height=240)
-    
+  
+    @classmethod
+    def init_mission(cls, i, mc, start_x=None, start_y=None):
+        miss = mb.MissionXML()
+        video_producer = mb.VideoProducer(width=320, height=240, want_depth=cls.want_depth)
+
         obs = mb.Observations()
-        obs.gridNear = [[-1, 1], [-2, 2], [-1, 1]]
-    
-    
+
+        obs = mb.Observations()
+        obs.gridNear = [[-1, 1], [-2, 1], [-1, 1]]
+
+
         agent_handlers = mb.AgentHandlers(observations=obs,
             all_str=mission_ending)
-    
-        miss = mb.MissionXML(serverSection=mb.ServerSection(handlers), agentSections=[mb.AgentSection(name='Cristina',
+
+
+        agent_handlers = mb.AgentHandlers(observations=obs,
+            all_str=mission_ending, video_producer=video_producer)
+        # a tree is at -18, 15
+        if start_x is None:
+            center_x = -18
+            center_y = 15
+            start_x = center_x + random.choice(numpy.arange(-329, 329))
+            start_y = center_y + random.choice(numpy.arange(-329, 329))
+
+        logging.info('starting at ({0}, {1})'.format(start_x, start_y))
+
+        miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
                  agenthandlers=agent_handlers,
-                 agentstart=mb.AgentStart([4.5, 46.0, 1.5, 30]))])
+                                          #    depth
+                 agentstart=mb.AgentStart([start_x, 30.0, start_y, 1]))])
+
+        miss.setWorld(mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake",
+            seed='43',
+            forceReset="false"))
+        miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
+
         if mc is None:
             mc = MalmoConnector(miss)
         else:
             mc.setMissionXML(miss)
-        return mc 
+        return mc
+

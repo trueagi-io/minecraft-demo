@@ -34,6 +34,15 @@ def grid_to_vec_walking(block_list):
     return codes
         
 
+def grid_to_real_feature_vec_walking(block_list):
+    codes = numpy.zeros(len(block_list))
+    feature_step = 2/(max_id_blocks_walking + 1)
+    for i,item in enumerate(block_list):
+        feature_val = -1.+block_id_cliff_walking[item]*feature_step+0.5*feature_step
+        codes[i] = feature_val
+    return codes
+
+
 # A simplistic search behavior
 # Note that we don't use video input and rely on a small Grid and Ray,
 # so our agent can miss objects visible by human

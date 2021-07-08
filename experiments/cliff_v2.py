@@ -381,15 +381,14 @@ class Trainer(common.Trainer):
                     break
             if reward == 0:
                 reward -= 0.5
-                if 'visible' in data:
-                    d = data['visible'][-1]
-                    if d < 1:
-                        logging.debug('visible {0}'.format(d))
-                        reward -= 3
-                # median_depth = numpy.median(data['image'][-1])
-                # if median_depth < 2:
-                #    reward -= 1 / median_depth
             if 'visible' in data:
+                d = data['visible'][-1]
+                if d < 1:
+                    logging.debug('visible {0}'.format(d))
+                    reward -= 3
+            # median_depth = numpy.median(data['image'][-1])
+            # if median_depth < 2:
+            #    reward -= 1 / median_depth
                 data.pop('visible')
             logging.debug("current reward %f", reward)
             data['prev_pos'] = prev_pos
@@ -403,7 +402,7 @@ class Trainer(common.Trainer):
             time.sleep(0.1)
             prev_pos = new_pos
             prev_target_dist = target_enc
-            if t == max_t or total_reward < -120:
+            if t == max_t or total_reward < -200:
                 reward -= 1
                 logging.debug("too long")
                 stop_motion(mc)

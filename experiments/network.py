@@ -155,7 +155,7 @@ class ContiniousActionAgent(nn.Module):
 
 
 class DQN:
-    def __init__(self, policy_net, target_net, gamma, batch_size, target_update, capacity=500):
+    def __init__(self, policy_net, target_net, gamma, batch_size, target_update, capacity=500, transform=None):
         self.policy_net = policy_net
         self.target_net = target_net
         self.target_update = target_update
@@ -173,6 +173,7 @@ class DQN:
                 self.memory.position = random.randint(0, len(self.memory))
         self.gamma = gamma
         self.batch_size = batch_size
+        self.transform=transform
 
     def to(self, arg):
         self.policy_net.to(arg)
@@ -218,6 +219,14 @@ class DQN:
         for k in batch.state[0].keys():
             state_batch[k] = torch.stack([data[k] for data in batch.state])
 
+        assert state_batch['image'].max() < 1.1
+        for i, img in enumerate(state_batch['image']):
+            img_trans = self.transform(img.permute(1,2,0).numpy() * 255).permute(2, 0, 1) / 255
+            state_batch['image'][i] = img_trans
+            # import cv2
+            # cv2.imshow('old', img.numpy().transpose(1,2,0))
+            # cv2.imshow('new', state_batch['image'][i].numpy().transpose(1,2,0))
+            # cv2.waitKey(1000)
         action_batch = torch.cat(batch.action)
         reward_batch = torch.stack(batch.reward)
         next_states = batch.next_state
@@ -279,7 +288,7 @@ class DQN:
 
 
 class QVisualNetwork(ContiniousActionAgent, VGG, common.BaseLoader):
-    def __init__(self, actions, pos_enc_len, state_len=0, n_channels=1, activation=nn.ReLU(), batchnorm=True):
+    def __init__(self, actions, pos_enc_len, state_len=0, n_channels=1, activation=nn.ReLU(), batchnorm=True, num=128):
         super().__init__(actions)
         self.activation = activation
         stride = 1
@@ -309,7 +318,6 @@ class QVisualNetwork(ContiniousActionAgent, VGG, common.BaseLoader):
                         stride=stride, padding=1)
         self.pool = nn.MaxPool2d((2, 2))
 
-        num = 128
         # position embedding
         self.pos_emb = nn.Sequential(
             # prev and current position

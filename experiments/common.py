@@ -224,7 +224,6 @@ def vectors_angle(vec1, vec2):
     return angle
 
 
-
 class  BaseLoader:
     def load_checkpoint(self, state_dict: dict, strict=True) -> bool:
         """
@@ -248,4 +247,40 @@ class  BaseLoader:
                 is_changed = True
         self.load_state_dict(state_dict, strict=strict)
         return is_changed
+
+
+def dist_embed(d, eps=1.00001):
+    d += eps
+    result = [d ** 1/2,
+              d ** 1/3,
+              d ** 1/4,
+              d ** 1/5]
+    return torch.stack(result).permute(1,0,2).flatten(1) - 1
+
+
+def angle_embed(d):
+    lst = [torch.sin(d / x) for x in range(2, 10, 2)] + \
+                           [torch.cos(d / x) for x in range(2, 10, 2)]
+    # return batch * (len(d) * 2 * 4)
+    return torch.stack(lst).permute(1,0,2).flatten(1)
+
+
+
+def make_noisy_transformers():
+    from torchvision.transforms import Compose
+    from transform import RandomTransformer, ToTensor
+
+    from noise import AdditiveGaussian, RandomBrightness, AdditiveShade, MotionBlur, SaltPepper, RandomContrast
+    totensor = ToTensor()
+    # ColorInversion doesn't seem to be usefull on most datasets
+    transformer = [
+                   AdditiveGaussian(var=30),
+                   RandomBrightness(range=(-50, 50)),
+                   AdditiveShade(kernel_size_range=[45, 85],
+                                 transparency_range=(-0.25, .45)),
+                   SaltPepper(),
+                   MotionBlur(max_kernel_size=5),
+                   RandomContrast([0.6, 1.05])
+                   ]
+    return Compose([RandomTransformer(transformer), totensor])
 

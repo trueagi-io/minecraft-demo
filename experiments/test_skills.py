@@ -53,7 +53,15 @@ def train_cliff_v2():
     from cliff_v2 import load_agent, Trainer
     path = 'agent_cliff_v2.pth'
     agent = load_agent(path)
+    train_agent(agent, Trainer, path, False)
+
+
+def train_cliff_v3():
+    from cliff_v3 import load_agent, Trainer
+    path = 'agent_cliff_v3.pth'
+    agent = load_agent(path)
     train_agent(agent, Trainer, path, True)
+
 
 def train_tree():
     from tree import load_agent, Trainer
@@ -82,4 +90,4 @@ def train_vision():
 
 if __name__ == '__main__':
     setup_logger('train.log')
-    train_cliff_v2()
+    train_cliff_v3()

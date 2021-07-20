@@ -167,9 +167,10 @@ class DQN:
         if os.path.exists(self.memory_path):
             with open(self.memory_path, 'rb') as f:
                 logging.debug('loading %s', self.memory_path)
-                self.memory = pickle.load(f)
-                self.memory.capacity = capacity
-                self.memory.memory = [x for x in self.memory.memory if x is not None]
+                memory = pickle.load(f)
+                self.memory.episode_stats = memory.episode_stats
+                self.memory.failed_queue = memory.failed_queue
+                self.memory.memory = [x for x in memory.memory if x is not None]
                 self.memory.memory = self.memory.memory[:capacity]
                 self.memory.position = random.randint(0, len(self.memory))
         self.gamma = gamma
@@ -484,6 +485,7 @@ class ReplayMemory:
         self.episode_stats = dict()
         # (start, target) -> [avg reward, avg length]
         self.failed_queue = deque([], maxlen=10)
+        self.read_position = 0
 
     def push(self, *args):
         """Saves a transition."""
@@ -495,7 +497,11 @@ class ReplayMemory:
         self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
+        # random access is very bad for swap
+        self.read_position = self.read_position % (self.capacity - batch_size)
+        slice = self.memory[self.read_position: self.read_position + 1000]
+        self.read_position += batch_size
+        return random.sample(slice, batch_size)
 
     def __len__(self):
         return len(self.memory)

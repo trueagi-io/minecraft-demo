@@ -142,7 +142,7 @@ def load_agent(path):
     batch_size = 18
 
     transformer = common.make_noisy_transformers()
-    my_simple_agent = network.DQN(policy_net, target_net, 0.99, batch_size, 450, capacity=5000, transform=transformer)
+    my_simple_agent = network.DQN(policy_net, target_net, 0.99, batch_size, 450, capacity=7000, transform=transformer)
     location = 'cuda' if torch.cuda.is_available() else 'cpu'
     if os.path.exists(path):
         logging.info('loading model from %s', path)

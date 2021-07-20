@@ -170,6 +170,7 @@ class DQN:
                 self.memory = pickle.load(f)
                 self.memory.capacity = capacity
                 self.memory.memory = [x for x in self.memory.memory if x is not None]
+                self.memory.memory = self.memory.memory[:capacity]
                 self.memory.position = random.randint(0, len(self.memory))
         self.gamma = gamma
         self.batch_size = batch_size

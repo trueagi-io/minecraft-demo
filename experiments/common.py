@@ -251,10 +251,10 @@ class  BaseLoader:
 
 def dist_embed(d, eps=1.00001):
     d += eps
-    result = [d ** 1/2,
-              d ** 1/3,
-              d ** 1/4,
-              d ** 1/5]
+    result = [d ** (1/2),
+              d ** (1/3),
+              d ** (1/4),
+              d ** (1/5)]
     return torch.stack(result).permute(1,0,2).flatten(1) - 1
 
 

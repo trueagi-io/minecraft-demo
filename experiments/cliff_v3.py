@@ -34,6 +34,7 @@ class QVisualNetworkV2(QVisualNetwork):
             nn.Linear(num, num),
             self.activation,
             nn.Linear(num, self.n_actions))
+        self.residual = True
 
 
     def forward(self, data):
@@ -343,9 +344,9 @@ class Trainer(common.Trainer):
             elif 10 < t and not solved:
                 self.failed_queue.append((start, end))
                 logging.info('adding to failed queue {0}, {1}'.format(start, end))
-        if random.random() < 0.2:
+        if random.random() < 0.25:
             mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(20)])
-            logging.info('loss %f', mean_loss)
+            logging.info('mean loss %f', mean_loss)
 
     def run_episode(self):
         """ Deep Q-Learning episode

@@ -176,6 +176,7 @@ class DQN:
         self.gamma = gamma
         self.batch_size = batch_size
         self.transform=transform
+        self.save_interval = target_update * 10
 
     def to(self, arg):
         self.policy_net.to(arg)
@@ -268,18 +269,24 @@ class DQN:
         self.iteration += 1
             # Update the target network, copying all weights and biases in DQN
         if self.iteration % self.target_update == 0:
-            # save memory
-            tmp_path = self.memory_path + 'tmp'
-            with open(tmp_path, 'wb') as f:
-                pickle.dump(self.memory, f)
-            shutil.move(tmp_path, self.memory_path)
             logging.debug('update target network')
             with torch.no_grad():
                 for pol_param, target_param in zip(self.policy_net.parameters(),
                                                    self.target_net.parameters()):
                     mean = 0.4 * pol_param.detach().cpu().numpy() + 0.6 * target_param.detach().cpu().numpy()
                     target_param[:] = torch.as_tensor(mean).to(pol_param)
+        if self.iteration % self.save_interval == 0 and (self.iteration):
+            self.save_memory()
         return loss
+
+    def save_memory(self):
+        # save memory
+        tmp_path = self.memory_path + 'tmp'
+        logging.debug('saving memory')
+        with open(tmp_path, 'wb') as f:
+            pickle.dump(self.memory, f)
+        shutil.move(tmp_path, self.memory_path)
+        logging.debug('saving memory done')
 
     def state_dict(self):
         return self.target_net.state_dict()
@@ -497,11 +504,14 @@ class ReplayMemory:
         self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):
-        # random access is very bad for swap
-        self.read_position = self.read_position % (self.capacity - batch_size)
-        slice = self.memory[self.read_position: self.read_position + 1000]
-        self.read_position += batch_size
-        return random.sample(slice, batch_size)
+        item = random.sample(self.memory, max(1, batch_size - 2))
+        while len(item) < batch_size:
+            pos = self.position - numpy.random.randint(0, 300)
+            if (len(self.memory) - 1) < abs(pos):
+                pos = numpy.random.randint(0, len(self.memory))
+            item.append(self.memory[pos])
+        assert len(item) == batch_size
+        return item
 
     def __len__(self):
         return len(self.memory)

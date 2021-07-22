@@ -16,6 +16,30 @@ def train_agent(agent, Trainer, save_path, train=True):
     eps_decay = 1
     optimizer = torch.optim.AdamW(agent.parameters(), lr=0.001,
                                   weight_decay=0.05)
+
+    optimizer = torch.optim.Adadelta(agent.parameters(), lr=0.001,
+                                  weight_decay=0.01)
+
+    params = [
+            {'params': agent.policy_net.conv1a.parameters(), 'lr': 0.001},
+            {'params': agent.policy_net.conv1b.parameters(), 'lr': 0.001},
+
+            {'params': agent.policy_net.conv2a.parameters(), 'lr': 0.001},
+            {'params': agent.policy_net.conv2b.parameters(), 'lr': 0.001},
+
+            {'params': agent.policy_net.conv3a.parameters(), 'lr': 0.001},
+            {'params': agent.policy_net.conv3b.parameters(), 'lr': 0.001},
+
+            {'params': agent.policy_net.conv4a.parameters(), 'lr': 0.001},
+            {'params': agent.policy_net.conv4b.parameters(), 'lr': 0.001},
+            {'params': agent.policy_net.pos_emb.parameters(), 'lr': 0.0001},
+            {'params': agent.policy_net.q_value.parameters(), 'lr': 0.0001}
+    ]
+
+    optimizer = torch.optim.RMSprop(agent.parameters(),
+                                    lr=0.0001,
+                                    weight_decay=0.01)
+
     mc = None
     for i in range(0, num_repeats):
         mc = Trainer.init_mission(i, mc)

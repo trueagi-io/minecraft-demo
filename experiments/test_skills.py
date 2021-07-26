@@ -36,7 +36,7 @@ def train_agent(agent, Trainer, save_path, train=True):
             {'params': agent.policy_net.q_value.parameters(), 'lr': 0.0001}
     ]
 
-    optimizer = torch.optim.RMSprop(agent.parameters(),
+    optimizer = torch.optim.RMSprop(params,
                                     lr=0.0001,
                                     weight_decay=0.01)
 

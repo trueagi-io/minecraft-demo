@@ -175,6 +175,7 @@ def stop_motion(mc):
 def learn(agent, optimizer):
     losses = []
     means = []
+    means1 = []
     means_change = []
     for i in range(40):
         optimizer.zero_grad()
@@ -182,10 +183,11 @@ def learn(agent, optimizer):
         if loss is not None:
             # Optimize the model
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(agent.parameters(), 2)
+            # torch.nn.utils.clip_grad_norm_(agent.parameters(), 2)
             weights1 = agent.policy_net.conv1a.weight.clone()
             optimizer.step()
             weights2 = agent.policy_net.conv1a.weight.clone()
+            means1.append(agent.policy_net.q_value[0].weight.grad.abs().mean().cpu().detach())
             means_change.append((weights2 - weights1).abs().mean().cpu().detach())
             means.append(agent.policy_net.conv1a.weight.grad.abs().mean().cpu().detach())
             losses.append(loss.cpu().detach())
@@ -194,6 +196,7 @@ def learn(agent, optimizer):
         logging.debug('loss %f', numpy.mean(losses))
         logging.debug('mean conv1a %f', numpy.mean(means))
         logging.debug('mean change conv1a %f', numpy.mean(means_change))
+        logging.debug('mean qvalue.0 %f', numpy.mean(means1))
     return numpy.mean(losses)
 
 

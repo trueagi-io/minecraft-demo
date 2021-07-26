@@ -184,6 +184,8 @@ def learn(agent, optimizer):
             # Optimize the model
             loss.backward()
             # torch.nn.utils.clip_grad_norm_(agent.parameters(), 2)
+            for param in agent.policy_net.parameters():
+                param.grad.data.clamp_(-1, 1)
             weights1 = agent.policy_net.conv1a.weight.clone()
             optimizer.step()
             weights2 = agent.policy_net.conv1a.weight.clone()

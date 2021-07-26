@@ -264,7 +264,7 @@ class DQN:
         # Compute Huber loss
         #loss = F.smooth_l1_loss(Q_values, expected_Q_values, beta=101)
         #loss = F.mse_loss(Q_values, expected_Q_values)
-        loss = F.huber_loss(Q_values, expected_Q_values, delta=100)
+        loss = F.huber_loss(Q_values, expected_Q_values, delta=10)
         if torch.isnan(loss):
             import pdb;pdb.set_trace()
         self.iteration += 1

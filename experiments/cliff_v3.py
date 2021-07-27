@@ -348,6 +348,20 @@ class Trainer(common.Trainer):
         mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(5)])
         logging.info('mean loss %f', mean_loss)
 
+    def start_fixed(self):
+        """
+        Helper method to be used instead of self._start
+        """
+        start, end = (-111.0, -162.0), (-126.0, -177.0)
+        self.mc.sendCommand("quit")
+        time.sleep(1)
+        self.target_x, self.target_y = end
+        start_x, start_y = start
+        self.mc = self.init_mission(0, self.mc, start_x=start_x, start_y=start_y)
+        self.mc.safeStart()
+        
+        return start
+
     def run_episode(self):
         """ Deep Q-Learning episode
         """

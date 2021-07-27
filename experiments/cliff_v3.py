@@ -25,15 +25,16 @@ class QVisualNetworkV2(QVisualNetwork):
         super().__init__(*args, **kwargs)
         self.n_prev_images = n_prev_images
         num = kwargs.get('num', 128)
+        num1 = num * 2
         # fully connected
         self.q_value = nn.Sequential(
-            nn.Linear(num + (28 * 8 * 8 + 28 * 4 * 4 + 28) * 3, num),
+            nn.Linear(num + (28 * 8 * 8 + 28 * 4 * 4 + 28) * 3, num1),
             self.activation,
-            nn.Linear(num, num),
+            nn.Linear(num1, num1),
             self.activation,
-            nn.Linear(num, num),
+            nn.Linear(num1, num1),
             self.activation,
-            nn.Linear(num, self.n_actions))
+            nn.Linear(num1, self.n_actions))
         self.residual = False
 
 

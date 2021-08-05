@@ -163,7 +163,7 @@ class DQN:
         self.prev_state = None
         self.prev_action = None
         self.memory = ReplayMemory(capacity)
-        self.memory_path = 'memory.pkl'
+        self.memory_path = 'memory_clif_.pkl'
         if os.path.exists(self.memory_path):
             with open(self.memory_path, 'rb') as f:
                 logging.debug('loading %s', self.memory_path)
@@ -198,7 +198,7 @@ class DQN:
             return
         self.memory.push(self.prev_state,
                          self.prev_action,
-                         None, torch.as_tensor(reward))
+                         None, torch.as_tensor(reward, dtype=torch.float))
         self.prev_state = None
         self.prev_action = None
 

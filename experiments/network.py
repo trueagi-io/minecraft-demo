@@ -155,7 +155,7 @@ class ContiniousActionAgent(nn.Module):
 
 
 class DQN:
-    def __init__(self, policy_net, target_net, gamma, batch_size, target_update, capacity=500):
+    def __init__(self, policy_net, target_net, gamma, batch_size, target_update, capacity=500, transform=None):
         self.policy_net = policy_net
         self.target_net = target_net
         self.target_update = target_update
@@ -167,12 +167,16 @@ class DQN:
         if os.path.exists(self.memory_path):
             with open(self.memory_path, 'rb') as f:
                 logging.debug('loading %s', self.memory_path)
-                self.memory = pickle.load(f)
-                self.memory.capacity = capacity
-                self.memory.memory = [x for x in self.memory.memory if x is not None]
+                memory = pickle.load(f)
+                self.memory.episode_stats = memory.episode_stats
+                self.memory.failed_queue = memory.failed_queue
+                self.memory.memory = [x for x in memory.memory if x is not None]
+                self.memory.memory = self.memory.memory[:capacity]
                 self.memory.position = random.randint(0, len(self.memory))
         self.gamma = gamma
         self.batch_size = batch_size
+        self.transform=transform
+        self.save_interval = target_update * 10
 
     def to(self, arg):
         self.policy_net.to(arg)
@@ -218,6 +222,14 @@ class DQN:
         for k in batch.state[0].keys():
             state_batch[k] = torch.stack([data[k] for data in batch.state])
 
+        assert state_batch['image'].max() < 1.1
+        for i, img in enumerate(state_batch['image']):
+            img_trans = self.transform(img.permute(1,2,0).numpy() * 255).permute(2, 0, 1) / 255
+            state_batch['image'][i] = img_trans
+            # import cv2
+            # cv2.imshow('old', img.numpy().transpose(1,2,0))
+            # cv2.imshow('new', state_batch['image'][i].numpy().transpose(1,2,0))
+            # cv2.waitKey(1000)
         action_batch = torch.cat(batch.action)
         reward_batch = torch.stack(batch.reward)
         next_states = batch.next_state
@@ -251,24 +263,31 @@ class DQN:
 
         # Compute Huber loss
         #loss = F.smooth_l1_loss(Q_values, expected_Q_values, beta=101)
-        loss = F.mse_loss(Q_values, expected_Q_values)
+        #loss = F.mse_loss(Q_values, expected_Q_values)
+        loss = F.huber_loss(Q_values, expected_Q_values, delta=10)
         if torch.isnan(loss):
             import pdb;pdb.set_trace()
         self.iteration += 1
             # Update the target network, copying all weights and biases in DQN
         if self.iteration % self.target_update == 0:
-            # save memory
-            tmp_path = self.memory_path + 'tmp'
-            with open(tmp_path, 'wb') as f:
-                pickle.dump(self.memory, f)
-            shutil.move(tmp_path, self.memory_path)
             logging.debug('update target network')
             with torch.no_grad():
                 for pol_param, target_param in zip(self.policy_net.parameters(),
                                                    self.target_net.parameters()):
                     mean = 0.4 * pol_param.detach().cpu().numpy() + 0.6 * target_param.detach().cpu().numpy()
                     target_param[:] = torch.as_tensor(mean).to(pol_param)
+        if self.iteration % self.save_interval == 0 and (self.iteration):
+            self.save_memory()
         return loss
+
+    def save_memory(self):
+        # save memory
+        tmp_path = self.memory_path + 'tmp'
+        logging.debug('saving memory')
+        with open(tmp_path, 'wb') as f:
+            pickle.dump(self.memory, f)
+        shutil.move(tmp_path, self.memory_path)
+        logging.debug('saving memory done')
 
     def state_dict(self):
         return self.target_net.state_dict()
@@ -279,7 +298,7 @@ class DQN:
 
 
 class QVisualNetwork(ContiniousActionAgent, VGG, common.BaseLoader):
-    def __init__(self, actions, pos_enc_len, state_len=0, n_channels=1, activation=nn.ReLU(), batchnorm=True):
+    def __init__(self, actions, pos_enc_len, state_len=0, n_channels=1, activation=nn.ReLU(), batchnorm=True, num=128):
         super().__init__(actions)
         self.activation = activation
         stride = 1
@@ -309,7 +328,6 @@ class QVisualNetwork(ContiniousActionAgent, VGG, common.BaseLoader):
                         stride=stride, padding=1)
         self.pool = nn.MaxPool2d((2, 2))
 
-        num = 128
         # position embedding
         self.pos_emb = nn.Sequential(
             # prev and current position
@@ -475,6 +493,7 @@ class ReplayMemory:
         self.episode_stats = dict()
         # (start, target) -> [avg reward, avg length]
         self.failed_queue = deque([], maxlen=10)
+        self.read_position = 0
 
     def push(self, *args):
         """Saves a transition."""
@@ -486,7 +505,14 @@ class ReplayMemory:
         self.position = (self.position + 1) % self.capacity
 
     def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
+        item = random.sample(self.memory, max(1, batch_size - 2))
+        while len(item) < batch_size:
+            pos = self.position - numpy.random.randint(0, 300)
+            if (len(self.memory) - 1) < abs(pos):
+                pos = numpy.random.randint(0, len(self.memory))
+            item.append(self.memory[pos])
+        assert len(item) == batch_size
+        return item
 
     def __len__(self):
         return len(self.memory)

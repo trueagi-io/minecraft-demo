@@ -16,6 +16,30 @@ def train_agent(agent, Trainer, save_path, train=True):
     eps_decay = 1
     optimizer = torch.optim.AdamW(agent.parameters(), lr=0.001,
                                   weight_decay=0.05)
+
+    optimizer = torch.optim.Adadelta(agent.parameters(), lr=0.001,
+                                  weight_decay=0.01)
+
+    params = [
+            {'params': agent.policy_net.conv1a.parameters(), 'lr': 0.001},
+            {'params': agent.policy_net.conv1b.parameters(), 'lr': 0.001},
+
+            {'params': agent.policy_net.conv2a.parameters(), 'lr': 0.001},
+            {'params': agent.policy_net.conv2b.parameters(), 'lr': 0.001},
+
+            {'params': agent.policy_net.conv3a.parameters(), 'lr': 0.001},
+            {'params': agent.policy_net.conv3b.parameters(), 'lr': 0.001},
+
+            {'params': agent.policy_net.conv4a.parameters(), 'lr': 0.001},
+            {'params': agent.policy_net.conv4b.parameters(), 'lr': 0.001},
+            {'params': agent.policy_net.pos_emb.parameters(), 'lr': 0.0001},
+            {'params': agent.policy_net.q_value.parameters(), 'lr': 0.0001}
+    ]
+
+    optimizer = torch.optim.RMSprop(params,
+                                    lr=0.0001,
+                                    weight_decay=0.01)
+
     mc = None
     for i in range(0, num_repeats):
         mc = Trainer.init_mission(i, mc)
@@ -53,7 +77,15 @@ def train_cliff_v2():
     from cliff_v2 import load_agent, Trainer
     path = 'agent_cliff_v2.pth'
     agent = load_agent(path)
+    train_agent(agent, Trainer, path, False)
+
+
+def train_cliff_v3():
+    from cliff_v3 import load_agent, Trainer
+    path = 'agent_cliff_v3.pth'
+    agent = load_agent(path)
     train_agent(agent, Trainer, path, True)
+
 
 def train_tree():
     from tree import load_agent, Trainer
@@ -82,4 +114,4 @@ def train_vision():
 
 if __name__ == '__main__':
     setup_logger('train.log')
-    train_cliff_v2()
+    train_cliff_v3()

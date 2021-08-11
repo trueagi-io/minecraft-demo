@@ -174,8 +174,9 @@ class Trainer(common.Trainer):
             mc.observeProc()
             aPos = mc.getAgentPos()
             img_data = self.mc.getImage()
-            if not all(mc.isAlive):
-                raise DeadException()
+        height = aPos[1]
+        if height < 30: # avoid ponds and holes
+            raise DeadException()
         pitch = aPos[3]
         yaw = aPos[4]
         data = dict()
@@ -380,7 +381,7 @@ class Trainer(common.Trainer):
             all_str=mission_ending, video_producer=video_producer)
 
         center_x, center_y = -69.25, -23.14
-        step = 20
+        step = 30
         start_x = center_x + random.choice(numpy.arange(-step, step))
         start_y = center_y + random.choice(numpy.arange(-step, step))
 

@@ -1,6 +1,7 @@
 """
 cliff-walking environment and agent
 """
+import cv2
 import logging
 import random
 import time
@@ -238,7 +239,8 @@ class Trainer(common.Trainer):
         ypos = 30 - aPos[1]
         data = dict()
 
-
+        img_data = img_data.reshape((240 * 4, 320 * 4, 3 + self.want_depth))
+        img_data = cv2.resize(img_data, (320, 240))
         img = img_data.reshape((240, 320, 3 + self.want_depth)).transpose(2, 0, 1) / 255.
         img = torch.as_tensor(img).float()
         data['image'] = img
@@ -280,7 +282,7 @@ class Trainer(common.Trainer):
         return data
 
     def _start(self):
-        if random.random() < 0.6 and (self.failed_queue or self.episode_stats):
+        if random.random() < 0.5 and (self.failed_queue or self.episode_stats):
             self.mc.sendCommand("quit")
             time.sleep(1)
             if self.failed_queue:
@@ -353,6 +355,8 @@ class Trainer(common.Trainer):
         Helper method to be used instead of self._start
         """
         start, end = (-111.0, -162.0), (-126.0, -177.0)
+        end = -112.44061909612837, -189.0
+        start = -118.99282090186865, -166.78612
         self.mc.sendCommand("quit")
         time.sleep(1)
         self.target_x, self.target_y = end
@@ -488,7 +492,7 @@ class Trainer(common.Trainer):
     @classmethod
     def init_mission(cls, i, mc, start_x=None, start_y=None):
         miss = mb.MissionXML()
-        video_producer = mb.VideoProducer(width=320, height=240, want_depth=cls.want_depth)
+        video_producer = mb.VideoProducer(width=320 * 4, height=240 * 4, want_depth=cls.want_depth)
 
         obs = mb.Observations()
 

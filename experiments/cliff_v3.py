@@ -434,7 +434,7 @@ class Trainer(common.Trainer):
                 if not mc.is_mission_running():
                     logging.debug('failed in %i steps', t)
                     reward = -100
-                if data['dist'] < 0.68:
+                if data['dist'] < 0.88:
                     time.sleep(1)
                     mc.observeProc()
                     life = mc.getLife()

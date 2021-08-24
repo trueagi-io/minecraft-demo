@@ -102,8 +102,14 @@ def train_vision():
     agent = load_agent(path)
     train_agent(agent, Trainer, path, True)
 
+def train_dig_v1():
+    from dig_v1 import load_agent, Trainer
+    path = 'agent_dig.pth'
+    agent = load_agent(path)
+    train_agent(agent, Trainer, path, False)
 
 if __name__ == '__main__':
     setup_logger('train.log')
     #train_tree_v3()
-    train_cliff_v3()
+    #train_cliff_v3()
+    train_dig_v1()

@@ -21,6 +21,9 @@ from common import stop_motion, grid_to_vec_walking, \
     direction_to_target, normAngle
 from network import QVisualNetwork
 
+BLOCK_TYPE = 0
+HEIGHT = 2
+DIST = -1
 
 class QVisualNetworkV2(QVisualNetwork):
     def __init__(self, n_prev_images, *args, **kwargs):
@@ -78,8 +81,8 @@ class QVisualNetworkV2(QVisualNetwork):
 
 
 class DeadException(RuntimeError):
-    def __init__(self):
-        super().__init__("it's dead")
+    def __init__(self, arg="it's dead"):
+        super().__init__(arg)
 
 
 # quit by reaching target or when zero health
@@ -138,7 +141,7 @@ def load_agent(path):
     #              network.BinaryAction('jump')]
 
     # discreet actions
-    action_names = ["turn 0.1", "turn -0.1", "pitch 0.015", "pitch -0.015", "move 0.9", "jump_forward", "attack 1", "attack 0"]
+    action_names = ["turn 0.1", "turn -0.1", "pitch 0.015", "pitch -0.015", "move 0.9", "jump_forward", "attack 1"]
     actionSet = [network.CategoricalAction(action_names)]
 
     policy_net = QVisualNetworkV2(3, actionSet, 0, 32,  n_channels=3, activation=nn.LeakyReLU(), batchnorm=False, num=256)
@@ -179,8 +182,6 @@ class Trainer(common.Trainer):
         self.agent = agent
         self.mc = mc
         self.optimizer = optimizer
-        if random.random() < 0.2:
-            eps = 0.05
         logging.info('start eps %f', eps)
         self.eps = eps
         self.img_num = 0
@@ -259,7 +260,7 @@ class Trainer(common.Trainer):
                 assert not torch.isnan(value).any()
         return data
 
-    def _end(self, t, total_reward):
+    def _end(self):
         mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(5)])
         logging.info('mean loss %f', mean_loss)
 
@@ -268,7 +269,7 @@ class Trainer(common.Trainer):
         """ Deep Q-Learning episode
         """
         self.agent.clear_state()
-        max_t = 3000
+        max_t = 250
         self._random_turn()
 
         mc = self.mc
@@ -285,6 +286,9 @@ class Trainer(common.Trainer):
 
         t = 0
 
+        state = self.collect_state()
+        if state['ypos'] < 0:
+            raise DeadException('started in a pit')
         # pitch, yaw, xpos, ypos, zpos
         prev_pos = None
         prev_target_dist = None
@@ -293,6 +297,7 @@ class Trainer(common.Trainer):
 
         while True:
             t += 1
+            logging.debug('\n\n\nstep %i', t)
             # target = search4blocks(mc, ['lapis_block'], run=False)
             reward = 0
             try:
@@ -302,6 +307,7 @@ class Trainer(common.Trainer):
                 self.agent.push_final(-100)
                 reward = -100
                 logging.debug("failed at step %i", t)
+                import pdb;pdb.set_trace()
                 self.learn(self.agent, self.optimizer)
                 break
             if self.state_queue:
@@ -314,28 +320,49 @@ class Trainer(common.Trainer):
                         self.agent.push_final(reward)
                     self.learn(self.agent, self.optimizer)
                     break
-                if 'visible' in data:
+                if 'visible' in self.state_queue[-1]:
                     prev_action = self.agent.policy_net.actions[0].to_string(self.state_queue[-1]['action'])
-                    if prev_action.startswith('attack'):
-                        # if block is removed visible would change
-                        prev_dist = self.state_queue[-1]['visible'][-1]
-                        current_dist = data['visible'][-1]
-                        if prev_dist < current_dist:
-                            reward += 2 
-                            if data['visible'][2] < 30:
-                                reward += 3
-                            if data['visible'][2] < 29:
-                                reward += 4
-                            if data['visible'][2] < 28:
-                                reward += 5
-                        else:
-                            if current_dist < 2:
-                                reward += 1
+                    prev_item = self.state_queue[-1]['visible']
+                    logging.debug(prev_item)
+                    prev_dist = prev_item[DIST]
+                    prev_block = prev_item[BLOCK_TYPE]
+                    if prev_block in ('water', 'lava', 'flowing_lava'):
+                        reward -= 2
+                    if prev_action == 'attack 1':
+                        h_target = 24
+                        if prev_dist <= 4:
                             reward += 0.5
-                    if data['visible'][0] in ('water', 'lava'):
+                        else:
+                            reward -= 1
+                        if 'visible' in data:
+                            current_dist = data['visible'][-1]
+                            # if block is removed visible would change
+                            if (0.1 < (current_dist - prev_dist)):
+                                logging.debug('distance is more than before!')
+                                reward += 1
+                                if prev_block in ('double_plant', 'tallgrass'):
+                                    reward -= 0.5
+                                tmp = ((30 - h_target) - abs(prev_item[HEIGHT] - h_target))
+                                logging.info('tmp dist %f', tmp)
+                                tmp = max(tmp, 0) ** 2
+                                if h_target < prev_item[HEIGHT]:
+                                    tmp /= 3
+                                reward += tmp
+                                if prev_block not in ('dirt', 'grass', 'stone', 'double_plant', 'tallgrass', 'leaves', 'log'):
+                                    reward += 25
+                            else:
+                                # give small reward for removing block under self
+                                prev_height = 30 - self.state_queue[-1]['ypos']
+                                curr_height = 30 - data['ypos']
+                                if curr_height < prev_height:
+                                    tmp = ((30 - h_target) - abs(prev_height - h_target))
+                                    logging.debug('removed block!')
+                                    logging.debug('tmp dist %f', tmp)
+                                    reward += max(tmp, 0) ** 2 / 2
+                else:
+                    if 'visible' not in data:
+                        logging.debug('not visible')
                         reward -= 1
-
-
                 reward -= 1
                 reward += (life - prev_life) * 2
                 prev_life = life
@@ -354,8 +381,7 @@ class Trainer(common.Trainer):
             time.sleep(0.4)
             stop_motion(mc)
             time.sleep(0.1)
-            if t == max_t or total_reward < -200:
-                reward -= 1
+            if t == max_t:
                 logging.debug("too long")
                 stop_motion(mc)
                 self.agent.push_final(reward)
@@ -365,8 +391,12 @@ class Trainer(common.Trainer):
             total_reward += reward
         # in termial state reward is not added due loop breaking
         total_reward += reward
+
+        aPos = self.mc.getAgentPos()
+        if aPos is not None and aPos[1] <= 25:
+            solved = True
         logging.debug("Final reward: %f", reward)
-        self._end(t, total_reward)
+        self._end()
         return total_reward, t, solved
 
     def act(self, actions):

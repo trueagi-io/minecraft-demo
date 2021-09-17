@@ -112,6 +112,9 @@ class MalmoConnector:
         world_state = self.agent_hosts[nAgent].getWorldState()
         return world_state.is_mission_running
 
+    def sendCommand(self, command, nAgent=0):
+        self.agent_hosts[nAgent].sendCommand(command)
+
     def observeProc(self, nAgent=None):
         r = range(len(self.agent_hosts)) if nAgent is None else range(nAgent, nAgent+1)
         self.pixels = [None for _ in r]
@@ -135,9 +138,16 @@ class MalmoConnector:
             return None
 
     def getFullStat(self, key, nAgent=0):
-        # keys (position): 'XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw'
-        # keys (status)  : 'Life', 'Food', 'Air', 'IsAlive'
-        # keys (more)    : 'XP', 'Score', 'Name', 'WorldTime', 'TotalTime', 'DistanceTravelled', 'TimeAlive', 'MobsKilled', 'PlayersKilled', 'DamageTaken', 'DamageDealt'
+        """
+            Dsc: this function was intended to return observations from full stats.
+                 However, full stats don't have a dedicated key, but are placed directly
+                 (each stat has its own key). Thus, this procedure can return any observation.
+            FullStat:
+                keys (position): 'XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw'
+                keys (status)  : 'Life', 'Food', 'Air', 'IsAlive'
+                keys (more)    : 'XP', 'Score', 'Name', 'WorldTime', 'TotalTime', 'DistanceTravelled', 'TimeAlive',
+                                 'MobsKilled', 'PlayersKilled', 'DamageTaken', 'DamageDealt'
+        """
         if (self.observe[nAgent] is not None) and (key in self.observe[nAgent]):
             return self.observe[nAgent][key]
         else:
@@ -146,19 +156,14 @@ class MalmoConnector:
     def isLineOfSightAvailable(self, nAgent=0):
         return not self.observe[nAgent] is None and 'LineOfSight' in self.observe[nAgent]
 
-    def isInventoryAvailable(self, nAgent=0):
-        return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]
+    def getLineOfSights(self, nAgent=0):
+        return self.observe[nAgent]['LineOfSight'] if self.isLineOfSightAvailable(nAgent) else None
 
     def getLineOfSight(self, key, nAgent=0):
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
-        if self.isLineOfSightAvailable(nAgent) and (key in self.observe[nAgent]['LineOfSight']):
-            return self.observe[nAgent]['LineOfSight'][key]
-        else:
-            return None
+        los = self.getLineOfSights(nAgent)
+        return los[key] if los is not None and key in los else None
     
-    def sendCommand(self, command, nAgent=0):
-        self.agent_hosts[nAgent].sendCommand(command)
-
     def getNearEntities(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('ents_near' in self.observe[nAgent]):
             return self.observe[nAgent]['ents_near']
@@ -177,33 +182,14 @@ class MalmoConnector:
         else:
             return None
 
+    def isInventoryAvailable(self, nAgent=0):
+        return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]
+
+    def getInventory(self, nAgent=0):
+        return self.observe[nAgent]['inventory'] if self.isInventoryAvailable(nAgent) else None
+
     def getGridBox(self, nAgent=0):
         return self.missionDesc.agentSections[nAgent].agenthandlers.observations.gridNear
-
-    def getNearGrid3D(self, nAgent=0):
-        if (self.observe[nAgent] is not None) and ('grid_near' in self.observe[nAgent]):
-            grid = self.observe[nAgent]['grid_near']
-            gridBox = self.getGridBox(nAgent)
-            gridSz = [gridBox[i][1]-gridBox[i][0]+1 for i in range(3)]
-            return [[grid[(z+y*gridSz[2])*gridSz[0]:(z+1+y*gridSz[2])*gridSz[0]] for z in range(gridSz[2])] for y in range(gridSz[1])]
-        else:
-            return None
-
-    def getYawDeltas(self, nAgent=0):
-        pos = self.getAgentPos(nAgent)
-        if pos is not None:
-            return MalmoConnector.yawDelta(pos[4] * math.pi / 180.)
-        else:
-            return None
-    
-    def dirToPos(self, pos, nAgent=0):
-        aPos = self.getAgentPos(nAgent)
-        if aPos is None: return None
-        dx = pos[0] - aPos[0]
-        dz = pos[2] - aPos[2]
-        yaw = -math.atan2(dx, dz)
-        pitch = -math.atan2(pos[1] - aPos[1] - 1, math.sqrt(dx * dx + dz * dz))
-        return [pitch, yaw]
 
     def gridIndexToPos(self, index, nAgent=0):
         gridBox = self.getGridBox(nAgent)
@@ -216,18 +202,80 @@ class MalmoConnector:
         return [x, y, z]
 
 
-    def gridIndexToAbsPos(self, index, nAgent=0):
-        [x, y, z] = self.gridIndexToPos(index, nAgent)
-        pos = self.getAgentPos(nAgent)
-        if pos is None: return None
+class RobustObserver:
+
+    def __init__(self, mc, nAgent = 0):
+        self.mc = mc
+        self.nAgent = nAgent
+        self.tick = 0.02
+        self.max_dt = 1.0
+        self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights',
+                        'getLife', 'getInventory']
+        self.cached = {method : (None, 0) for method in self.methods}
+    
+    def getCachedObserve(self, method, key = None):
+        val = self.cached[method][0]
+        if key is None:
+            return val
+        else:
+            return val[key] if val is not None and key in val else None
+
+    def observeProcCached(self):
+        self.mc.observeProc()
+        t_new = time.time()
+        for method in self.methods:
+            v_new = getattr(self.mc, method)(self.nAgent)
+            (v, t) = self.cached[method]
+            if v_new is not None or t_new - t > self.max_dt: # or v is None
+                self.cached[method] = (v_new, t_new)
+
+    def waitNotNoneObserve(self, method, updateReq=False):
+        # REM: do not use with 'getLineOfSights'
+        tm = self.cached[method][1]
+        self.observeProcCached()
+        # if updated observation is required, observation time should be changed
+        # (is not recommended while moving)
+        while self.getCachedObserve(method) is None or\
+              (self.cached[method][1] == tm and updateReq):
+            time.sleep(self.tick)
+            self.observeProcCached()
+        return self.getCachedObserve(method)
+    
+    def sendCommand(self, command):
+        self.mc.sendCommand(command, self.nAgent)
+
+    # ===== specific methods =====
+
+    def dirToPos(self, pos):
+        aPos = self.waitNotNoneObserve('getAgentPos')
+        dx = pos[0] - aPos[0]
+        dz = pos[2] - aPos[2]
+        yaw = -math.atan2(dx, dz)
+        pitch = -math.atan2(pos[1] - aPos[1] - 1, math.sqrt(dx * dx + dz * dz))
+        return [pitch, yaw]
+
+    def gridIndexToAbsPos(self, index):
+        [x, y, z] = self.mc.gridIndexToPos(index, self.nAgent)
+        pos = self.waitNotNoneObserve('getAgentPos')
         # TODO? Round to the center of the block (0.5)?
         return [x + pos[0], y + pos[1], z + pos[2]]
 
-    def gridInYaw(self, nAgent=0):
+    def getNearGrid3D(self):
+        grid = self.waitNotNoneObserve('getNearGrid')
+        gridBox = self.mc.getGridBox(self.nAgent)
+        gridSz = [gridBox[i][1]-gridBox[i][0]+1 for i in range(3)]
+        return [[grid[(z+y*gridSz[2])*gridSz[0]:(z+1+y*gridSz[2])*gridSz[0]] \
+                 for z in range(gridSz[2])] for y in range(gridSz[1])]
+
+    def getYawDeltas(self):
+        pos = self.waitNotNoneObserve('getAgentPos')
+        return MalmoConnector.yawDelta(pos[4] * math.pi / 180.)
+    
+    def gridInYaw(self):
         '''Vertical slice of the grid in the line-of-sight direction'''
-        grid3D = self.getNearGrid3D(nAgent)
-        deltas = self.getYawDeltas(nAgent)
-        pos = self.getAgentPos(nAgent)
+        grid3D = self.getNearGrid3D()
+        deltas = self.getYawDeltas()
+        pos = self.getCachedObserve('getAgentPos')
         if grid3D is None or deltas is None:
             return None
         dimX = len(grid3D[0][0])
@@ -256,7 +304,14 @@ class MalmoConnector:
             objs += [line]
         return objs
 
-    def filterInventoryItem(self, item, nAgent=0):
-        if not self.isInventoryAvailable(nAgent):
-            return None
-        return list(filter(lambda entry: entry['type']==item, self.observe[nAgent]['inventory']))
+    def craft(self, item):
+        self.sendCommand('craft ' + item)
+        # always sleep after crafting, so information about the crafted item
+        # will be received
+        time.sleep(0.1)
+
+    def filterInventoryItem(self, item):
+        inv = self.waitNotNoneObserve('getInventory', True)
+        return list(filter(lambda entry: entry['type']==item, inv))
+
+

@@ -201,6 +201,13 @@ class MalmoConnector:
         x = index % gridSz[0] + gridBox[0][0]
         return [x, y, z]
 
+    def dirToPos(self, aPos, pos):
+        dx = pos[0] - aPos[0]
+        dz = pos[2] - aPos[2]
+        yaw = -math.atan2(dx, dz)
+        pitch = -math.atan2(pos[1] - aPos[1] - 1, math.sqrt(dx * dx + dz * dz))
+        return [pitch, yaw]
+
 
 class RobustObserver:
 
@@ -246,13 +253,9 @@ class RobustObserver:
 
     # ===== specific methods =====
 
-    def dirToPos(self, pos):
+    def dirToAgentPos(self, pos):
         aPos = self.waitNotNoneObserve('getAgentPos')
-        dx = pos[0] - aPos[0]
-        dz = pos[2] - aPos[2]
-        yaw = -math.atan2(dx, dz)
-        pitch = -math.atan2(pos[1] - aPos[1] - 1, math.sqrt(dx * dx + dz * dz))
-        return [pitch, yaw]
+        return self.mc.dirToPos(aPos, pos)
 
     def gridIndexToAbsPos(self, index):
         [x, y, z] = self.mc.gridIndexToPos(index, self.nAgent)
@@ -308,7 +311,7 @@ class RobustObserver:
         self.sendCommand('craft ' + item)
         # always sleep after crafting, so information about the crafted item
         # will be received
-        time.sleep(0.1)
+        time.sleep(0.2)
 
     def filterInventoryItem(self, item):
         inv = self.waitNotNoneObserve('getInventory', True)

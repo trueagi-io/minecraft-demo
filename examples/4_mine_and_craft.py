@@ -104,7 +104,7 @@ def lookAt(rob, pos):
     for t in range(3000):
         sleep(0.02)
         aPos = rob.waitNotNoneObserve('getAgentPos')
-        [pitch, yaw] = rob.dirToPos(pos)
+        [pitch, yaw] = rob.dirToAgentPos(pos)
         pitch = normAngle(pitch - aPos[3]*math.pi/180.)
         yaw = normAngle(yaw - aPos[4]*math.pi/180.)
         if abs(pitch)<0.02 and abs(yaw)<0.02: break

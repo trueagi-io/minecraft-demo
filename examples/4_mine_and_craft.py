@@ -1,3 +1,4 @@
+import logging
 import math
 from time import sleep
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
@@ -68,9 +69,11 @@ def nearestFromEntities(rob, obj):
 
 # This function is executed to run to a visible object,
 # but it doesn't check if the path is safe
-def runStraight(rob, dist):
+def runStraight(rob, dist, keepHeight=False):
+    logging.info("\tinside runStraight")
     start = rob.waitNotNoneObserve('getAgentPos')
     rob.sendCommand("move 1")
+    bJump = False
     for t in range(2+int(dist*5)):
         sleep(0.1)
         rob.observeProcCached()
@@ -79,15 +82,25 @@ def runStraight(rob, dist):
             continue
         if dist * dist < (pos[0] - start[0]) * (pos[0] - start[0]) + (pos[2] - start[2]) * (pos[2] - start[2]):
             break
+        if pos[1] < start[1] - 0.5 and keepHeight:
+            rob.sendCommand("jump 1")
+            rob.sendCommand("attack 1")
+            bJump = True
+        elif bJump:
+            rob.sendCommand("jump 0")
+            rob.sendCommand("attack 0")
+            bJump = False
         los = rob.getCachedObserve('getLineOfSights')
         if los is not None and los['distance'] < 0.5 and \
            not los['distance'] in passableBlocks and \
-           not los['type'] in passableBlocks:
+           not los['type'] in passableBlocks and\
+           not bJump:
             break
     rob.sendCommand("move 0")
 
 # Just look at a specified direction
 def lookDir(rob, pitch, yaw):
+    logging.info("\tinside lookDir")
     for t in range(3000):
         sleep(0.02) # wait for action
         aPos = rob.waitNotNoneObserve('getAgentPos')
@@ -101,6 +114,7 @@ def lookDir(rob, pitch, yaw):
 
 # Look at a specified location
 def lookAt(rob, pos):
+    logging.info("\tinside lookAt")
     for t in range(3000):
         sleep(0.02)
         aPos = rob.waitNotNoneObserve('getAgentPos')
@@ -115,6 +129,7 @@ def lookAt(rob, pos):
     return math.sqrt((aPos[0] - pos[0]) * (aPos[0] - pos[0]) + (aPos[2] - pos[2]) * (aPos[2] - pos[2]))
 
 def strafeCenterX(rob):
+    logging.info("\tinside strafeCenterX")
     rob.sendCommand('strafe 0.1')
     for t in range(200):
         sleep(0.02)
@@ -128,6 +143,7 @@ def strafeCenterX(rob):
 # Note that we don't use video input and rely on a small Grid and Ray,
 # so our agent can miss objects visible by human
 def search4blocks(rob, blocks):
+    logging.info("\tinside search4blocks")
     for t in range(3000):
         sleep(0.02) # for action execution - not observations
         grid = rob.waitNotNoneObserve('getNearGrid')
@@ -158,6 +174,7 @@ def search4blocks(rob, blocks):
 # Just attacking while the current block is not destroyed
 # assuming nothing else happens
 def mineAtSight(rob):
+    logging.info("\tinside mineAtSight")
     sleep(0.1)
     rob.observeProcCached()
     los = rob.getCachedObserve('getLineOfSights')
@@ -179,6 +196,7 @@ def mineAtSight(rob):
 
 # A skill to choose a tool for mining (in the context of the current example)
 def chooseTool(rob):
+    # logging.info("\tinside chooseTool")
     los = rob.getCachedObserve('getLineOfSights')
     if los is None:
         return
@@ -204,6 +222,7 @@ def chooseTool(rob):
     
 # Mine not just one block, but everything in range
 def mineWhileInRange(rob):
+    logging.info("\tinside mineWhileInRange")
     rob.sendCommand('attack 1')
     rob.observeProcCached()
     while rob.getCachedObserve('getLineOfSights') is None or rob.getCachedObserve('getLineOfSights', 'inRange'):
@@ -214,12 +233,13 @@ def mineWhileInRange(rob):
 
 # A higher-level skill for getting sticks
 def getSticks(rob):
+    logging.info("\tinside getSticks")
     # repeat 3 times, because the initial target can be wrong due to tallgrass
     # or imprecise direction to a distant tree
     for i in range(3):
         target = search4blocks(rob, ['log', 'leaves'])
         dist = lookAt(rob, target[1:4])
-        runStraight(rob, dist)
+        runStraight(rob, dist, True)
 
     target = nearestFromGrid(rob, 'log')
     while target is not None:
@@ -228,7 +248,7 @@ def getSticks(rob):
             break
         target = nearestFromEntities(rob, 'log')
         if target is not None:
-            runStraight(rob, lookAt(rob, target))
+            runStraight(rob, lookAt(rob, target), True)
         target = nearestFromGrid(rob, 'log')
 
     while rob.filterInventoryItem('log') != []: # [] != None as well
@@ -238,6 +258,7 @@ def getSticks(rob):
 
 # A very simple skill for leaving a flat shaft mined in a certain direction
 def leaveShaft(rob):
+    logging.info("\tinside leaveShaft")
     lookDir(rob, 0, math.pi)
     rob.sendCommand('move 1')
     rob.sendCommand('jump 1')
@@ -247,6 +268,7 @@ def leaveShaft(rob):
 
 # Making a shaft in a certain direction
 def mineStone(rob):
+    logging.info("\tinside mineStone")
     lookDir(rob, math.pi/4, 0.0)
     strafeCenterX(rob)
     while True:
@@ -258,6 +280,7 @@ def mineStone(rob):
 # The skill that will most likely fail: it's not that easy to find iron ore and coal
 # without even looking around
 def mineIron(rob):
+    logging.info("\tinside mineIron")
     strafeCenterX(rob)
     while rob.waitNotNoneObserve('getAgentPos')[1] > 22.:
         mineWhileInRange(rob)
@@ -282,53 +305,66 @@ def mineIron(rob):
             break
 
 
-miss = mb.MissionXML()
-miss.setWorld(mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", forceReset="true"))
-miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
-mc = MalmoConnector(miss)
-mc.safeStart()
-rob = RobustObserver(mc)
-# fixing bug with falling through while reconnecting
-sleep(2)
-rob.sendCommand("jump 1")
-sleep(0.1)
-rob.sendCommand("jump 0")
+if __name__ == '__main__':
 
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Starting the mission")
+    miss = mb.MissionXML()
+    miss.setWorld(mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", forceReset="true"))
+    miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
+    mc = MalmoConnector(miss)
+    mc.safeStart()
+    rob = RobustObserver(mc)
+    # fixing bug with falling through while reconnecting
+    logging.info("Initializing the starting position")
+    sleep(2)
+    rob.sendCommand("jump 1")
+    sleep(0.1)
+    rob.sendCommand("jump 0")
+    lookDir(rob, 0, 0)
 
-lookDir(rob, 0, 0)
+    logging.info("The first search for sticks")
+    getSticks(rob)
 
-getSticks(rob)
+    logging.info("Trying to craft a wooden pickaxe")
+    rob.craft('wooden_pickaxe')
+    pickaxe = rob.filterInventoryItem('wooden_pickaxe')
+    if pickaxe == []:
+        print("Failed")
+        exit()
 
-rob.craft('wooden_pickaxe')
-pickaxe = rob.filterInventoryItem('wooden_pickaxe')
-if pickaxe == []:
-    print("Failed")
-    exit()
+    # put pickaxe into inventory_0 == hotbar.1 slot
+    rob.sendCommand('swapInventoryItems 0 ' + str(pickaxe[0]['index']))
 
-# put pickaxe into inventory_0 == hotbar.1 slot
-rob.sendCommand('swapInventoryItems 0 ' + str(pickaxe[0]['index']))
+    logging.info("Mining stones")
+    mineStone(rob)
 
-mineStone(rob)
+    logging.info("Crafting stone_pickaxe")
+    rob.craft('stone_pickaxe')
+    pickaxe = rob.filterInventoryItem('stone_pickaxe')
+    # put pickaxe into inventory_1 == hotbar.2 slot
+    rob.sendCommand('swapInventoryItems 1 ' + str(pickaxe[0]['index']))
 
-rob.craft('stone_pickaxe')
-pickaxe = rob.filterInventoryItem('stone_pickaxe')
-# put pickaxe into inventory_1 == hotbar.2 slot
-rob.sendCommand('swapInventoryItems 1 ' + str(pickaxe[0]['index']))
-
-#climbing up
-leaveShaft(rob)
-
-rob.sendCommand('move 1')
-rob.sendCommand('attack 1')
-sleep(3)
-stopMove(rob)
-getSticks(rob)
-
-lookDir(rob, math.pi/4, 0.0)
-mineIron(rob)
-leaveShaft(rob)
-
-if not rob.filterInventoryItem('iron_pickaxe'):
-    lookDir(rob, math.pi/4, math.pi)
-    mineIron(rob)
+    #climbing up
+    logging.info("Leaving the shaft")
     leaveShaft(rob)
+    rob.sendCommand('move 1')
+    rob.sendCommand('attack 1')
+    sleep(3)
+    stopMove(rob)
+
+    logging.info("Getting sticks once again")
+    getSticks(rob)
+
+    logging.info("Mining for iron")
+    lookDir(rob, math.pi/4, 0.0)
+    mineIron(rob)
+    logging.info("Leaving the shaft")
+    leaveShaft(rob)
+
+    if not rob.filterInventoryItem('iron_pickaxe'):
+        logging.info("One more attemp of iron mining")
+        rob.craft('stone_pickaxe')
+        lookDir(rob, math.pi/4, math.pi)
+        mineIron(rob)
+        leaveShaft(rob)

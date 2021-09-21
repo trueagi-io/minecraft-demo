@@ -91,45 +91,6 @@ def grid_to_real_feature_vec_walking(block_list):
     return codes
 
 
-# A simplistic search behavior
-# Note that we don't use video input and rely on a small Grid and Ray,
-# so our agent can miss objects visible by human
-def search4blocks(mc, blocks, run=True):
-    print('search for blocks')
-    for t in range(3000):
-        sleep(0.02)
-        mc.observeProc()
-        if mc.getLineOfSight('type') in blocks:
-            stopMove(mc)
-            return [mc.getLineOfSight('type'), mc.getLineOfSight('x'), mc.getLineOfSight('y'), mc.getLineOfSight('z')]
-        if run:
-            grid = mc.getNearGrid()
-            if grid is not None:
-                for i in range(len(grid)):
-                    if grid[i] in blocks:
-                        stopMove(mc)
-                        import pdb;pdb.set_trace()
-                        return [grid[i]] + mc.gridIndexToAbsPos(i)
-            gridSlice = mc.gridInYaw()
-            if gridSlice == None:
-                continue
-            ground = gridSlice[(len(gridSlice) - 1) // 2 - 1]
-            solid = all([not (b in passableBlocks) for b in ground])
-            wayLv0 = gridSlice[(len(gridSlice) - 1) // 2]
-            wayLv1 = gridSlice[(len(gridSlice) - 1) // 2 + 1]
-            passWay = all([b in passableBlocks for b in wayLv0]) and all([b in passableBlocks for b in wayLv1])
-        turnVel = 0.125 * math.sin(t * 0.005)
-        if run and (not (passWay and solid)):
-            turnVel -= 1
-        pitchVel = -0.015 * math.cos(t * 0.005)
-        if run:
-            mc.sendCommand("move 1")
-        mc.sendCommand("turn " + str(turnVel))
-        mc.sendCommand("pitch " + str(pitchVel))
-    stopMove(mc)
-    return None
-
-
 def normAngle(angle):
     while (angle < -math.pi): angle += 2 * math.pi
     while (angle > math.pi): angle -= 2 * math.pi
@@ -145,7 +106,7 @@ def lookAt(mc, pos):
         aPos = mc.getAgentPos()
         if aPos is None:
             continue
-        [pitch, yaw] = mc.dirToPos(pos)
+        [pitch, yaw] = mc.dirToPos(aPos, pos)
         pitch = normAngle(pitch - aPos[3]*math.pi/180.)
         yaw = normAngle(yaw - aPos[4]*math.pi/180.)
         if abs(pitch)<0.02 and abs(yaw)<0.02: break
@@ -166,7 +127,7 @@ def stopMove(mc):
 
 def direction_to_target(mc, pos):
     aPos = mc.getAgentPos()
-    [pitch, yaw] = mc.dirToPos(pos)
+    [pitch, yaw] = mc.dirToPos(aPos, pos)
     pitch = normAngle(pitch - aPos[3]*math.pi/180.)
     yaw = normAngle(yaw - aPos[4]*math.pi/180.)
     dist = math.sqrt((aPos[0] - pos[0]) * (aPos[0] - pos[0]) + (aPos[2] - pos[2]) * (aPos[2] - pos[2]))
@@ -183,18 +144,31 @@ def stop_motion(mc):
 
 def learn(agent, optimizer):
     losses = []
+    means = []
+    means1 = []
+    means_change = []
     for i in range(40):
         optimizer.zero_grad()
         loss = agent.compute_loss()
         if loss is not None:
             # Optimize the model
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(agent.parameters(), 2)
+            # torch.nn.utils.clip_grad_norm_(agent.parameters(), 2)
+            for param in agent.policy_net.parameters():
+                param.grad.data.clamp_(-1, 1)
+            weights1 = agent.policy_net.conv1a.weight.clone()
             optimizer.step()
+            weights2 = agent.policy_net.conv1a.weight.clone()
+            means1.append(agent.policy_net.q_value[0].weight.grad.abs().mean().cpu().detach())
+            means_change.append((weights2 - weights1).abs().mean().cpu().detach())
+            means.append(agent.policy_net.conv1a.weight.grad.abs().mean().cpu().detach())
             losses.append(loss.cpu().detach())
     if losses:
         logging.debug('optimizing')
         logging.debug('loss %f', numpy.mean(losses))
+        logging.debug('mean conv1a %f', numpy.mean(means))
+        logging.debug('mean change conv1a %f', numpy.mean(means_change))
+        logging.debug('mean qvalue.0 %f', numpy.mean(means1))
     return numpy.mean(losses)
 
 
@@ -233,7 +207,6 @@ def vectors_angle(vec1, vec2):
     return angle
 
 
-
 class  BaseLoader:
     def load_checkpoint(self, state_dict: dict, strict=True) -> bool:
         """
@@ -257,4 +230,40 @@ class  BaseLoader:
                 is_changed = True
         self.load_state_dict(state_dict, strict=strict)
         return is_changed
+
+
+def dist_embed(d, eps=1.00001):
+    d += eps
+    result = [d ** (1/2),
+              d ** (1/3),
+              d ** (1/4),
+              d ** (1/5)]
+    return torch.stack(result).permute(1,0,2).flatten(1) - 1
+
+
+def angle_embed(d):
+    lst = [torch.sin(d / x) for x in range(2, 10, 2)] + \
+                           [torch.cos(d / x) for x in range(2, 10, 2)]
+    # return batch * (len(d) * 2 * 4)
+    return torch.stack(lst).permute(1,0,2).flatten(1)
+
+
+
+def make_noisy_transformers():
+    from torchvision.transforms import Compose
+    from transform import RandomTransformer, ToTensor
+
+    from noise import AdditiveGaussian, RandomBrightness, AdditiveShade, MotionBlur, SaltPepper, RandomContrast
+    totensor = ToTensor()
+    # ColorInversion doesn't seem to be usefull on most datasets
+    transformer = [
+                   AdditiveGaussian(var=30),
+                   RandomBrightness(range=(-50, 50)),
+                   AdditiveShade(kernel_size_range=[45, 85],
+                                 transparency_range=(-0.25, .45)),
+                   SaltPepper(),
+                   MotionBlur(max_kernel_size=5),
+                   RandomContrast([0.6, 1.05])
+                   ]
+    return Compose([RandomTransformer(transformer), totensor])
 

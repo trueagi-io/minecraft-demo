@@ -40,7 +40,7 @@ class MalmoConnector:
             if self.agent_hosts[0].receivedArgument("record_video"):
                 self.mission_record.recordMP4(24,2000000)
         self.client_pool = MalmoPython.ClientPool()
-        for x in range(10000, 10000 + nAgents):
+        for x in range(10000, 10000 + nAgents+5):
             self.client_pool.add( MalmoPython.ClientInfo(serverIp, x) )
         self.worldStates = [None]*nAgents
         self.observe = [None]*nAgents

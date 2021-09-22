@@ -239,13 +239,18 @@ class RobustObserver:
     def waitNotNoneObserve(self, method, updateReq=False):
         # REM: do not use with 'getLineOfSights'
         tm = self.cached[method][1]
-        self.observeProcCached()
+        # Do not force observeProcCached if the value was updated less than tick ago
+        if time.time() - tm > self.tick:
+            self.observeProcCached()
         # if updated observation is required, observation time should be changed
         # (is not recommended while moving)
         while self.getCachedObserve(method) is None or\
               (self.cached[method][1] == tm and updateReq):
             time.sleep(self.tick)
             self.observeProcCached()
+            if self.cached[method][1] - tm > self.max_dt:
+                # It's better to return None rather than hanging too long
+                break
         return self.getCachedObserve(method)
     
     def sendCommand(self, command):

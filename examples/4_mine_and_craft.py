@@ -257,13 +257,14 @@ def getSticks(rob):
     rob.craft('stick')
 
 # A very simple skill for leaving a flat shaft mined in a certain direction
-def leaveShaft(rob):
+def leaveShaft(rob, angle):
     logging.info("\tinside leaveShaft")
-    lookDir(rob, 0, math.pi)
+    lookDir(rob, 0, angle)
     rob.sendCommand('move 1')
     rob.sendCommand('jump 1')
     while rob.waitNotNoneObserve('getAgentPos')[1] < 30.:
         sleep(0.1)
+    sleep(1.)
     stopMove(rob)
 
 # Making a shaft in a certain direction
@@ -347,7 +348,7 @@ if __name__ == '__main__':
 
     #climbing up
     logging.info("Leaving the shaft")
-    leaveShaft(rob)
+    leaveShaft(rob, math.pi)
     rob.sendCommand('move 1')
     rob.sendCommand('attack 1')
     sleep(3)
@@ -360,11 +361,11 @@ if __name__ == '__main__':
     lookDir(rob, math.pi/4, 0.0)
     mineIron(rob)
     logging.info("Leaving the shaft")
-    leaveShaft(rob)
+    leaveShaft(rob, math.pi)
 
     if not rob.filterInventoryItem('iron_pickaxe'):
         logging.info("One more attemp of iron mining")
         rob.craft('stone_pickaxe')
         lookDir(rob, math.pi/4, math.pi)
         mineIron(rob)
-        leaveShaft(rob)
+        leaveShaft(rob, 0.0)

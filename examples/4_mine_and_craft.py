@@ -17,8 +17,6 @@ import tagilmo.utils.mission_builder as mb
 # The longer the plan, the more things can go wrong.
 # It is instructive to examine failure cases.
 
-passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass', 'reeds', 'red_flower', 'yellow_flower']
-
 
 # ============== some helper functions ==============
 
@@ -26,43 +24,6 @@ def normAngle(angle):
     while (angle < -math.pi): angle += 2 * math.pi
     while (angle > math.pi): angle -= 2 * math.pi
     return angle
-
-def stopMove(rob):
-    rob.sendCommand("move 0")
-    rob.sendCommand("turn 0")
-    rob.sendCommand("pitch 0")
-    rob.sendCommand("jump 0")
-    rob.sendCommand("strafe 0")
-
-def nearestFromGrid(rob, obj):
-    grid = rob.waitNotNoneObserve('getNearGrid')
-    pos  = rob.waitNotNoneObserve('getAgentPos')
-    d2 = 10000
-    target = None
-    for i in range(len(grid)):
-        if grid[i] != obj: continue
-        [x, y, z] = rob.mc.gridIndexToPos(i)
-        d2c = x * x + y * y + z * z
-        if d2c < d2:
-            d2 = d2c
-            # target = rob.gridIndexToAbsPos(i)
-            target = [x + pos[0], y + pos[1], z + pos[2]]
-    return target
-
-def nearestFromEntities(rob, obj):
-    ent = rob.waitNotNoneObserve('getNearEntities')
-    pos = rob.waitNotNoneObserve('getAgentPos')
-    d2 = 10000
-    target = None
-    for e in ent:
-        if e['name'] != obj: continue
-        [x, y, z] = [e['x'], e['y'], e['z']]
-        if abs(y - pos[1]) > 1: continue
-        d2c = (x - pos[0]) * (x - pos[0]) + (y - pos[1]) * (y - pos[1]) + (z - pos[2]) * (z - pos[2])
-        if d2c < d2:
-            d2 = d2c
-            target = [x, y, z]
-    return target
 
 
 # ============== some hand-coded skills ==============
@@ -92,8 +53,8 @@ def runStraight(rob, dist, keepHeight=False):
             bJump = False
         los = rob.getCachedObserve('getLineOfSights')
         if los is not None and los['distance'] < 0.5 and \
-           not los['distance'] in passableBlocks and \
-           not los['type'] in passableBlocks and\
+           not los['distance'] in RobustObserver.passableBlocks and \
+           not los['type'] in RobustObserver.passableBlocks and\
            not bJump:
             break
     rob.sendCommand("move 0")
@@ -136,7 +97,7 @@ def strafeCenterX(rob):
         aPos = rob.waitNotNoneObserve('getAgentPos')
         if int(abs(aPos[0])*10+0.5)%10==5:
             break
-    stopMove(rob)
+    rob.stopMove()
     
 
 # A simplistic search behavior
@@ -149,26 +110,21 @@ def search4blocks(rob, blocks):
         grid = rob.waitNotNoneObserve('getNearGrid')
         for i in range(len(grid)):
             if grid[i] in blocks:
-                stopMove(rob)
+                rob.stopMove()
                 return [grid[i]] + rob.gridIndexToAbsPos(i)
         los = rob.getCachedObserve('getLineOfSights')
         if los is not None and los['type'] in blocks:
-            stopMove(rob)
+            rob.stopMove()
             return [los['type'], los['x'], los['y'], los['z']]
-        gridSlice = rob.gridInYaw()
-        ground = gridSlice[(len(gridSlice) - 1) // 2 - 1]
-        solid = all([not (b in passableBlocks) for b in ground])
-        wayLv0 = gridSlice[(len(gridSlice) - 1) // 2]
-        wayLv1 = gridSlice[(len(gridSlice) - 1) // 2 + 1]
-        passWay = all([b in passableBlocks for b in wayLv0]) and all([b in passableBlocks for b in wayLv1])
+        path = rob.analyzeGridInYaw()
         turnVel = 0.25 * math.sin(t * 0.05)
-        if not (passWay and solid):
+        if not (path['passWay'] and path['solid']):
             turnVel -= 1
         pitchVel = -0.015 * math.cos(t * 0.03)
         rob.sendCommand("move 1")
         rob.sendCommand("turn " + str(turnVel))
         rob.sendCommand("pitch " + str(pitchVel))
-    stopMove(rob)
+    rob.stopMove()
     return None
 
 # Just attacking while the current block is not destroyed
@@ -241,15 +197,15 @@ def getSticks(rob):
         dist = lookAt(rob, target[1:4])
         runStraight(rob, dist, True)
 
-    target = nearestFromGrid(rob, 'log')
+    target = rob.nearestFromGrid('log')
     while target is not None:
         lookAt(rob, target)
         if not mineAtSight(rob):
             break
-        target = nearestFromEntities(rob, 'log')
+        target = rob.nearestFromEntities('log')
         if target is not None:
             runStraight(rob, lookAt(rob, target), True)
-        target = nearestFromGrid(rob, 'log')
+        target = rob.nearestFromGrid('log')
 
     while rob.filterInventoryItem('log') != []: # [] != None as well
         rob.craft('planks')
@@ -265,7 +221,7 @@ def leaveShaft(rob, angle):
     while rob.waitNotNoneObserve('getAgentPos')[1] < 30.:
         sleep(0.1)
     sleep(1.)
-    stopMove(rob)
+    rob.stopMove()
 
 # Making a shaft in a certain direction
 def mineStone(rob):
@@ -352,7 +308,7 @@ if __name__ == '__main__':
     rob.sendCommand('move 1')
     rob.sendCommand('attack 1')
     sleep(3)
-    stopMove(rob)
+    rob.stopMove()
 
     logging.info("Getting sticks once again")
     getSticks(rob)

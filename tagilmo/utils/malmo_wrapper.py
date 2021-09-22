@@ -211,6 +211,9 @@ class MalmoConnector:
 
 class RobustObserver:
 
+    passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass', 'reeds', 'red_flower', 'yellow_flower']
+    deadlyBlocks = ['lava']
+
     def __init__(self, mc, nAgent = 0):
         self.mc = mc
         self.nAgent = nAgent
@@ -311,6 +314,29 @@ class RobustObserver:
                 z += deltas[2]
             objs += [line]
         return objs
+    
+    def analyzeGridInYaw(self):
+        passableBlocks = RobustObserver.passableBlocks
+        deadlyBlocks = RobustObserver.deadlyBlocks
+        gridSlice = self.gridInYaw()
+        underground = gridSlice[(len(gridSlice) - 1) // 2 - 2]
+        ground = gridSlice[(len(gridSlice) - 1) // 2 - 1]
+        solid = all([b not in passableBlocks for b in ground])
+        wayLv0 = gridSlice[(len(gridSlice) - 1) // 2]
+        wayLv1 = gridSlice[(len(gridSlice) - 1) // 2 + 1]
+        passWay = all([b in passableBlocks for b in wayLv0]) and \
+                  all([b in passableBlocks for b in wayLv1])
+        lvl = (len(gridSlice) + 1) // 2
+        for h in range(len(gridSlice)):
+            if gridSlice[-h-1][0] not in passableBlocks:
+                break
+            lvl -= 1
+        safe = all([b not in deadlyBlocks for b in ground]) and \
+               all([b not in deadlyBlocks for b in wayLv0]) and \
+               all([b not in deadlyBlocks for b in wayLv1])
+        if lvl < -1:
+            safe = safe and all([b not in deadlyBlocks for b in underground]) 
+        return {'solid': solid, 'passWay': passWay, 'level': lvl, 'safe': safe}
 
     def craft(self, item):
         self.sendCommand('craft ' + item)
@@ -318,8 +344,47 @@ class RobustObserver:
         # will be received
         time.sleep(0.2)
 
+    def stopMove(self):
+        self.sendCommand("move 0")
+        self.sendCommand("turn 0")
+        self.sendCommand("pitch 0")
+        self.sendCommand("jump 0")
+        self.sendCommand("strafe 0")
+        # self.sendCommand("attack 0")
+
     def filterInventoryItem(self, item):
         inv = self.waitNotNoneObserve('getInventory', True)
         return list(filter(lambda entry: entry['type']==item, inv))
+
+    def nearestFromGrid(self, obj):
+        grid = self.waitNotNoneObserve('getNearGrid')
+        pos  = self.waitNotNoneObserve('getAgentPos')
+        d2 = 10000
+        target = None
+        for i in range(len(grid)):
+            if grid[i] != obj: continue
+            [x, y, z] = self.mc.gridIndexToPos(i)
+            d2c = x * x + y * y + z * z
+            if d2c < d2:
+                d2 = d2c
+                # target = self.gridIndexToAbsPos(i)
+                target = [x + pos[0], y + pos[1], z + pos[2]]
+        return target
+
+    def nearestFromEntities(self, obj):
+        ent = self.waitNotNoneObserve('getNearEntities')
+        pos = self.waitNotNoneObserve('getAgentPos')
+        d2 = 10000
+        target = None
+        for e in ent:
+            if e['name'] != obj: continue
+            [x, y, z] = [e['x'], e['y'], e['z']]
+            if abs(y - pos[1]) > 1: continue
+            d2c = (x - pos[0]) * (x - pos[0]) + (y - pos[1]) * (y - pos[1]) + (z - pos[2]) * (z - pos[2])
+            if d2c < d2:
+                d2 = d2c
+                target = [x, y, z]
+        return target
+
 
 

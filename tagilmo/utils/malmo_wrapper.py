@@ -236,7 +236,7 @@ class RobustObserver:
         t_new = time.time()
         for method in self.methods:
             v_new = getattr(self.mc, method)(self.nAgent)
-            (v, t) = self.cached[method]
+            v, t = self.cached[method]
             if v_new is not None or t_new - t > self.max_dt: # or v is None
                 self.cached[method] = (v_new, t_new)
 
@@ -259,12 +259,11 @@ class RobustObserver:
     
     def updateAllObservations(self):
         # we don't require observations to be updated in fact, but we try to do an update
-        tm_in = time.time()
         self.observeProcCached()
-        while not all([self.cached[method] is not None or method in self.canBeNone for method in self.methods]):
+        while not all([self.cached[method][0] is not None or method in self.canBeNone for method in self.methods]):
+            print("updating")
             time.sleep(self.tick)
             self.observeProcCached()
-        tm_out = time.time()
     
     def sendCommand(self, command):
         self.mc.sendCommand(command, self.nAgent)

@@ -261,7 +261,6 @@ class RobustObserver:
         # we don't require observations to be updated in fact, but we try to do an update
         self.observeProcCached()
         while not all([self.cached[method][0] is not None or method in self.canBeNone for method in self.methods]):
-            print("updating")
             time.sleep(self.tick)
             self.observeProcCached()
     
@@ -348,7 +347,9 @@ class RobustObserver:
                all([b not in deadlyBlocks for b in wayLv0]) and \
                all([b not in deadlyBlocks for b in wayLv1])
         if lvl < -1:
-            safe = safe and all([b not in deadlyBlocks for b in underground]) 
+            safe = safe and all([b not in deadlyBlocks for b in underground])
+            if ground[0] != 'water' and underground[0] != 'water':
+                safe = False
         return {'solid': solid, 'passWay': passWay, 'level': lvl, 'safe': safe}
 
     def craft(self, item):

@@ -214,14 +214,28 @@ class VideoProducer:
                 width=self.width, height=self.height)
 
 
+class ColourMapProducer:
+    def __init__(self, height, width):
+        self.height = height
+        self.width = width
+
+    def xml(self):
+        return '<ColourMapProducer> \
+                   <Width>{width}</Width> \
+                   <Height>{height}</Height> \
+                </ColourMapProducer>'.format(width=self.width, height=self.height)
+
+
+
 class AgentHandlers:
 
     def __init__(self, commands=Commands(), observations=Observations(),
-                 all_str='', video_producer=None):
+                 all_str='', video_producer=None, colourmap_producer=None):
         self.commands = commands
         self.observations = observations
         self.all_str = all_str
         self.video_producer = video_producer
+        self.colourmap_producer = colourmap_producer
 
     def xml(self):
         _xml = '<AgentHandlers>\n'
@@ -229,6 +243,7 @@ class AgentHandlers:
         _xml += self.observations.xml()
         _xml += self.all_str
         _xml += '' if self.video_producer is None else self.video_producer.xml()
+        _xml += '' if self.colourmap_producer is None else self.colourmap_producer.xml()
         _xml += '</AgentHandlers>\n'
         # <VideoProducer want_depth=... viewpoint=...> --
         # <DepthProducer> --

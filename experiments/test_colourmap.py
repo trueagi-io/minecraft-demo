@@ -75,7 +75,6 @@ def get_img(mc):
 
 def main():
     start = -88, 88
-    colormap, order = read_colormap()
     mc = init_mission(None, *start) 
     mc.safeStart()
     while True:
@@ -85,7 +84,7 @@ def main():
                 print(mc.observe[0]['LineOfSight'])
 
             cv2.imshow('colormap', img)
-            cv2.imshow(mapping[120], (img[:,:, 0] == 120) * 255.0)
+            cv2.imshow(segment_mapping[120], (img[:,:, 0] == 120) * 255.0)
             cv2.waitKey(1000)
             
 

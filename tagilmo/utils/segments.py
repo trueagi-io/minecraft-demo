@@ -19,13 +19,12 @@ s = """
 27, sunflower
 96, gold_ore
 6, stone/stone
+117, sand
 114, lava"""
 
-mapping = dict()
+segment_mapping = dict()
 
 for line in s.split('\n'):
     if line.strip():
         code, name = line.split(',')
-        mapping[int(code.strip())] = name.strip()
-
-
+        segment_mapping[int(code.strip())] = name.strip()

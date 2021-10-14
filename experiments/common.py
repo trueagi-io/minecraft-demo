@@ -82,43 +82,13 @@ def grid_to_vec_walking(block_list):
     return codes
 
 
-# A simplistic search behavior
-# Note that we don't use video input and rely on a small Grid and Ray,
-# so our agent can miss objects visible by human
-def search4blocks(mc, blocks, run=True):
-    print('search for blocks')
-    for t in range(3000):
-        sleep(0.02)
-        mc.observeProc()
-        if mc.getLineOfSight('type') in blocks:
-            stopMove(mc)
-            return [mc.getLineOfSight('type'), mc.getLineOfSight('x'), mc.getLineOfSight('y'), mc.getLineOfSight('z')]
-        if run:
-            grid = mc.getNearGrid()
-            if grid is not None:
-                for i in range(len(grid)):
-                    if grid[i] in blocks:
-                        stopMove(mc)
-                        import pdb;pdb.set_trace()
-                        return [grid[i]] + mc.gridIndexToAbsPos(i)
-            gridSlice = mc.gridInYaw()
-            if gridSlice == None:
-                continue
-            ground = gridSlice[(len(gridSlice) - 1) // 2 - 1]
-            solid = all([not (b in passableBlocks) for b in ground])
-            wayLv0 = gridSlice[(len(gridSlice) - 1) // 2]
-            wayLv1 = gridSlice[(len(gridSlice) - 1) // 2 + 1]
-            passWay = all([b in passableBlocks for b in wayLv0]) and all([b in passableBlocks for b in wayLv1])
-        turnVel = 0.125 * math.sin(t * 0.005)
-        if run and (not (passWay and solid)):
-            turnVel -= 1
-        pitchVel = -0.015 * math.cos(t * 0.005)
-        if run:
-            mc.sendCommand("move 1")
-        mc.sendCommand("turn " + str(turnVel))
-        mc.sendCommand("pitch " + str(pitchVel))
-    stopMove(mc)
-    return None
+def grid_to_real_feature_vec_walking(block_list):
+    codes = numpy.zeros(len(block_list))
+    feature_step = 2/(max_id_blocks_walking + 1)
+    for i,item in enumerate(block_list):
+        feature_val = -1.+block_id_cliff_walking[item]*feature_step+0.5*feature_step
+        codes[i] = feature_val
+    return codes
 
 
 def normAngle(angle):
@@ -136,7 +106,7 @@ def lookAt(mc, pos):
         aPos = mc.getAgentPos()
         if aPos is None:
             continue
-        [pitch, yaw] = mc.dirToPos(pos)
+        [pitch, yaw] = mc.dirToPos(aPos, pos)
         pitch = normAngle(pitch - aPos[3]*math.pi/180.)
         yaw = normAngle(yaw - aPos[4]*math.pi/180.)
         if abs(pitch)<0.02 and abs(yaw)<0.02: break
@@ -157,7 +127,7 @@ def stopMove(mc):
 
 def direction_to_target(mc, pos):
     aPos = mc.getAgentPos()
-    [pitch, yaw] = mc.dirToPos(pos)
+    [pitch, yaw] = mc.dirToPos(aPos, pos)
     pitch = normAngle(pitch - aPos[3]*math.pi/180.)
     yaw = normAngle(yaw - aPos[4]*math.pi/180.)
     dist = math.sqrt((aPos[0] - pos[0]) * (aPos[0] - pos[0]) + (aPos[2] - pos[2]) * (aPos[2] - pos[2]))

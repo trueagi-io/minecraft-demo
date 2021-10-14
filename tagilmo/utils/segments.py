@@ -28,5 +28,3 @@ for line in s.split('\n'):
     if line.strip():
         code, name = line.split(',')
         segment_mapping[int(code.strip())] = name.strip()
-
-

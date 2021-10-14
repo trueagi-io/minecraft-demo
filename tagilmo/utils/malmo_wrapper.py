@@ -11,6 +11,7 @@ import tagilmo.utils.malmoutils as malmoutils
 from tagilmo.utils.mission_builder import MissionXML
 
 
+
 class MalmoConnector:
 
     @staticmethod
@@ -38,13 +39,15 @@ class MalmoConnector:
             self.mission_record.recordCommands()
             self.mission_record.setDestination(recordingsDirectory + "//" + "lastRecording.tgz")
             if self.agent_hosts[0].receivedArgument("record_video"):
-                self.mission_record.recordMP4(24,2000000)
+                self.mission_record.recordMP4(24, 2000000)
         self.client_pool = MalmoPython.ClientPool()
         for x in range(10000, 10000 + nAgents):
             self.client_pool.add( MalmoPython.ClientInfo(serverIp, x) )
         self.worldStates = [None]*nAgents
         self.observe = [None]*nAgents
         self.isAlive = [True] * nAgents
+        self.pixels = [None] * nAgents 
+        self.segmentation = [None] * nAgents
 
     def receivedArgument(self, arg):
         return self.agent_hosts[0].receivedArgument(arg)
@@ -114,7 +117,6 @@ class MalmoConnector:
 
     def observeProc(self, nAgent=None):
         r = range(len(self.agent_hosts)) if nAgent is None else range(nAgent, nAgent+1)
-        self.pixels = [None for _ in r]
         for n in r:
             self.worldStates[n] = self.agent_hosts[n].getWorldState()
             self.isAlive[n] = self.worldStates[n].is_mission_running
@@ -122,11 +124,22 @@ class MalmoConnector:
             self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
+            segments = self.worldStates[n].video_frames_colourmap
             if frames:
                 self.pixels[n] = numpy.frombuffer(frames[0].pixels, dtype=numpy.uint8)
+            else:
+                self.pixels[n] = None
+            if segments:
+                self.segmentation[n] = numpy.frombuffer(segments[0].pixels, dtype=numpy.uint8)
+            else:
+                self.segmentation[n] = None
 
     def getImage(self, nAgent=0):
         return self.pixels[nAgent]
+
+    def getSegmentation(self, nAgent=0):
+        if self.segmentation:
+            return self.segmentation[nAgent]
 
     def getAgentPos(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('XPos' in self.observe[nAgent]):

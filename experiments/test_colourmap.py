@@ -16,11 +16,15 @@ mission_ending = """
 """
 
 
-def init_mission(mc, start_x=None, start_y=None):
+def init_mission(mc, start_x=None, start_y=None, use_video=False, use_colormap=False):
     miss = mb.MissionXML()
-    colourmap_producer = mb.ColourMapProducer(width=320 * 4, height=240 * 4)
-    video_producer = mb.VideoProducer(width=320 * 4, height=240 * 4, want_depth=False)    
-    video_producer = None # use None; there are races in client library
+    colourmap_producer = None
+    if use_colormap:
+        colourmap_producer = mb.ColourMapProducer(width=320 * 4, height=240 * 4)
+    video_producer = None
+    if use_video:
+        video_producer = mb.VideoProducer(width=320 * 4, height=240 * 4, want_depth=False)    
+
 
     obs = mb.Observations()
 
@@ -65,27 +69,80 @@ def init_mission(mc, start_x=None, start_y=None):
 
 
 def get_img(mc):
-    mc.observeProc()
-    time.sleep(0.2)
     img_data = mc.getImage()
     if img_data is not None:
         img_data = img_data.reshape((240 * 4, 320 * 4, 3))
         return img_data
 
+def get_segment(mc):
+    img_data = mc.getSegmentation()
+    if img_data is not None:
+        img_data = img_data.reshape((240 * 4, 320 * 4, 3))
+        return img_data
 
-def main():
+
+def main_video_img():
+    print('testing original')
     start = -88, 88
-    mc = init_mission(None, *start) 
+    mc = init_mission(None, *start, use_video=True, use_colormap=False) 
     mc.safeStart()
-    while True:
+    start = time.time()
+    count = 0
+    while count < 10:
+        mc.observeProc()
+        time.sleep(0.05)
         img = get_img(mc)
         if img is not None:
-            if mc.isLineOfSightAvailable(0):
-                print(mc.observe[0]['LineOfSight'])
+            count += 1
+    end = time.time()
+    print('10 frames in ', end - start)
 
-            cv2.imshow('colormap', img)
-            cv2.imshow(segment_mapping[120], (img[:,:, 0] == 120) * 255.0)
-            cv2.waitKey(1000)
-            
+          
+def main_segm_video():
+    print('testing segmentation + original')
+    start = -88, 88
+    mc = init_mission(None, *start, use_video=True, use_colormap=True) 
+    mc.safeStart()
+    start = time.time()
+    count = 0
+    while count < 10:
+        mc.observeProc()
+        time.sleep(0.05)
+        segm = get_segment(mc)
+        img = get_img(mc)
+        if segm is not None and img is not None:
+            #if mc.isLineOfSightAvailable(0):
+            #    print(mc.observe[0]['LineOfSight'])
+            count += 1
+           # cv2.imshow('colormap', segm)
+           # cv2.imshow('frame', img)
+           # cv2.imshow(segment_mapping[120], (segm[:,:, 0] == 120) * 255.0)
+           # cv2.waitKey(1000)
+    end = time.time()
+    print('10 frames in ', end - start)
 
-main()
+
+def main_segm():
+    print('testing segmentation')
+    start = -88, 88
+    mc = init_mission(None, *start, use_video=False, use_colormap=True) 
+    mc.safeStart()
+    start = time.time()
+    count = 0
+    while count < 10:
+        mc.observeProc()
+        time.sleep(0.05)
+        segm = get_segment(mc)
+        if segm is not None:
+            count += 1
+           # cv2.imshow('colormap', segm)
+           # cv2.imshow('frame', img)
+           # cv2.imshow(segment_mapping[120], (segm[:,:, 0] == 120) * 255.0)
+           # cv2.waitKey(1000)
+    end = time.time()
+    print('10 frames in ', end - start)
+             
+
+main_video_img()
+main_segm_video()
+main_segm()

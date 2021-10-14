@@ -14,31 +14,16 @@ def train_agent(agent, Trainer, save_path, train=True):
     eps_start = eps
     eps_end = 0.09
     eps_decay = 1
-    optimizer = torch.optim.AdamW(agent.parameters(), lr=0.001,
-                                  weight_decay=0.05)
-
     optimizer = torch.optim.Adadelta(agent.parameters(), lr=0.001,
                                   weight_decay=0.01)
 
-    params = [
-            {'params': agent.policy_net.conv1a.parameters(), 'lr': 0.001},
-            {'params': agent.policy_net.conv1b.parameters(), 'lr': 0.001},
-
-            {'params': agent.policy_net.conv2a.parameters(), 'lr': 0.001},
-            {'params': agent.policy_net.conv2b.parameters(), 'lr': 0.001},
-
-            {'params': agent.policy_net.conv3a.parameters(), 'lr': 0.001},
-            {'params': agent.policy_net.conv3b.parameters(), 'lr': 0.001},
-
-            {'params': agent.policy_net.conv4a.parameters(), 'lr': 0.001},
-            {'params': agent.policy_net.conv4b.parameters(), 'lr': 0.001},
-            {'params': agent.policy_net.pos_emb.parameters(), 'lr': 0.0001},
-            {'params': agent.policy_net.q_value.parameters(), 'lr': 0.0001}
-    ]
-
-    optimizer = torch.optim.RMSprop(params,
+    optimizer = torch.optim.RMSprop(agent.parameters(),
                                     lr=0.0001,
                                     weight_decay=0.01)
+
+#    optimizer = torch.optim.AdamW(agent.parameters(), lr=0.001,
+#                                  weight_decay=0.01)
+#
 
     mc = None
     for i in range(0, num_repeats):
@@ -48,7 +33,7 @@ def train_agent(agent, Trainer, save_path, train=True):
         mc.safeStart()
 
         # -- run the agent in the world -- #
-        trainer = Trainer(agent, mc, optimizer, eps, train)
+        trainer = Trainer(agent, mc, optimizer, eps, i > 15 and train)
         comulative_reward, steps, solved = trainer.run_episode()
         logging.info('episode %i: solved %i: comulative reward: %f', i, solved, comulative_reward)
         logging.debug("eps: %f", eps)
@@ -91,7 +76,13 @@ def train_tree():
     from tree import load_agent, Trainer
     path = 'agent_tree.pth'
     agent = load_agent(path)
-    train_agent(agent, Trainer, path, False)
+    train_agent(agent, Trainer, path, True)
+
+def train_tree_v3():
+    from tree_v3 import load_agent, Trainer
+    path = 'agent_tree.pth'
+    agent = load_agent(path)
+    train_agent(agent, Trainer, path, True)
 
 def train_tree_v1():
     from tree_v1 import load_agent, Trainer
@@ -111,7 +102,14 @@ def train_vision():
     agent = load_agent(path)
     train_agent(agent, Trainer, path, True)
 
+def train_dig_v1():
+    from dig_v1 import load_agent, Trainer
+    path = 'agent_dig.pth'
+    agent = load_agent(path)
+    train_agent(agent, Trainer, path, False)
 
 if __name__ == '__main__':
     setup_logger('train.log')
-    train_cliff_v3()
+    #train_tree_v3()
+    #train_cliff_v3()
+    train_dig_v1()

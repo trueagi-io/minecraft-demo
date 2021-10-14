@@ -5,7 +5,7 @@ import numpy
 import logging
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector
-from tagilmo.utils import mapping
+from tagilmo.utils import segment_mapping
 
 
 mission_ending = """
@@ -72,52 +72,6 @@ def get_img(mc):
         img_data = img_data.reshape((240 * 4, 320 * 4, 3))
         return img_data
 
-
-def read_colormap():
-    colormap = dict()
-    order = []
-    with open('colourmap.txt' , 'rt') as f:
-        for line in f:
-            r, g, b, name = line.split(',')
-            if name.strip() not in order:
-                order.append(name.strip())
-            colormap[(int(r), int(g), int(b))] = order.index(name.strip()) + 1 
-    return colormap, order
-
-
-def img_to_int1(colormap, order, img):
-    img1 = img.copy()
-    # exchange first and last channels
-    img1[:,:, [0, 2]] = img1[:,:, [2, 0]]
- 
-    tmp = numpy.zeros(img.shape[:2])
-    for k, v in colormap.items():
-        num = v 
-        start = time.time()
-        item_present = ((img1 == k).sum(axis=2) == 3) 
-        end = time.time()
-        import pdb;pdb.set_trace()
-        tmp += item_present * num
-        if item_present.max():
-            print('found item ', order[v - 1])
-    return tmp 
-
-def img_to_int2(_color_codes, order, img):
-    img1 = img.copy()
-    # exchange first and last channels
-    img1[:,:, [0, 2]] = img1[:,:, [2, 0]]
-    # Extract color codes and their IDs from input dict
-    colors = numpy.array(list(_color_codes.keys()))
-    color_ids = numpy.array(list(_color_codes.values()))
-
-    # Initialize output array
-    result = numpy.empty((img.shape[0],img.shape[1]),dtype=int)
-    result[:] = 0 
-    # Finally get the matches and accordingly set result locations
-    # to their respective color IDs
-    R,C,D = numpy.where((img1 == colors[:,None,None,:]).all(3))
-    result[C,D] = color_ids[R]
-    return result
 
 def main():
     start = -88, 88

@@ -233,8 +233,11 @@ class RobustObserver:
         self.tick = 0.02
         self.max_dt = 1.0
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights',
-                        'getLife', 'getInventory']
+                        'getLife', 'getInventory', 'getImage', 'getSegmentation']
         self.canBeNone = ['getLineOfSights']
+        self.cached = {method : (None, 0) for method in self.methods}
+
+    def clear(self):
         self.cached = {method : (None, 0) for method in self.methods}
     
     def getCachedObserve(self, method, key = None):
@@ -412,6 +415,4 @@ class RobustObserver:
                 d2 = d2c
                 target = [x, y, z]
         return target
-
-
 

@@ -4,7 +4,7 @@ import time
 import numpy
 import logging
 import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.malmo_wrapper import MalmoConnector
+from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 from tagilmo.utils import segment_mapping
 
 
@@ -24,9 +24,6 @@ def init_mission(mc, start_x=None, start_y=None, use_video=False, use_colormap=F
     video_producer = None
     if use_video:
         video_producer = mb.VideoProducer(width=320 * 4, height=240 * 4, want_depth=False)    
-
-
-    obs = mb.Observations()
 
     obs = mb.Observations()
     obs.gridNear = [[-1, 1], [-2, 1], [-1, 1]]
@@ -65,17 +62,18 @@ def init_mission(mc, start_x=None, start_y=None, use_video=False, use_colormap=F
         mc = MalmoConnector(miss)
     else:
         mc.setMissionXML(miss)
-    return mc
+    obs1 = RobustObserver(mc)
+    return mc, obs1
 
 
 def get_img(mc):
-    img_data = mc.getImage()
+    img_data = mc.waitNotNoneObserve('getImage')
     if img_data is not None:
         img_data = img_data.reshape((240 * 4, 320 * 4, 3))
         return img_data
 
 def get_segment(mc):
-    img_data = mc.getSegmentation()
+    img_data = mc.waitNotNoneObserve('getSegmentation')
     if img_data is not None:
         img_data = img_data.reshape((240 * 4, 320 * 4, 3))
         return img_data
@@ -84,16 +82,15 @@ def get_segment(mc):
 def main_video_img():
     print('testing original')
     start = -88, 88
-    mc = init_mission(None, *start, use_video=True, use_colormap=False) 
+    mc, obs = init_mission(None, *start, use_video=True, use_colormap=False)
     mc.safeStart()
+    time.sleep(5)
     start = time.time()
     count = 0
     while count < 10:
-        mc.observeProc()
-        time.sleep(0.05)
-        img = get_img(mc)
-        if img is not None:
-            count += 1
+        obs.clear()
+        img = get_img(obs)
+        count += 1
     end = time.time()
     print('10 frames in ', end - start)
 
@@ -101,23 +98,16 @@ def main_video_img():
 def main_segm_video():
     print('testing segmentation + original')
     start = -88, 88
-    mc = init_mission(None, *start, use_video=True, use_colormap=True) 
+    mc, obs = init_mission(None, *start, use_video=True, use_colormap=True)
     mc.safeStart()
+    time.sleep(5)
     start = time.time()
     count = 0
     while count < 10:
-        mc.observeProc()
-        time.sleep(0.05)
-        segm = get_segment(mc)
-        img = get_img(mc)
-        if segm is not None and img is not None:
-            #if mc.isLineOfSightAvailable(0):
-            #    print(mc.observe[0]['LineOfSight'])
-            count += 1
-           # cv2.imshow('colormap', segm)
-           # cv2.imshow('frame', img)
-           # cv2.imshow(segment_mapping[120], (segm[:,:, 0] == 120) * 255.0)
-           # cv2.waitKey(1000)
+        obs.clear()
+        segm = get_segment(obs)
+        img = get_img(obs)
+        count += 1
     end = time.time()
     print('10 frames in ', end - start)
 
@@ -125,20 +115,15 @@ def main_segm_video():
 def main_segm():
     print('testing segmentation')
     start = -88, 88
-    mc = init_mission(None, *start, use_video=False, use_colormap=True) 
+    mc, obs = init_mission(None, *start, use_video=False, use_colormap=True)
     mc.safeStart()
+    time.sleep(5)
     start = time.time()
     count = 0
     while count < 10:
-        mc.observeProc()
-        time.sleep(0.05)
-        segm = get_segment(mc)
-        if segm is not None:
-            count += 1
-           # cv2.imshow('colormap', segm)
-           # cv2.imshow('frame', img)
-           # cv2.imshow(segment_mapping[120], (segm[:,:, 0] == 120) * 255.0)
-           # cv2.waitKey(1000)
+        obs.clear()
+        segm = get_segment(obs)
+        count += 1
     end = time.time()
     print('10 frames in ', end - start)
              

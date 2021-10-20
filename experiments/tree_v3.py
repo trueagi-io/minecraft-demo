@@ -11,6 +11,7 @@ from torch.nn import functional as F
 import os
 import network
 import numpy
+import cv2
 from collections import deque, defaultdict
 
 import tagilmo.utils.mission_builder as mb
@@ -180,7 +181,10 @@ class Trainer(common.Trainer):
         pitch = aPos[3]
         yaw = aPos[4]
         data = dict()
+        img_data = img_data.reshape((240 * 4, 320 * 4, 3 + self.want_depth))
+        img_data = cv2.resize(img_data, (320, 240))
         img = img_data.reshape((240, 320, 3 + self.want_depth)).transpose(2, 0, 1) / 255.
+
         img = torch.as_tensor(img).float()
         data['image'] = img
         actions = []
@@ -374,7 +378,7 @@ class Trainer(common.Trainer):
     @classmethod
     def init_mission(cls, i, mc):
         miss = mb.MissionXML()
-        video_producer = mb.VideoProducer(width=320, height=240, want_depth=cls.want_depth)
+        video_producer = mb.VideoProducer(width=320 * 4, height=240 * 4, want_depth=cls.want_depth)
 
         obs = mb.Observations()
         agent_handlers = mb.AgentHandlers(observations=obs,

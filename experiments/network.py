@@ -175,7 +175,9 @@ class DQN:
                 self.memory.position = random.randint(0, len(self.memory))
         self.gamma = gamma
         self.batch_size = batch_size
-        self.transform=transform
+        if transform is None:
+            transform = lambda x: x
+        self.transform = transform
         self.save_interval = target_update * 10
 
     def to(self, arg):
@@ -224,7 +226,7 @@ class DQN:
 
         assert state_batch['image'].max() < 1.1
         for i, img in enumerate(state_batch['image']):
-            img_trans = self.transform(img.permute(1,2,0).numpy() * 255).permute(2, 0, 1) / 255
+            img_trans = torch.as_tensor(self.transform(img.permute(1,2,0).numpy() * 255)).permute(2, 0, 1) / 255
             state_batch['image'][i] = img_trans
             # import cv2
             # cv2.imshow('old', img.numpy().transpose(1,2,0))

@@ -11,6 +11,7 @@ import os
 import network
 import numpy
 import math
+import copy
 from collections import deque, defaultdict
 
 import tagilmo.utils.mission_builder as mb
@@ -20,6 +21,9 @@ from common import stop_motion, grid_to_vec_walking, \
     direction_to_target, normAngle
 from network import QVisualNetwork
 
+BLOCK_TYPE = 0
+HEIGHT = 2
+DIST = -1
 
 class QVisualNetworkV2(QVisualNetwork):
     def __init__(self, n_prev_images, *args, **kwargs):
@@ -77,8 +81,8 @@ class QVisualNetworkV2(QVisualNetwork):
 
 
 class DeadException(RuntimeError):
-    def __init__(self):
-        super().__init__("it's dead")
+    def __init__(self, arg="it's dead"):
+        super().__init__(arg)
 
 
 # quit by reaching target or when zero health
@@ -137,11 +141,11 @@ def load_agent(path):
     #              network.BinaryAction('jump')]
 
     # discreet actions
-    action_names = ["turn 0.1", "turn -0.1", "move 0.9", "jump_forward" ]
+    action_names = ["turn 0.1", "turn -0.1", "pitch 0.015", "pitch -0.015", "move 0.9", "jump_forward", "attack 1"]
     actionSet = [network.CategoricalAction(action_names)]
 
-    policy_net = QVisualNetworkV2(3, actionSet, 0, 41,  n_channels=3, activation=nn.LeakyReLU(), batchnorm=False, num=256)
-    target_net = QVisualNetworkV2(3, actionSet, 0, 41,  n_channels=3, activation=nn.LeakyReLU(), batchnorm=False, num=256)
+    policy_net = QVisualNetworkV2(3, actionSet, 0, 32,  n_channels=3, activation=nn.LeakyReLU(), batchnorm=False, num=256)
+    target_net = QVisualNetworkV2(3, actionSet, 0, 32,  n_channels=3, activation=nn.LeakyReLU(), batchnorm=False, num=256)
     batch_size = 18
 
     transformer = common.make_noisy_transformers()
@@ -178,19 +182,10 @@ class Trainer(common.Trainer):
         self.agent = agent
         self.mc = mc
         self.optimizer = optimizer
-        if random.random() < 0.2:
-            eps = 0.05
         logging.info('start eps %f', eps)
         self.eps = eps
-        self.target_x = 4.5
-        self.target_y = 12.5
-        self.dist = max(5, round(abs(numpy.random.normal()) * 110))
-        self.episode_stats = agent.memory.episode_stats
-        self.failed_queue = agent.memory.failed_queue
         self.img_num = 0
         self.state_queue = deque(maxlen=2)
-        if self.episode_stats:
-            logging.info('average reward in episode stats {0}'.format(numpy.mean([v[0] for v in self.episode_stats.values()])))
 
     def _random_turn(self):
         turn = numpy.random.random() * random.choice([-1, 1])
@@ -212,8 +207,6 @@ class Trainer(common.Trainer):
 
     def collect_state(self):
         mc = self.mc
-        target =  ['lapis_block', self.target_x, 30, self.target_y]
-        target_pos = target[1:4]
         mc.observeProc()
         aPos = mc.getAgentPos()
         img_data = self.mc.getImage()
@@ -227,12 +220,6 @@ class Trainer(common.Trainer):
                 raise DeadException()
 
         # target
-        pitch, yaw, dist = direction_to_target(mc, target_pos)
-        # 'XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw'
-        # take pitch, yaw
-        # take XPos, YPos, ZPos modulo 1
-        self_pitch = normAngle(aPos[3] * math.pi/180.)
-        self_yaw = normAngle(aPos[4] * math.pi/180.)
         xpos, ypos, zpos = aPos[0:3]
         logging.debug("%.2f %.2f %.2f ", xpos, ypos, zpos)
         # use relative height
@@ -247,28 +234,20 @@ class Trainer(common.Trainer):
 
         actions = []
         imgs = [torch.as_tensor(img)]
-        yaws = [torch.as_tensor(yaw)]
-        dists = [torch.as_tensor(dist)]
         heights = [torch.as_tensor(ypos)]
         # first prev, then prev_prev etc..
         for item in reversed(self.state_queue):
             actions.append(item['action'])
             imgs.append(item['image'])
-            yaws.append(item['yaw'])
-            dists.append(item['dist'])
             heights.append(item['ypos'])
         while len(imgs) < 3:
             imgs.append(img.to(img))
             actions.append(torch.as_tensor(-1).to(img))
-            yaws.append(torch.as_tensor(yaw).to(img))
-            dists.append(torch.as_tensor(dist).to(img))
             heights.append(torch.as_tensor(ypos).to(img))
-        state = torch.as_tensor(yaws + dists + heights + actions)
+        state = torch.as_tensor(heights + actions)
         data.update(dict(state=state,
                          images=torch.stack(imgs),
                          image=img,
-                         dist=torch.as_tensor(dist),
-                         yaw=torch.as_tensor(yaw),
                          ypos=torch.as_tensor(ypos)
                          ))
 
@@ -281,107 +260,22 @@ class Trainer(common.Trainer):
                 assert not torch.isnan(value).any()
         return data
 
-    def _start(self):
-        if random.random() < 0.5 and (self.failed_queue or self.episode_stats):
-            self.mc.sendCommand("quit")
-            time.sleep(1)
-            if self.failed_queue:
-                self.from_queue = True
-                start, end = self.failed_queue.pop()
-                x, y = end
-                start_x = x + random.choice((-15, 15))
-                start_y = y + random.choice((-15, 15))
-                logging.info('evaluating from queue {0}, {1}'.format(start, end))
-            else:
-                pairs = list(self.episode_stats.items())
-                r = numpy.asarray([p[1][0] for p in pairs])
-                idx = inverse_priority_sample(r)
-                logging.debug('prority sample idx=%i', idx)
-                start, end = pairs[idx][0]
-                logging.info('evaluating from stats {0}, {1}'.format(start, end))
-                start_x, start_y = start
-            # start somewhere near end
-            self.mc = self.init_mission(0, self.mc, start_x=start_x, start_y=start_y)
-            self.mc.safeStart()
-            self.target_x, self.target_y = end
-            return start_x, start_y
-        else:
-            self.mc.observeProc()
-            aPos = self.mc.getAgentPos()
-            while aPos is None:
-                time.sleep(0.05)
-                self.mc.observeProc()
-                aPos = self.mc.getAgentPos()
-
-            XPos, _, YPos = aPos[:3]
-            self.target_x = XPos + random.choice(numpy.arange(-self.dist, self.dist))
-            self.target_y = YPos + random.choice(numpy.arange(-self.dist, self.dist))
-            return XPos, YPos
-
-    @property
-    def end(self):
-        return self.target_x, self.target_y
-
-    def _end(self, start, end, solved, t, total_reward):
-        if self.from_queue:
-
-            """
-            If episode failed check length, if 15 < t
-                start from a different point near the target
-                if success add to episode_stats
-            """
-            # failed
-            if not solved:
-                pass
-            else:
-                logging.info('from queue run succeeded')
-                self.episode_stats[(start, end)] = [0, 0]
-        else:
-            if (start, end) in self.episode_stats:
-                r, l = self.episode_stats[(start, end)]
-                logging.info('old stats ({0}, {1})'.format(r, l))
-                r = iterative_avg(r, total_reward)
-                l = iterative_avg(l, t)
-                self.episode_stats[(start, end)] = (r, l)
-                logging.info('new episode stats reward {0} length {1}'.format(r, l))
-            elif 10 < t and not solved:
-                self.failed_queue.append((start, end))
-                logging.info('adding to failed queue {0}, {1}'.format(start, end))
+    def _end(self):
         mean_loss = numpy.mean([self.learn(self.agent, self.optimizer) for _ in range(5)])
         logging.info('mean loss %f', mean_loss)
 
-    def start_fixed(self):
-        """
-        Helper method to be used instead of self._start
-        """
-        start, end = (-111.0, -162.0), (-126.0, -177.0)
-        end = -112.44061909612837, -189.0
-        start = -118.99282090186865, -166.78612
-        self.mc.sendCommand("quit")
-        time.sleep(1)
-        self.target_x, self.target_y = end
-        start_x, start_y = start
-        self.mc = self.init_mission(0, self.mc, start_x=start_x, start_y=start_y)
-        self.mc.safeStart()
-        
-        return start
 
     def run_episode(self):
         """ Deep Q-Learning episode
         """
         self.agent.clear_state()
-        start = self._start()
-        end = self.end
-        max_t = 3000
+        max_t = 250
         self._random_turn()
-
-        logging.info('current target (%i, %i)', self.target_x, self.target_y)
 
         mc = self.mc
         logging.debug('memory: %i', self.agent.memory.position)
         self.agent.train()
 
-        logging.info('max dist %i', max_t)
         eps_start = self.eps
         eps_end = 0.05
         eps_decay = 0.999
@@ -392,6 +286,9 @@ class Trainer(common.Trainer):
 
         t = 0
 
+        state = self.collect_state()
+        if state['ypos'] < 0:
+            raise DeadException('started in a pit')
         # pitch, yaw, xpos, ypos, zpos
         prev_pos = None
         prev_target_dist = None
@@ -400,6 +297,7 @@ class Trainer(common.Trainer):
 
         while True:
             t += 1
+            logging.debug('\n\n\nstep %i', t)
             # target = search4blocks(mc, ['lapis_block'], run=False)
             reward = 0
             try:
@@ -409,6 +307,7 @@ class Trainer(common.Trainer):
                 self.agent.push_final(-100)
                 reward = -100
                 logging.debug("failed at step %i", t)
+                import pdb;pdb.set_trace()
                 self.learn(self.agent, self.optimizer)
                 break
             if self.state_queue:
@@ -421,51 +320,68 @@ class Trainer(common.Trainer):
                         self.agent.push_final(reward)
                     self.learn(self.agent, self.optimizer)
                     break
-                logging.debug('distance %f', data['dist'])
-                prev_target_dist = self.state_queue[-1]['dist']
-                dist_diff = (prev_target_dist - data['dist'])
-                if dist_diff > 1:
-                    reward += 1
-                if dist_diff < 0:
-                    reward -= 1
-                reward += dist_diff + (life - prev_life) * 2
+                if 'visible' in self.state_queue[-1]:
+                    prev_action = self.agent.policy_net.actions[0].to_string(self.state_queue[-1]['action'])
+                    prev_item = self.state_queue[-1]['visible']
+                    logging.debug(prev_item)
+                    prev_dist = prev_item[DIST]
+                    prev_block = prev_item[BLOCK_TYPE]
+                    if prev_block in ('water', 'lava', 'flowing_lava'):
+                        reward -= 2
+                    if prev_action == 'attack 1':
+                        h_target = 24
+                        if prev_dist <= 4:
+                            reward += 0.5
+                        else:
+                            reward -= 1
+                        if 'visible' in data:
+                            current_dist = data['visible'][-1]
+                            # if block is removed visible would change
+                            if (0.1 < (current_dist - prev_dist)):
+                                logging.debug('distance is more than before!')
+                                reward += 1
+                                if prev_block in ('double_plant', 'tallgrass'):
+                                    reward -= 0.5
+                                tmp = ((30 - h_target) - abs(prev_item[HEIGHT] - h_target))
+                                logging.info('tmp dist %f', tmp)
+                                tmp = max(tmp, 0) ** 2
+                                if h_target < prev_item[HEIGHT]:
+                                    tmp /= 3
+                                reward += tmp
+                                if prev_block not in ('dirt', 'grass', 'stone', 'double_plant', 'tallgrass', 'leaves', 'log'):
+                                    reward += 25
+                            else:
+                                # give small reward for removing block under self
+                                prev_height = 30 - self.state_queue[-1]['ypos']
+                                curr_height = 30 - data['ypos']
+                                if curr_height < prev_height:
+                                    tmp = ((30 - h_target) - abs(prev_height - h_target))
+                                    logging.debug('removed block!')
+                                    logging.debug('tmp dist %f', tmp)
+                                    reward += max(tmp, 0) ** 2 / 2
+                else:
+                    if 'visible' not in data:
+                        logging.debug('not visible')
+                        reward -= 1
+                reward -= 1
+                reward += (life - prev_life) * 2
                 prev_life = life
-                grid = mc.getNearGrid()
                 if not mc.is_mission_running():
                     logging.debug('failed in %i steps', t)
                     reward = -100
-                if data['dist'] < 0.88:
-                    time.sleep(1)
-                    mc.observeProc()
-                    life = mc.getLife()
-                    mc.sendCommand("quit")
-                    if life == prev_life:
-                        reward += 25
-                        self.agent.push_final(reward)
-                    logging.debug('solved in %i steps', t)
-                    solved = True
-                    break
-                if reward == 0:
-                    reward -= 0.5
-                if 'visible' in data:
-                    d = data['visible'][-1]
-                    if d < 1:
-                        logging.debug('visible {0}'.format(d))
-                        reward -= 3
             logging.debug("current reward %f", reward)
             new_actions = self.agent(data, reward=reward, epsilon=eps)
             eps = max(eps * eps_decay, eps_end)
             logging.debug('epsilon %f', eps)
             data['action'] = self.agent.prev_action
+            self.state_queue.append(copy.copy(data))
             if 'visible' in data:
                 data.pop('visible')
-            self.state_queue.append(data)
             self.act(new_actions)
             time.sleep(0.4)
             stop_motion(mc)
             time.sleep(0.1)
-            if t == max_t or total_reward < -200:
-                reward -= 1
+            if t == max_t:
                 logging.debug("too long")
                 stop_motion(mc)
                 self.agent.push_final(reward)
@@ -475,8 +391,12 @@ class Trainer(common.Trainer):
             total_reward += reward
         # in termial state reward is not added due loop breaking
         total_reward += reward
+
+        aPos = self.mc.getAgentPos()
+        if aPos is not None and aPos[1] <= 25:
+            solved = True
         logging.debug("Final reward: %f", reward)
-        self._end(start, end, solved, t, total_reward)
+        self._end()
         return total_reward, t, solved
 
     def act(self, actions):

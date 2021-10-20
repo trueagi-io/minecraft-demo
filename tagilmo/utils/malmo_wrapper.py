@@ -11,6 +11,7 @@ import tagilmo.utils.malmoutils as malmoutils
 from tagilmo.utils.mission_builder import MissionXML
 
 
+
 class MalmoConnector:
 
     @staticmethod
@@ -38,13 +39,15 @@ class MalmoConnector:
             self.mission_record.recordCommands()
             self.mission_record.setDestination(recordingsDirectory + "//" + "lastRecording.tgz")
             if self.agent_hosts[0].receivedArgument("record_video"):
-                self.mission_record.recordMP4(24,2000000)
+                self.mission_record.recordMP4(24, 2000000)
         self.client_pool = MalmoPython.ClientPool()
         for x in range(10000, 10000 + nAgents+5):
             self.client_pool.add( MalmoPython.ClientInfo(serverIp, x) )
         self.worldStates = [None]*nAgents
         self.observe = [None]*nAgents
         self.isAlive = [True] * nAgents
+        self.pixels = [None] * nAgents 
+        self.segmentation = [None] * nAgents
 
     def receivedArgument(self, arg):
         return self.agent_hosts[0].receivedArgument(arg)
@@ -117,7 +120,6 @@ class MalmoConnector:
 
     def observeProc(self, nAgent=None):
         r = range(len(self.agent_hosts)) if nAgent is None else range(nAgent, nAgent+1)
-        self.pixels = [None for _ in r]
         for n in r:
             self.worldStates[n] = self.agent_hosts[n].getWorldState()
             self.isAlive[n] = self.worldStates[n].is_mission_running
@@ -125,11 +127,22 @@ class MalmoConnector:
             self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
+            segments = self.worldStates[n].video_frames_colourmap
             if frames:
                 self.pixels[n] = numpy.frombuffer(frames[0].pixels, dtype=numpy.uint8)
+            else:
+                self.pixels[n] = None
+            if segments:
+                self.segmentation[n] = numpy.frombuffer(segments[0].pixels, dtype=numpy.uint8)
+            else:
+                self.segmentation[n] = None
 
     def getImage(self, nAgent=0):
         return self.pixels[nAgent]
+
+    def getSegmentation(self, nAgent=0):
+        if self.segmentation:
+            return self.segmentation[nAgent]
 
     def getAgentPos(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('XPos' in self.observe[nAgent]):
@@ -211,6 +224,9 @@ class MalmoConnector:
 
 class RobustObserver:
 
+    passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass', 'reeds', 'red_flower', 'yellow_flower']
+    deadlyBlocks = ['lava']
+
     def __init__(self, mc, nAgent = 0):
         self.mc = mc
         self.nAgent = nAgent
@@ -218,6 +234,7 @@ class RobustObserver:
         self.max_dt = 1.0
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights',
                         'getLife', 'getInventory']
+        self.canBeNone = ['getLineOfSights']
         self.cached = {method : (None, 0) for method in self.methods}
     
     def getCachedObserve(self, method, key = None):
@@ -232,52 +249,64 @@ class RobustObserver:
         t_new = time.time()
         for method in self.methods:
             v_new = getattr(self.mc, method)(self.nAgent)
-            (v, t) = self.cached[method]
+            v, t = self.cached[method]
             if v_new is not None or t_new - t > self.max_dt: # or v is None
                 self.cached[method] = (v_new, t_new)
 
-    def waitNotNoneObserve(self, method, updateReq=False):
+    def waitNotNoneObserve(self, method, updateReq=False, observeReq=True):
         # REM: do not use with 'getLineOfSights'
         tm = self.cached[method][1]
-        self.observeProcCached()
+        # Do not force observeProcCached if the value was updated less than tick ago
+        if time.time() - tm > self.tick and observeReq:
+            self.observeProcCached()
         # if updated observation is required, observation time should be changed
         # (is not recommended while moving)
         while self.getCachedObserve(method) is None or\
               (self.cached[method][1] == tm and updateReq):
             time.sleep(self.tick)
             self.observeProcCached()
+            if self.cached[method][1] - tm > self.max_dt:
+                # It's better to return None rather than hanging too long
+                break
         return self.getCachedObserve(method)
+    
+    def updateAllObservations(self):
+        # we don't require observations to be updated in fact, but we try to do an update
+        self.observeProcCached()
+        while not all([self.cached[method][0] is not None or method in self.canBeNone for method in self.methods]):
+            time.sleep(self.tick)
+            self.observeProcCached()
     
     def sendCommand(self, command):
         self.mc.sendCommand(command, self.nAgent)
 
     # ===== specific methods =====
 
-    def dirToAgentPos(self, pos):
-        aPos = self.waitNotNoneObserve('getAgentPos')
+    def dirToAgentPos(self, pos, observeReq=True):
+        aPos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
         return self.mc.dirToPos(aPos, pos)
 
-    def gridIndexToAbsPos(self, index):
+    def gridIndexToAbsPos(self, index, observeReq=True):
         [x, y, z] = self.mc.gridIndexToPos(index, self.nAgent)
-        pos = self.waitNotNoneObserve('getAgentPos')
+        pos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
         # TODO? Round to the center of the block (0.5)?
         return [x + pos[0], y + pos[1], z + pos[2]]
 
-    def getNearGrid3D(self):
-        grid = self.waitNotNoneObserve('getNearGrid')
+    def getNearGrid3D(self, observeReq=True):
+        grid = self.waitNotNoneObserve('getNearGrid', observeReq=observeReq)
         gridBox = self.mc.getGridBox(self.nAgent)
         gridSz = [gridBox[i][1]-gridBox[i][0]+1 for i in range(3)]
         return [[grid[(z+y*gridSz[2])*gridSz[0]:(z+1+y*gridSz[2])*gridSz[0]] \
                  for z in range(gridSz[2])] for y in range(gridSz[1])]
 
-    def getYawDeltas(self):
-        pos = self.waitNotNoneObserve('getAgentPos')
+    def getYawDeltas(self, observeReq=True):
+        pos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
         return MalmoConnector.yawDelta(pos[4] * math.pi / 180.)
     
-    def gridInYaw(self):
+    def gridInYaw(self, observeReq=True):
         '''Vertical slice of the grid in the line-of-sight direction'''
-        grid3D = self.getNearGrid3D()
-        deltas = self.getYawDeltas()
+        grid3D = self.getNearGrid3D(observeReq)
+        deltas = self.getYawDeltas(observeReq)
         pos = self.getCachedObserve('getAgentPos')
         if grid3D is None or deltas is None:
             return None
@@ -295,6 +324,10 @@ class RobustObserver:
             x0int = int(x)
             z0int = int(z)
             for t in range(dimX + dimZ):
+                # TODO? It works, but when the agent is still partly standing
+                # on the previous block, it will not show the next block (on which
+                # the agent is formally standing, but which can be air, so the agent
+                # will fall down if it moves forward within this block)
                 if int(x + deltas[0]) != int(x) or int(z + deltas[2]) != int(z):
                     dxGrid = int(x + deltas[0]) - x0int
                     dzGrid = int(z + deltas[2]) - z0int
@@ -306,6 +339,31 @@ class RobustObserver:
                 z += deltas[2]
             objs += [line]
         return objs
+    
+    def analyzeGridInYaw(self, observeReq=True):
+        passableBlocks = RobustObserver.passableBlocks
+        deadlyBlocks = RobustObserver.deadlyBlocks
+        gridSlice = self.gridInYaw(observeReq)
+        underground = gridSlice[(len(gridSlice) - 1) // 2 - 2]
+        ground = gridSlice[(len(gridSlice) - 1) // 2 - 1]
+        solid = all([b not in passableBlocks for b in ground])
+        wayLv0 = gridSlice[(len(gridSlice) - 1) // 2]
+        wayLv1 = gridSlice[(len(gridSlice) - 1) // 2 + 1]
+        passWay = all([b in passableBlocks for b in wayLv0]) and \
+                  all([b in passableBlocks for b in wayLv1])
+        lvl = (len(gridSlice) + 1) // 2
+        for h in range(len(gridSlice)):
+            if gridSlice[-h-1][0] not in passableBlocks:
+                break
+            lvl -= 1
+        safe = all([b not in deadlyBlocks for b in ground]) and \
+               all([b not in deadlyBlocks for b in wayLv0]) and \
+               all([b not in deadlyBlocks for b in wayLv1])
+        if lvl < -1:
+            safe = safe and all([b not in deadlyBlocks for b in underground])
+            if ground[0] != 'water' and underground[0] != 'water':
+                safe = False
+        return {'solid': solid, 'passWay': passWay, 'level': lvl, 'safe': safe}
 
     def craft(self, item):
         self.sendCommand('craft ' + item)
@@ -313,8 +371,47 @@ class RobustObserver:
         # will be received
         time.sleep(0.2)
 
-    def filterInventoryItem(self, item):
-        inv = self.waitNotNoneObserve('getInventory', True)
+    def stopMove(self):
+        self.sendCommand("move 0")
+        self.sendCommand("turn 0")
+        self.sendCommand("pitch 0")
+        self.sendCommand("jump 0")
+        self.sendCommand("strafe 0")
+        # self.sendCommand("attack 0")
+
+    def filterInventoryItem(self, item, observeReq=True):
+        inv = self.waitNotNoneObserve('getInventory', True, observeReq=observeReq)
         return list(filter(lambda entry: entry['type']==item, inv))
+
+    def nearestFromGrid(self, obj, observeReq=True):
+        grid = self.waitNotNoneObserve('getNearGrid', observeReq=observeReq)
+        pos  = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
+        d2 = 10000
+        target = None
+        for i in range(len(grid)):
+            if grid[i] != obj: continue
+            [x, y, z] = self.mc.gridIndexToPos(i)
+            d2c = x * x + y * y + z * z
+            if d2c < d2:
+                d2 = d2c
+                # target = self.gridIndexToAbsPos(i, observeReq)
+                target = [x + pos[0], y + pos[1], z + pos[2]]
+        return target
+
+    def nearestFromEntities(self, obj, observeReq=True):
+        ent = self.waitNotNoneObserve('getNearEntities', observeReq=observeReq)
+        pos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
+        d2 = 10000
+        target = None
+        for e in ent:
+            if e['name'] != obj: continue
+            [x, y, z] = [e['x'], e['y'], e['z']]
+            if abs(y - pos[1]) > 1: continue
+            d2c = (x - pos[0]) * (x - pos[0]) + (y - pos[1]) * (y - pos[1]) + (z - pos[2]) * (z - pos[2])
+            if d2c < d2:
+                d2 = d2c
+                target = [x, y, z]
+        return target
+
 
 

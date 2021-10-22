@@ -2,6 +2,7 @@ import math
 from time import sleep, time
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
+from examples import minelogy
 
 def normAngle(angle):
     while (angle < -math.pi): angle += 2 * math.pi
@@ -265,6 +266,7 @@ class Search4Blocks:
 
     def finished(self):
         for block in self.blocks:
+            # TODO: blocks in ignore_blocks are missed even if they are searched; need to add focus_blocks
             # if self.blockMem.nearestBlock(block) is not None
             if block in self.blockMem.blocks and len(self.blockMem.blocks[block]) > 0:
                 return True
@@ -361,6 +363,101 @@ class TAgent:
         #self.rob.sendCommand("jump 0")
         #sleep(0.1)
 
+    def howtoMine(self, targ):
+        t = minelogy.get_otype(targ[0]) # TODO?: other blocks?
+        if t == 'log':
+            target = targ + [{'type': 'log2'}, {'type': 'leaves'}, {'type': 'leaves2'}]
+        else:
+            target = targ
+        for targ in target:
+            t = minelogy.get_otype(targ)
+            ray = self.rob.cached['getLineOfSights'][0]
+            if minelogy.matchEntity(ray, targ):
+                if ray['inRange']:
+                    return [['mine', [ray]]]
+                return [['mine', [ray]], ['approach', ray]]
+            known = self.rob.nearestFromGrid(t, observeReq=False)
+            if known is None:
+                if t in self.blockMem.blocks:
+                    # TODO? updateBlocks
+                    known = self.blockMem.blocks[t][-1]
+            # REM: 'approach' should include lookAt
+            if known is not None:
+                return [['mine', [targ]], ['approach', {'type': t, 'x': known[0], 'y': known[1], 'z': known[2]}]]
+        return [['mine', target], ['search', target]]
+
+    def howtoGet(self, target, craft_only=False):
+        '''
+        This method doesn't try to return a complete plan.
+        For example, if there is a matching nearby entity, it will
+        proposes to approach it without planning to mine remaining quantity
+        '''
+
+        invent = self.rob.cached['getInventory'][0]
+        nearEnt = self.rob.cached['getNearEntities'][0]
+
+        acts = []
+
+        for item in invent:
+            if not minelogy.matchEntity(item, target):
+                continue
+            if 'quantity' in target:
+                if item['quantity'] < target['quantity']:
+                    continue
+            return acts + [['inventory', item]]
+        
+        for ent in nearEnt:
+            if not minelogy.matchEntity(ent, target):
+                continue
+            return acts + [['approach', ent]]
+            
+
+        # TODO actions can be kept hierarchically, or we can somehow else
+        # analyze/represent that some actions can be done in parallel
+        # (e.g. mining of different blocks which don't require unavailable tools)
+        # while others cannot be done right away
+        # (craft requiring mining, mining requiring tools)
+        # TODO? combining similar actions with summing up amounts
+        # (may not be necessary with the above)
+
+        for craft in minelogy.crafts:
+            if not minelogy.matchEntity(craft[1], target):
+                continue
+            acts += [['craft', target]]
+            for ingrid in craft[0]:
+                # TODO? amounts
+                act = self.howtoGet(ingrid, craft_only)
+                acts = None if act is None else acts + act
+            return acts
+
+        if craft_only:
+            return None
+
+        for mine in minelogy.mines:
+            if not minelogy.matchEntity(mine[1], target):
+                continue
+            # TODO: there can be alternative blocks to mine (OR instead of AND)
+            acts += self.howtoMine(mine[0]['block'])
+            best_cnd = None
+            for tool in mine[0]['tools']:
+                if tool is None:
+                    best_cnd = []
+                    break
+                cnd = self.howtoGet({'type': tool}, craft_only=True)
+                if cnd is None:
+                    continue
+                if len(cnd) <= 1:
+                    best_cnd = cnd
+                    break
+                if best_cnd is None or len(cnd) < len(best_cnd):
+                    best_cnd = cnd
+            if best_cnd is None:
+                best_cnd = self.howtoGet({'type': mine[0]['tools'][-1]}, craft_only=False)
+            acts += best_cnd
+            return acts
+        
+        return ['UNKNOWN']
+
     def ccycle(self):
         self.rob.updateAllObservations()
         self.blockMem.updateBlocks(self.rob)
@@ -378,22 +475,49 @@ class TAgent:
         return True
     
     def loop(self):
-        target = None
-        while target is None:
-            self.skill = Search4Blocks(self.rob, self.blockMem, ['log', 'leaves'])
+        self.skill = None
+        target = {'type': 'wooden_pickaxe'}
+        while target:
+            sleep(0.2)
+            self.rob.updateAllObservations()
+            howto = self.howtoGet(target)
+            if howto == []:
+                target = None
+                break
+            elif howto[-1][0] == 'UNKNOWN':
+                print("Panic. Don't know how to get " + str(target))
+                print(str(howto))
+                break
+            while howto[-1][0] == 'inventory':
+                # self.rob.mc.sendCommand('swapInventoryItems 0 ' + str(howto[-1][1]['index']))
+                howto = howto[:-1]
+                if howto == []:
+                    target = None
+                    break
+            if target is None or howto == []:
+                break
+            if howto[-1][0] == 'search':
+                self.skill = Search4Blocks(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
+            if howto[-1][0] == 'craft':
+                t = minelogy.get_otype(howto[-1][1])
+                if t == 'planks': # hotfix
+                    invent = self.rob.cached['getInventory'][0]
+                    for item in invent:
+                        if item['type'] == 'log':
+                            t = item['variant'] + ' ' + t
+                            break
+                self.rob.craft(t)
+                continue
+            if howto[-1][0] == 'approach':
+                self.skill = ApproachXZPos(self.rob,
+                                [howto[-1][1]['x'], howto[-1][1]['y'], howto[-1][1]['z']])
+            if howto[-1][0] == 'mine':
+                self.skill = MineAround(self.rob, minelogy.get_otlist(howto[-1][1]))
+            if self.skill is None:
+                break
             while self.ccycle():
                 sleep(0.05)
-            b = self.blockMem.blocks
-            if 'leaves' in b and b['leaves']:
-                target = b['leaves'][-1]
-            if 'log' in b and b['log']:
-                target = b['log'][-1]
-        self.skill = ApproachXZPos(self.rob, target)
-        while self.ccycle():
-            sleep(0.05)
-        self.skill = MineAround(self.rob, ['log', 'leaves'])
-        while self.ccycle():
-            sleep(0.05)
+            self.skill = None
 
 
 if __name__ == '__main__':

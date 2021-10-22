@@ -14,11 +14,15 @@ s = """
 120, leaves/oak
 35, double_plant/sunflower
 14, stone/andesite
+46, stone/granite
 98, gravel
 102, water
+0, flowing_water
+175, duck
 27, sunflower
 96, gold_ore
 6, stone/stone
+30, stone/diorite
 117, sand
 114, lava"""
 

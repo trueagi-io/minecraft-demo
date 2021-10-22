@@ -66,9 +66,10 @@ if __name__ == '__main__':
     from dataset import MinecraftImageDataset
     from goodpoint import GoodPoint
     import torch.optim as optim
-    device = 'cpu'
-    device = 'cuda'
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     train_depth = False
+    train = True
     n_epochs = 22
     batch_size = 22
 
@@ -108,14 +109,16 @@ if __name__ == '__main__':
             # don't use weighting for now
             # logprob *= weights.unsqueeze(0).unsqueeze(2).unsqueeze(3).to(logprob)
             loss = (- (logprob * target)).mean()
-            loss.backward()
-            optimizer.step()
+            if train:
+                loss.backward()
+                optimizer.step()
             if j % 10 == 0:
                 print(loss)
-                cv2.imshow('leaves', (blocks[0][1] * 255).detach().cpu().numpy().astype(numpy.uint8))
-                cv2.imshow('target', (target[0][1] * 255).detach().cpu().numpy().astype(numpy.uint8))
-                cv2.imshow('image', (imgs[0].permute(1, 2, 0) * 255).detach().cpu().numpy().astype(numpy.uint8))
-                cv2.waitKey(1000)
+                if show:
+                    cv2.imshow('leaves', (blocks[0][1] * 255).detach().cpu().numpy().astype(numpy.uint8))
+                    cv2.imshow('target', (target[0][1] * 255).detach().cpu().numpy().astype(numpy.uint8))
+                    cv2.imshow('image', (imgs[0].permute(1, 2, 0) * 255).detach().cpu().numpy().astype(numpy.uint8))
+                    cv2.waitKey(1000)
         snap = dict()
         snap['model'] = net.state_dict()
         snap['optimizer'] = optimizer.state_dict()

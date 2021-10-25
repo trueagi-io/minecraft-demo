@@ -141,8 +141,7 @@ class MalmoConnector:
         return self.pixels[nAgent]
 
     def getSegmentation(self, nAgent=0):
-        if self.segmentation:
-            return self.segmentation[nAgent]
+        return self.segmentation[nAgent]
 
     def getAgentPos(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('XPos' in self.observe[nAgent]):
@@ -176,7 +175,7 @@ class MalmoConnector:
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
         los = self.getLineOfSights(nAgent)
         return los[key] if los is not None and key in los else None
-    
+
     def getNearEntities(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('ents_near' in self.observe[nAgent]):
             return self.observe[nAgent]['ents_near']
@@ -221,6 +220,12 @@ class MalmoConnector:
         pitch = -math.atan2(pos[1] - aPos[1] - 1, math.sqrt(dx * dx + dz * dz))
         return [pitch, yaw]
 
+    def supportsVideo(self):
+        return self.missionDesc.hasVideo()
+
+    def supportsSegmentation(self):
+        return self.missionDesc.hasSegmentation()
+
 
 class RobustObserver:
 
@@ -235,6 +240,10 @@ class RobustObserver:
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights',
                         'getLife', 'getInventory', 'getImage', 'getSegmentation']
         self.canBeNone = ['getLineOfSights']
+        if not self.mc.supportsVideo():
+            self.canBeNone.append('getImage')
+        if not self.mc.supportsSegmentation():
+            self.canBeNone.append('getSegmentation')
         self.cached = {method : (None, 0) for method in self.methods}
 
     def clear(self):
@@ -253,7 +262,8 @@ class RobustObserver:
         for method in self.methods:
             v_new = getattr(self.mc, method)(self.nAgent)
             v, t = self.cached[method]
-            if v_new is not None or t_new - t > self.max_dt: # or v is None
+            outdated = t_new - t > self.max_dt
+            if v_new is not None or outdated: # or v is None
                 self.cached[method] = (v_new, t_new)
 
     def waitNotNoneObserve(self, method, updateReq=False, observeReq=True):
@@ -262,6 +272,8 @@ class RobustObserver:
         # Do not force observeProcCached if the value was updated less than tick ago
         if time.time() - tm > self.tick and observeReq:
             self.observeProcCached()
+            tm = self.cached[method][1]
+
         # if updated observation is required, observation time should be changed
         # (is not recommended while moving)
         while self.getCachedObserve(method) is None or\

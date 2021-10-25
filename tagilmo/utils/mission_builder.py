@@ -115,7 +115,7 @@ class ServerSection:
     def __init__(self, handlers=ServerHandlers(), initial_conditions=ServerInitialConditions()):
         self.handlers = handlers
         self.initial_conditions = initial_conditions
-        
+
     def xml(self):
         return '<ServerSection>\n'+self.initial_conditions.xml()+self.handlers.xml()+'</ServerSection>\n'
 
@@ -251,6 +251,16 @@ class AgentHandlers:
         # ...
         return _xml
 
+    def hasVideo(self):
+        if self.video_producer is None:
+            return False
+        return True
+
+    def hasSegmentation(self):
+        if self.colourmap_producer is None:
+            return False
+        return True
+
 
 class AgentStart:
 
@@ -297,6 +307,16 @@ class AgentSection:
         _xml += '</AgentSection>\n'
         return _xml
 
+    def hasVideo(self):
+        if self.agenthandlers.hasVideo():
+            return True
+        return False
+
+    def hasSegmentation(self):
+        if self.agenthandlers.hasSegmentation():
+            return True
+        return False
+
 
 class MissionXML:
 
@@ -305,6 +325,18 @@ class MissionXML:
         self.serverSection = serverSection
         self.agentSections = agentSections
     
+    def hasVideo(self):
+        for section in self.agentSections:
+            if section.hasVideo():
+                return True
+        return False
+
+    def hasSegmentation(self):
+        for section in self.agentSections:
+           if section.hasSegmentation():
+               return True
+        return False
+
     def setSummary(self, summary_string):
         self.about.summary = summary_string
     

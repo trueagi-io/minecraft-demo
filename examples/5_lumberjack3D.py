@@ -235,7 +235,7 @@ class ApproachXZPos:
     def act(self):
         aPos = self.rob.cached['getAgentPos'][0]
         pos = self.target_pos
-        if abs(aPos[0] - pos[0]) < 1.8 and abs(aPos[2] - pos[2]) < 1.8 and not self.move.finished():
+        if abs(aPos[0] - pos[0]) < 1.4 and abs(aPos[2] - pos[2]) < 1.4 and not self.move.finished():
             return self.move.stop()
         los = self.rob.cached['getLineOfSights'][0]
         acts = []
@@ -521,7 +521,8 @@ class TAgent:
                 self.skill = ApproachXZPos(self.rob,
                                 [howto[-1][1]['x'], howto[-1][1]['y'], howto[-1][1]['z']])
             if howto[-1][0] == 'mine':
-                self.skill = MineAround(self.rob, minelogy.get_otlist(howto[-1][1]))
+                #self.skill = MineAround(self.rob, minelogy.get_otlist(howto[-1][1]))
+                self.skill = MineAtSight(self.rob)
             if self.skill is None:
                 break
             while self.ccycle():

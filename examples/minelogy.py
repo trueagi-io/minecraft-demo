@@ -1,16 +1,16 @@
-mines = [({'block': [{'type': 'log'}],
+mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
           {'type': 'log'}
          ),
-         ({'block': [{'type': 'log2'}],
+         ({'blocks': [{'type': 'log2'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
           {'type': 'log2'}
          ),
-         ({'block': [{'type': 'grass'}, {'type': 'dirt'}],
+         ({'blocks': [{'type': 'grass'}, {'type': 'dirt'}],
            'tools': ['stone_shovel', 'wooden_shovel', None]},
           {'type': 'dirt'}
          ),
-         ({'block': [{'type': 'stone', 'variant': 'stone'}],
+         ({'blocks': [{'type': 'stone', 'variant': 'stone'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'cobblestone'}
          )

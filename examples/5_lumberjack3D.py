@@ -235,9 +235,16 @@ class ApproachXZPos:
     def act(self):
         aPos = self.rob.cached['getAgentPos'][0]
         pos = self.target_pos
-        if abs(aPos[0] - pos[0]) < 2 and abs(aPos[2] - pos[2]) < 2 and not self.move.finished():
+        if abs(aPos[0] - pos[0]) < 1.8 and abs(aPos[2] - pos[2]) < 1.8 and not self.move.finished():
             return self.move.stop()
-        return self.move.act() + self.lookAt.act()
+        los = self.rob.cached['getLineOfSights'][0]
+        acts = []
+        if los is not None:
+            if los['inRange']:
+                acts = [['attack 1']]
+            else:
+                acts = [['attack 0']]
+        return self.move.act() + self.lookAt.act() + acts
 
     def stop(self):
         return self.move.stop() + self.lookAt.stop()
@@ -367,6 +374,8 @@ class TAgent:
         t = minelogy.get_otype(targ[0]) # TODO?: other blocks?
         if t == 'log':
             target = targ + [{'type': 'log2'}, {'type': 'leaves'}, {'type': 'leaves2'}]
+        elif t == 'stone':
+            target = targ + [{'type': 'dirt'}, {'type': 'grass'}]
         else:
             target = targ
         for targ in target:
@@ -386,7 +395,7 @@ class TAgent:
                 return [['mine', [targ]], ['approach', {'type': t, 'x': known[0], 'y': known[1], 'z': known[2]}]]
         return [['mine', target], ['search', target]]
 
-    def howtoGet(self, target, craft_only=False):
+    def howtoGet(self, target, craft_only=False, tool=False):
         '''
         This method doesn't try to return a complete plan.
         For example, if there is a matching nearby entity, it will
@@ -404,14 +413,13 @@ class TAgent:
             if 'quantity' in target:
                 if item['quantity'] < target['quantity']:
                     continue
-            return acts + [['inventory', item]]
+            return acts + [['tool' if tool else 'inventory', item]]
         
         for ent in nearEnt:
             if not minelogy.matchEntity(ent, target):
                 continue
             return acts + [['approach', ent]]
             
-
         # TODO actions can be kept hierarchically, or we can somehow else
         # analyze/represent that some actions can be done in parallel
         # (e.g. mining of different blocks which don't require unavailable tools)
@@ -437,13 +445,13 @@ class TAgent:
             if not minelogy.matchEntity(mine[1], target):
                 continue
             # TODO: there can be alternative blocks to mine (OR instead of AND)
-            acts += self.howtoMine(mine[0]['block'])
+            acts += self.howtoMine(mine[0]['blocks'])
             best_cnd = None
             for tool in mine[0]['tools']:
                 if tool is None:
                     best_cnd = []
                     break
-                cnd = self.howtoGet({'type': tool}, craft_only=True)
+                cnd = self.howtoGet({'type': tool}, craft_only=True, tool=True)
                 if cnd is None:
                     continue
                 if len(cnd) <= 1:
@@ -488,8 +496,9 @@ class TAgent:
                 print("Panic. Don't know how to get " + str(target))
                 print(str(howto))
                 break
-            while howto[-1][0] == 'inventory':
-                # self.rob.mc.sendCommand('swapInventoryItems 0 ' + str(howto[-1][1]['index']))
+            while howto[-1][0] == 'inventory' or howto[-1][0] == 'tool':
+                if howto[-1][0] == 'tool' and howto[-1][1]['index'] != 0:
+                    self.rob.mc.sendCommand('swapInventoryItems 0 ' + str(howto[-1][1]['index']))
                 howto = howto[:-1]
                 if howto == []:
                     target = None

@@ -46,7 +46,7 @@ class MalmoConnector:
         self.worldStates = [None]*nAgents
         self.observe = [None]*nAgents
         self.isAlive = [True] * nAgents
-        self.pixels = [None] * nAgents 
+        self.pixels = [None] * nAgents
         self.segmentation = [None] * nAgents
 
     def receivedArgument(self, arg):
@@ -127,7 +127,7 @@ class MalmoConnector:
             self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
-            segments = self.worldStates[n].video_frames_colourmap
+            segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None
             if frames:
                 self.pixels[n] = numpy.frombuffer(frames[0].pixels, dtype=numpy.uint8)
             else:
@@ -194,6 +194,12 @@ class MalmoConnector:
         else:
             return None
 
+    def getChat(self, nAgent=0):
+        if (self.observe[nAgent] is not None) and ('Chat' in self.observe[nAgent]):
+            return self.observe[nAgent]['Chat']
+        else:
+            return None
+
     def isInventoryAvailable(self, nAgent=0):
         return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]
 
@@ -238,8 +244,8 @@ class RobustObserver:
         self.tick = 0.02
         self.max_dt = 1.0
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights',
-                        'getLife', 'getInventory', 'getImage', 'getSegmentation']
-        self.canBeNone = ['getLineOfSights']
+                        'getLife', 'getInventory', 'getImage', 'getSegmentation', 'getChat']
+        self.canBeNone = ['getLineOfSights', 'getChat']
         if not self.mc.supportsVideo():
             self.canBeNone.append('getImage')
         if not self.mc.supportsSegmentation():

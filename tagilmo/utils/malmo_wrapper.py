@@ -46,8 +46,8 @@ class MalmoConnector:
         self.worldStates = [None]*nAgents
         self.observe = [None]*nAgents
         self.isAlive = [True] * nAgents
-        self.pixels = [None] * nAgents
-        self.segmentation = [None] * nAgents
+        self.frames = [None] * nAgents
+        self.segmentation_frames = [None] * nAgents
 
     def receivedArgument(self, arg):
         return self.agent_hosts[0].receivedArgument(arg)
@@ -129,19 +129,29 @@ class MalmoConnector:
             frames = self.worldStates[n].video_frames
             segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None
             if frames:
-                self.pixels[n] = numpy.frombuffer(frames[0].pixels, dtype=numpy.uint8)
+                self.frames[n] = frames[0]
             else:
-                self.pixels[n] = None
+                self.frames[n] = None
             if segments:
-                self.segmentation[n] = numpy.frombuffer(segments[0].pixels, dtype=numpy.uint8)
+                self.segmentation_frames[n] = segments[0]
             else:
-                self.segmentation[n] = None
+                self.segmentation_frames[n] = None
+
+    def getImageFrame(self, nAgent=0):
+        return self.frames[nAgent]
+
+    def getSegmentationFrame(self, nAgent=0):
+        return self.segmentation_frames[nAgent]
 
     def getImage(self, nAgent=0):
-        return self.pixels[nAgent]
+        if self.frames[nAgent] is not None:
+            return numpy.frombuffer(self.frames[nAgent].pixels, dtype=numpy.uint8)
+        return None
 
     def getSegmentation(self, nAgent=0):
-        return self.segmentation[nAgent]
+        if self.segmentation_frames[nAgent] is not None:
+            return numpy.frombuffer(self.segmentation_frames[nAgent].pixels, dtype=numpy.uint8)
+        return None
 
     def getAgentPos(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('XPos' in self.observe[nAgent]):
@@ -244,12 +254,13 @@ class RobustObserver:
         self.tick = 0.02
         self.max_dt = 1.0
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights',
-                        'getLife', 'getInventory', 'getImage', 'getSegmentation', 'getChat']
+                        'getLife', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat']
         self.canBeNone = ['getLineOfSights', 'getChat']
+
         if not self.mc.supportsVideo():
-            self.canBeNone.append('getImage')
+            self.canBeNone.append('getImageFrame')
         if not self.mc.supportsSegmentation():
-            self.canBeNone.append('getSegmentation')
+            self.canBeNone.append('getSegmentationFrame')
         self.cached = {method : (None, 0) for method in self.methods}
 
     def clear(self):

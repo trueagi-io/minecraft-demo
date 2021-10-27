@@ -8,6 +8,7 @@ s = """
 22, tallgrass
 69, yellow_flower/dandelion
 67, red_flower/oxeye_daisy
+86, vine
 122, log/oak
 121, log/birch
 115, leaves/birch

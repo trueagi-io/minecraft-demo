@@ -29,7 +29,7 @@ class DataCollection:
         self.img_pairs = []
         self.maxlen = maxlen
         self.idx = 0
-        self.frame_count = 0
+        self.prev_time = 0
         self.datadir = datadir
         self.load()
 
@@ -46,13 +46,12 @@ class DataCollection:
         print('loaded {0} files'.format(idx + 1))
 
     def put(self, img, segm):
-        if self.frame_count == 4: 
+        t = time.time()
+        if t - self.prev_time > 0.4:
             blocks = get_types(segm)
             self.queue.append((img, segm, blocks))
             self.idx = self.iteration(self.idx)
-            self.frame_count = 0
-        else:
-            self.frame_count += 1
+            self.prev_time = t
 
     def compute_weight(self, blocks):
         result = - 1
@@ -124,8 +123,10 @@ def start_mission():
     miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
              agenthandlers=agent_handlers,)])
 
+    # good point seed='2', x=-90, y=71, z=375
+    # good point seed='3', x=6, y=71, z=350
     world = mb.defaultworld(
-        seed='43',
+        seed='3',
         forceReset="false")
 
     miss.setWorld(world)
@@ -141,17 +142,19 @@ def start_mission():
 
 
 def get_img(mc):
-    img_data = mc.waitNotNoneObserve('getImage')
-    if img_data is not None:
-        img_data = img_data.reshape((240 * 4, 320 * 4, 3))
-        return img_data
+    img_frame = mc.waitNotNoneObserve('getImageFrame')
+    if img_frame is None:
+        return None, None
+    pos = numpy.asarray((img_frame.pitch, img_frame.yaw, img_frame.xPos, img_frame.yPos, img_frame.zPos))
+    return pos, img_frame
 
 
 def get_segment(mc):
-    img_data = mc.waitNotNoneObserve('getSegmentation')
-    if img_data is not None:
-        img_data = img_data.reshape((240 * 4, 320 * 4, 3))
-        return img_data
+    img_frame = mc.waitNotNoneObserve('getSegmentationFrame')
+    if img_frame is None:
+        return None, None
+    pos = numpy.asarray((img_frame.pitch, img_frame.yaw, img_frame.xPos, img_frame.yPos, img_frame.zPos))
+    return pos, img_frame
 
 
 def get_distance(mc):
@@ -168,24 +171,43 @@ def get_distance(mc):
     return dist
 
 
+def extract(data):
+    img_data = numpy.frombuffer(data, dtype=numpy.uint8)
+    img_data = img_data.reshape((240 * 4, 320 * 4, 3))
+    return img_data
+
+
 def main():
     mc, obs = start_mission()
     mc.safeStart()
-    dataset = DataCollection(400, 'image_data1')
+    dataset = DataCollection(400, 'image_data')
+    prev_pos = None
     while True:
         obs.clear()
-        img = get_img(obs)
-        segm = get_segment(obs)
+        pos1, img = get_img(obs)
+        pos2, segm = get_segment(obs)
+        if pos1 is None or pos2 is None:
+            continue
+        diff = numpy.max(numpy.abs(pos1 - pos2))
+        if 0 < diff:
+            continue
+        if prev_pos is not None:
+            if numpy.max(numpy.abs(pos1 - prev_pos)) == 0:
+                print('old data')
+                continue
         visible = mc.getFullStat('LineOfSight')
         if visible:
             dist = get_distance(mc)
             if dist < 3:
                 continue
-        print(visible)
+        else:
+            continue
         if img is not None and segm is not None:
+            img = extract(img.pixels)
+            segm = extract(segm.pixels)
             dataset.put(img, segm)
             cv2.imshow('segm', segm[:, :, 0])
             cv2.imshow('img', img)
-            cv2.waitKey()
-
+            #cv2.waitKey(100)
+            prev_pos = pos1
 main()

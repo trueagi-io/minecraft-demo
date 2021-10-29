@@ -11,6 +11,7 @@ s = """
 86, vine
 122, log/oak
 121, log/birch
+123, log/spruce
 115, leaves/birch
 120, leaves/oak
 35, double_plant/sunflower
@@ -22,10 +23,15 @@ s = """
 175, duck
 27, sunflower
 96, gold_ore
+1, cow
 6, stone/stone
 30, stone/diorite
 117, sand
 114, lava"""
+#todo pumking 124,21
+# 115 leaves/acacia
+# 120, 121 log/acacia
+# 120, leaves/spruce
 
 segment_mapping = dict()
 

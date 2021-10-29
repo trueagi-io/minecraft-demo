@@ -11,9 +11,9 @@ import torch
 import torch.nn as nn
 from torch.distributions.beta import Beta
 from torch.distributions.categorical import Categorical
-from pyramidpooling import PyramidPooling
-from vgg import VGG
-import common
+from experiments.pyramidpooling import PyramidPooling
+from experiments.vgg import VGG
+from experiments import common
 
 
 def init_weights_xavier(m):

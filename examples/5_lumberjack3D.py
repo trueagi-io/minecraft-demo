@@ -1,8 +1,14 @@
 import math
+import cv2
+import torch
+import numpy
+import os
 from time import sleep, time
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
 from examples import minelogy
+import logging
+
 
 def normAngle(angle):
     while (angle < -math.pi): angle += 2 * math.pi
@@ -17,13 +23,13 @@ def int_coords(xs):
 
 
 class NoticeBlocks:
-    
+
     def __init__(self):
         self.blocks = {}
         self.max_len = 5
         self.ignore_blocks = ['air', 'grass', 'tallgrass', 'double_plant', 'dirt', 'stone']
         self.dx = 4
-    
+
     def updateBlock(self, block, pos):
         if block not in self.blocks:
             self.blocks[block] = []
@@ -35,7 +41,7 @@ class NoticeBlocks:
                    return
         ps.append(pos)
         self.blocks[block] = ps[1:] if len(ps) > self.max_len else ps
-    
+
     def removeIfMissing(self, current_block, blocks, pos):
         for block in blocks:
             if block not in self.blocks or block == current_block:
@@ -74,7 +80,7 @@ class MoveForward:
     def act(self):
         self.isAct = True
         return [['move', '1']]
-    
+
     def stop(self):
         self.isAct = False
         return [['move', '0']]
@@ -104,7 +110,7 @@ class Jump:
 
 
 class ForwardNJump:
-    
+
     def __init__(self, rob):
         self.rob = rob
         self.move = MoveForward(rob)
@@ -144,7 +150,7 @@ class ForwardNJump:
 
 
 class LookDir:
-    
+
     def __init__(self, rob, pitch, yaw):
         self.fin = False
         self.update_target(pitch, yaw)
@@ -180,7 +186,7 @@ class LookDir:
 
 
 class LookAt:
-    
+
     def __init__(self, rob, pos):
         self.rob = rob
         self.target_pos = pos
@@ -197,19 +203,19 @@ class LookAt:
 
     def finished(self):
         return self.lookDir.finished()
-    
+
     def stop(self):
         return self.lookDir.stop()
 
 
 class VisScan:
-    
+
     def __init__(self):
         self.t0 = time()
 
     def precond(self):
         return True
-    
+
     def act(self):
         t = time()
         turnVel = 0.1 * math.cos((t-self.t0) * 1.3)
@@ -221,7 +227,7 @@ class VisScan:
 
 
 class ApproachXZPos:
-    
+
     def __init__(self, rob, pos):
         self.rob = rob
         self.target_pos = pos
@@ -253,8 +259,127 @@ class ApproachXZPos:
         return self.move.finished() and self.lookAt.finished()
 
 
+model_cache = dict()
+
+
+class NeuralScan:
+    def __init__(self, rob, blocks):
+        self.rob = rob
+        self.blocks = blocks
+        self.net = self.load_model()
+        # for debug purposes
+        self._visualize = False
+
+    def load_model(self):
+        path = 'experiments/goodpoint.pt'
+        if path in model_cache:
+            return model_cache[path]
+        from experiments.goodpoint import GoodPoint
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        n_classes = 3 # other, log, leaves
+        depth = False
+        net = GoodPoint(8, n_classes, n_channels=3, depth=depth, batchnorm=False).to(device)
+        if os.path.exists(path):
+            model_weights = torch.load(path, map_location=device)['model']
+            net.load_state_dict(model_weights)
+        model_cache[path] = net
+        return net
+
+    def _get_image(self):
+        img_frame = self.rob.waitNotNoneObserve('getImageFrame')
+        img_data = None
+        if img_frame is not None:
+            img_data = numpy.frombuffer(img_frame.pixels, dtype=numpy.uint8)
+            img_data = img_data.reshape((240, 320, 3))
+            img_data = torch.as_tensor(img_data).permute(2,0,1)
+            img_data = img_data.unsqueeze(0) / 255.0
+        return img_data
+
+    def visualize(self, img, heatmaps):
+        if self._visualize:
+            cv2.imshow('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
+            cv2.imshow('leaves', heatmaps[0, 2].detach().numpy() * 255)
+            cv2.imshow('log', heatmaps[0, 1].detach().numpy() * 255)
+            cv2.waitKey(300)
+
+    def act(self):
+        LOG = 1
+        LEAVES = 2
+        img = self._get_image()
+        turn = 0
+        pitch = 0
+        if img is not None:
+            with torch.no_grad():
+                heatmaps = self.net(img)
+            h, w = heatmaps.shape[-2:]
+            size = (h // 10, w // 10)
+            pooled = torch.nn.functional.avg_pool2d(heatmaps[:, 1:], kernel_size=size, stride=size)
+            stabilize = True
+            log = pooled[0, 0]
+            leaves = pooled[0, 1]
+            blocks = {'log': log, 'leaves': leaves}
+            for block in 'log', 'leaves':
+                self.visualize(img, heatmaps)
+                if block in self.blocks:
+                    m = blocks[block].max()
+                    if 0.1 < m:
+                        if block == 'log':
+                            logging.debug('log')
+                        if block == 'leaves':
+                            logging.debug('leaves')
+                        idx = torch.argmax(blocks[block])
+                        h_idx = idx // 10
+                        w_idx = idx % 10
+                        pitch = (h_idx.item() - 4) / 80
+                        turn = (w_idx.item() - 4) / 60
+                        stabilize = False
+                        break
+            if stabilize:
+                logging.debug('stabilizing')
+                pos = self.rob.waitNotNoneObserve('getAgentPos')
+                pitch = pos[3]
+                if pitch < -10:
+                    pitch = 0.03
+                if 10 < pitch:
+                    pitch = - 0.03
+        else:
+            logging.warn('img is None')
+        result = [["turn", str(turn)], ["pitch", str(pitch)]]
+        logging.debug(result)
+        return result
+
+    def stop(self):
+        return [["turn", "0"], ["pitch", "0"]]
+
+
+class NeuralSearch:
+    def __init__(self, rob, blockMem, blocks):
+        self.blocks = blocks
+        self.blockMem = blockMem
+        # blockMem.addToFocus + removeFromFocus
+        self.move = ForwardNJump(rob)
+        self.scan = NeuralScan(rob, blocks)
+
+    def precond(self):
+        return self.move.precond()
+
+    def act(self):
+        return self.move.act() + self.scan.act()
+
+    def stop(self):
+        return self.move.stop() + self.scan.stop()
+
+    def finished(self):
+        for block in self.blocks:
+            # TODO: blocks in ignore_blocks are missed even if they are searched; need to add focus_blocks
+            # if self.blockMem.nearestBlock(block) is not None
+            if block in self.blockMem.blocks and len(self.blockMem.blocks[block]) > 0:
+                return True
+        return False
+
+
 class Search4Blocks:
-    
+
     def __init__(self, rob, blockMem, blocks):
         self.blocks = blocks
         self.blockMem = blockMem
@@ -281,7 +406,7 @@ class Search4Blocks:
 
 
 class MineAtSight:
-    
+
     def __init__(self, rob):
         self.rob = rob
         self.isAct = False
@@ -293,7 +418,7 @@ class MineAtSight:
 
     def precond(self):
         return self.dist is not None
-    
+
     def act(self):
         return [['attack', '1']]
 
@@ -308,24 +433,24 @@ class MineAtSight:
 
 
 class MineAround:
-    
+
     def __init__(self, rob, objs):
         self.rob = rob
         self.objs = objs
         self.mine = None
         self.approach = None
         self._set_target()
-    
+
     def _set_target(self):
         for obj in self.objs:
             self.target = self.rob.nearestFromGrid(obj, observeReq=False)
             if self.target is not None:
                 self.approach = ApproachXZPos(self.rob, self.target)
                 break
-    
+
     def precond(self):
         return self.target is not None
-    
+
     def act(self):
         acts = []
         if self.mine is not None:
@@ -357,7 +482,7 @@ class MineAround:
 
 
 class TAgent:
-    
+
     def __init__(self, miss):
         mc = MalmoConnector(miss)
         mc.safeStart()
@@ -414,12 +539,12 @@ class TAgent:
                 if item['quantity'] < target['quantity']:
                     continue
             return acts + [['tool' if tool else 'inventory', item]]
-        
+
         for ent in nearEnt:
             if not minelogy.matchEntity(ent, target):
                 continue
             return acts + [['approach', ent]]
-            
+
         # TODO actions can be kept hierarchically, or we can somehow else
         # analyze/represent that some actions can be done in parallel
         # (e.g. mining of different blocks which don't require unavailable tools)
@@ -463,7 +588,7 @@ class TAgent:
                 best_cnd = self.howtoGet({'type': mine[0]['tools'][-1]}, craft_only=False)
             acts += best_cnd
             return acts
-        
+
         return ['UNKNOWN']
 
     def ccycle(self):
@@ -481,7 +606,7 @@ class TAgent:
                 self.rob.sendCommand(' '.join(act))
             return False
         return True
-    
+
     def loop(self):
         self.skill = None
         target = {'type': 'wooden_pickaxe'}
@@ -506,7 +631,7 @@ class TAgent:
             if target is None or howto == []:
                 break
             if howto[-1][0] == 'search':
-                self.skill = Search4Blocks(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
+                self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
             if howto[-1][0] == 'craft':
                 t = minelogy.get_otype(howto[-1][1])
                 if t == 'planks': # hotfix
@@ -531,9 +656,17 @@ class TAgent:
 
 
 if __name__ == '__main__':
-    
-    miss = mb.MissionXML()
-    miss.setWorld(mb.defaultworld(forceReset="true"))
+    video_producer = mb.VideoProducer(width=320, height=240, want_depth=False)
+    agent_handlers = mb.AgentHandlers(video_producer=video_producer)
+    miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
+             agenthandlers=agent_handlers,)])
+
+
+    world = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", seed='43', forceReset="false")
+    miss.serverSection.initial_conditions.time_pass = 'false'
+    miss.serverSection.initial_conditions.time_start = "1000"
+    world1 = mb.defaultworld(forceReset="false")
+    miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     agent = TAgent(miss)
     agent.loop()

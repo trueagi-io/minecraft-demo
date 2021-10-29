@@ -356,7 +356,6 @@ class NeuralSearch:
     def __init__(self, rob, blockMem, blocks):
         self.blocks = blocks
         self.blockMem = blockMem
-        # blockMem.addToFocus + removeFromFocus
         self.move = ForwardNJump(rob)
         self.scan = NeuralScan(rob, blocks)
 

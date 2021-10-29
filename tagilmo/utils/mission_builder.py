@@ -147,13 +147,12 @@ class Commands:
         #<MissionQuitCommands /> --
         #<HumanLevelCommands/> --
         #<TurnBasedCommands/> --
-        #<ObservationFromRecentCommands/> --
         return _xml
 
 
 class Observations:
 
-    def __init__(self, bAll=True, bRay=None, bFullStats=None, bInvent=None, bNearby=None, bGrid=None):
+    def __init__(self, bAll=True, bRay=None, bFullStats=None, bInvent=None, bNearby=None, bGrid=None, bChat=None):
         self.bAll = bAll
         self.bRay = bRay
         self.bFullStats = bFullStats
@@ -161,6 +160,7 @@ class Observations:
         self.bNearby = bNearby
         self.bGrid = bGrid
         self.gridNear = [[-5, 5], [-2, 2], [-5, 5]]
+        self.bChat = bChat
 
     def xml(self):
         _xml = ""
@@ -192,7 +192,9 @@ class Observations:
     </Grid>
 </ObservationFromGrid>
 '''
-        #<ObservationFromFullInventory/>
+        if (self.bAll or self.bChat) and not (self.bChat == False):
+            _xml += "<ObservationFromChat />\n"
+        #<ObservationFromRecentCommands/>
         #<ObservationFromDiscreteCell/>
         #<ObservationFromSubgoalPositionList>
         #<ObservationFromDistance><Marker name="Start" x="0.5" y="227" z="0.5"/></ObservationFromDistance>

@@ -102,6 +102,7 @@ class GoodPoint(nn.Module):
     def forward(self, x):
         assert x.max() > 0.01
         assert x.max() < 1.01
+        x = x.to(next(self.parameters()))
         x = self.vgg(x)
         semi_det = self.detector_head(x)
         result = self.depth_to_space(semi_det)

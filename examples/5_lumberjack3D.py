@@ -268,7 +268,7 @@ class NeuralScan:
         self.blocks = blocks
         self.net = self.load_model()
         # for debug purposes
-        self._visualize = False
+        self._visualize = True
 
     def load_model(self):
         path = 'experiments/goodpoint.pt'
@@ -298,9 +298,9 @@ class NeuralScan:
     def visualize(self, img, heatmaps):
         if self._visualize:
             cv2.imshow('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
-            cv2.imshow('leaves', heatmaps[0, 2].detach().numpy() * 255)
-            cv2.imshow('log', heatmaps[0, 1].detach().numpy() * 255)
-            cv2.waitKey(300)
+            cv2.imshow('leaves', (heatmaps[0, 2].detach().numpy() * 255).astype(numpy.uint8))
+            cv2.imshow('log', (heatmaps[0, 1].detach().numpy() * 255).astype(numpy.uint8))
+            cv2.waitKey(200)
 
     def act(self):
         LOG = 1

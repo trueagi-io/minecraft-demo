@@ -44,9 +44,14 @@ class RandomTransformer:
 reverse_map = {v: k for k, v in segment_mapping.items()}
 
 # merge second to first
-to_merge = ('log/oak', 'log/birch'), ('leaves/oak', 'leaves/birch'), ('leaves/oak', 'vine'), ('log/oak', 'log/spruce')
-to_train = ['log/oak', 'leaves/oak', 'dirt', 'grass', 'lava', 'water', 'stone/stone']
-to_train = ['log/oak', 'leaves/oak']
+# to do ('leaves/oak', 'vine')
+to_merge = ('log/oak', 'log/birch'), ('log/oak', 'log/spruce'),  \
+    ('leaves/oak', 'leaves/birch'), ('leaves/oak', 'leaves/spruce'), \
+    ('log/oak', 'log/oak1'), ('log/oak', 'log/birch1'), ('log/oak', 'log/spruce1') \
+    ('leaves/oak', 'leaves2/dark_oak'), \
+    ('log/oak', 'log2/dark_oak'), ('log/oak', 'log2/dark_oak1')
+
+to_train = ['log/oak', 'leaves/oak', 'coal_ore']
 train_id = [reverse_map[k] for k in to_train]
 
 RESIZE = 1/4
@@ -55,17 +60,17 @@ RESIZE = 1/4
 def replace(segm, to_merge):
     """replace second element from to_merge pairs with the first one"""
     for (first, second) in to_merge:
-        f_id = reverse_map[first]
-        s_id = reverse_map[second]
-        diff = f_id - s_id
-        segm += (diff * (segm == s_id)).astype('uint8')
+        f_id = numpy.asarray(reverse_map[first], numpy.uint8)
+        s_id = numpy.asarray(reverse_map[second], numpy.uint8)
+        idx = numpy.where(numpy.all(segm == s_id, axis=2))
+        segm[idx] = f_id
     return segm
 
 
 def transform_item_1channel(item):
     image, segm_image = item
     height, width, _ = image.shape
-    segm_image1 = replace(segm_image[:, :, 0].copy(), to_merge)
+    segm_image1 = replace(segm_image.copy(), to_merge)
     mask = numpy.zeros_like(segm_image1)
     for t in to_train:
         mask += (segm_image1 == reverse_map[t])
@@ -101,10 +106,10 @@ def transform_item_nchannel(item):
                 fx=RESIZE, fy=RESIZE, interpolation=cv2.INTER_NEAREST)
 
     height, width, _ = image.shape
-    segm_image1 = replace(segm_image[:, :, 0].copy(), to_merge)
+    segm_image1 = replace(segm_image.copy(), to_merge)
     mask = numpy.zeros((height, width, len(to_train) + 1))
     for i, t in enumerate(to_train):
-        mask[:, :, i + 1] = (segm_image1 == reverse_map[to_train[i]])
+        mask[:, :, i + 1] = numpy.all(segm_image1 == reverse_map[to_train[i]], axis=2)
     mask[:, :, 0] = ~ (mask[:, :, 1:].sum(2) > 0)
 
     image1 = random_t(image)
@@ -125,9 +130,8 @@ if __name__ == '__main__':
     n_epochs = 100
     batch_size = 22
 
-    data_set = MinecraftSegmentation(imagedir='image_data1',
+    data_set = MinecraftSegmentation(imagedir='train',
                                      transform=transform_item_nchannel)
-    data_set[44]
     loader = DataLoader(data_set, batch_size=batch_size, shuffle=True)
     # +1 for None
     net = GoodPoint(8, len(to_train) + 1, n_channels=3, depth=train_depth, batchnorm=False).to(device)
@@ -169,12 +173,14 @@ if __name__ == '__main__':
             if j % 10 == 0:
                 print(loss)
                 if show:
-                    cv2.imshow('leaves', (blocks[0][1] * 255).detach().cpu().numpy().astype(numpy.uint8))
-                    cv2.imshow('target', (target[0][1] * 255).detach().cpu().numpy().astype(numpy.uint8))
-                    cv2.imshow('image', (imgs[0].permute(1, 2, 0) * 255).detach().cpu().numpy().astype(numpy.uint8))
-                    cv2.waitKey(1000)
-        snap = dict()
-        snap['model'] = net.state_dict()
-        snap['optimizer'] = optimizer.state_dict()
-        torch.save(snap, 'goodpoint.pt')
+                    for i in range(len(blocks)):
+                        cv2.imshow('leaves', (blocks[i][1] * 255).detach().cpu().numpy().astype(numpy.uint8))
+                        cv2.imshow('target', (target[i][1] * 255).detach().cpu().numpy().astype(numpy.uint8))
+                        cv2.imshow('image', (imgs[i].permute(1, 2, 0) * 255).detach().cpu().numpy().astype(numpy.uint8))
+                        cv2.waitKey(1000)
+        if train:
+            snap = dict()
+            snap['model'] = net.state_dict()
+            snap['optimizer'] = optimizer.state_dict()
+            torch.save(snap, 'goodpoint.pt')
 

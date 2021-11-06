@@ -54,7 +54,6 @@ class MinecraftSegmentation(Dataset):
     def __getitem__(self, idx):
         item0 = cv2.imread(os.path.join(self.imagedir, self.pairs[idx][IMG]))
         item1 = cv2.imread(os.path.join(self.imagedir, self.pairs[idx][SEGM]))
-        print(self.pairs[idx][IMG])
         assert item0 is not None
         assert item1 is not None
         if self.transform:

@@ -1,4 +1,5 @@
 import cv2
+import torch
 import os
 import math
 import numpy
@@ -12,6 +13,8 @@ from tagilmo.utils import segment_mapping
 IMAGE = 0
 SEGMENT = 1
 BLOCKS = 2
+WIDTH = 320 * 4
+HEIGHT = 240 * 4
 
 
 def get_types(segm) -> set:
@@ -24,18 +27,20 @@ def get_types(segm) -> set:
 class DataCollection:
     def __init__(self, maxlen, datadir):
         self.queue = deque(maxlen=10)
-        # block -> img count 
+        # block -> img count
         self.img_with_block = defaultdict(int)
         self.img_pairs = []
         self.maxlen = maxlen
-        self.idx = 0
         self.prev_time = 0
         self.datadir = datadir
+        if not os.path.exists(self.datadir):
+            os.mkdir(self.datadir)
         self.load()
+        self.idx = max(len(self.img_pairs) - 1, 0)
 
     def load(self):
         idx = 0
-        for idx in range(len(os.listdir(self.datadir)) // 2): 
+        for idx in range(len(os.listdir(self.datadir)) // 2):
             img_path = os.path.join(self.datadir, 'img' + str(idx) + '.png')
             segm_path = os.path.join(self.datadir, 'seg' + str(idx) + '.png')
             if os.path.exists(segm_path):
@@ -98,7 +103,7 @@ class DataCollection:
         if self.maxlen <= idx:
             idx = 0
         return idx
-    
+
     def update_stats(self, blocks_new, blocks_old):
         for e in blocks_old:
             if e in self.img_with_block:
@@ -110,13 +115,13 @@ class DataCollection:
 
 def start_mission():
     miss = mb.MissionXML()
-    colourmap_producer = mb.ColourMapProducer(width=320 * 4, height=240 * 4)
-    video_producer = mb.VideoProducer(width=320 * 4, height=240 * 4, want_depth=False)    
-    
+    colourmap_producer = mb.ColourMapProducer(width=WIDTH, height=HEIGHT)
+    video_producer = mb.VideoProducer(width=WIDTH, height=HEIGHT, want_depth=False)
+
     obs = mb.Observations()
     agent_handlers = mb.AgentHandlers(observations=obs)
 
-    agent_handlers = mb.AgentHandlers(observations=obs, 
+    agent_handlers = mb.AgentHandlers(observations=obs,
         colourmap_producer=colourmap_producer,
         video_producer=video_producer)
 
@@ -126,10 +131,13 @@ def start_mission():
     # good point seed='2', x=-90, y=71, z=375
     # good point seed='3', x=6, y=71, z=350
     world = mb.defaultworld(
-        seed='3',
+        seed='2',
         forceReset="false")
 
-    miss.setWorld(world)
+    world1 = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake",
+            seed='43',
+            forceReset="false")
+    miss.setWorld(world1)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     # uncomment to disable passage of time:
     miss.serverSection.initial_conditions.time_pass = 'false'
@@ -167,21 +175,23 @@ def get_distance(mc):
     height = 1.6025
     coords1[1] += height
 
-    dist = numpy.linalg.norm(numpy.asarray(coords) - numpy.asarray(coords1), 2) 
+    dist = numpy.linalg.norm(numpy.asarray(coords) - numpy.asarray(coords1), 2)
     return dist
 
 
 def extract(data):
     img_data = numpy.frombuffer(data, dtype=numpy.uint8)
-    img_data = img_data.reshape((240 * 4, 320 * 4, 3))
+    img_data = img_data.reshape((HEIGHT, WIDTH, 3))
     return img_data
 
 
 def main():
     mc, obs = start_mission()
     mc.safeStart()
-    dataset = DataCollection(400, 'image_data')
+    test_model = True
+    dataset = DataCollection(400, 'train')
     prev_pos = None
+    check_dist = False
     while True:
         obs.clear()
         pos1, img = get_img(obs)
@@ -195,19 +205,21 @@ def main():
             if numpy.max(numpy.abs(pos1 - prev_pos)) == 0:
                 print('old data')
                 continue
-        visible = mc.getFullStat('LineOfSight')
-        if visible:
-            dist = get_distance(mc)
-            if dist < 3:
+        if check_dist:
+            visible = mc.getFullStat('LineOfSight')
+            if visible:
+    #            print(visible)
+                dist = get_distance(mc)
+                if dist < 3:
+                    continue
+            else:
                 continue
-        else:
-            continue
         if img is not None and segm is not None:
             img = extract(img.pixels)
             segm = extract(segm.pixels)
             dataset.put(img, segm)
-            cv2.imshow('segm', segm[:, :, 0])
+            cv2.imshow('segm', segm)
             cv2.imshow('img', img)
-            #cv2.waitKey(100)
+            cv2.waitKey(200)
             prev_pos = pos1
 main()

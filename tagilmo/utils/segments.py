@@ -1,41 +1,30 @@
 
 
 s = """
-97, grass
-50, dirt
-68, fire
-66, white_flower/azure_bluet
-22, tallgrass
-69, yellow_flower/dandelion
-67, red_flower/oxeye_daisy
-86, vine
-122, log/oak
-121, log/birch
-123, log/spruce
-115, leaves/birch
-120, leaves/oak
-35, double_plant/sunflower
-14, stone/andesite
-46, stone/granite
-98, gravel
-102, water
-0, flowing_water
-175, duck
-27, sunflower
-96, gold_ore
-1, cow
-6, stone/stone
-30, stone/diorite
-117, sand
-114, lava"""
-#todo pumking 124,21
-# 115 leaves/acacia
-# 120, 121 log/acacia
-# 120, leaves/spruce
+162,232,70 leaves/oak
+162,0,93 log/oak
+185,0,93 log/oak1
+0,209,70 leaves/birch
+70,0,93 log/birch
+93,0,93 log/birch1
+209,0,93 log/spruce
+232,0,93 log/spruce1
+185,232,70 leaves/spruce
+
+232,185,70 leaves2/dark_oak
+23,0,93 log2/dark_oak
+46,0,93 log2/dark_oak1
+209,232,23 red_mushroom_block
+0,116,23 brown_mushroom_block
+185,46,46 mushroom/stem
+
+0,162,23 coal_ore
+"""
 
 segment_mapping = dict()
 
 for line in s.split('\n'):
     if line.strip():
-        code, name = line.split(',')
-        segment_mapping[int(code.strip())] = name.strip()
+        code, name = line.split(' ')
+        code = [int(x) for x in code.split(',')]
+        segment_mapping[tuple(code)] = name.strip()

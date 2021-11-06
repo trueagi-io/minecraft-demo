@@ -10,6 +10,9 @@ from examples import minelogy
 import logging
 
 
+SCALE = 4
+RESIZE = 1/SCALE
+
 def normAngle(angle):
     while (angle < -math.pi): angle += 2 * math.pi
     while (angle > math.pi): angle -= 2 * math.pi
@@ -268,7 +271,7 @@ class NeuralScan:
         self.blocks = blocks
         self.net = self.load_model()
         # for debug purposes
-        self._visualize = False
+        self._visualize = True
 
     def load_model(self):
         path = 'experiments/goodpoint.pt'
@@ -276,7 +279,7 @@ class NeuralScan:
             return model_cache[path]
         from experiments.goodpoint import GoodPoint
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        n_classes = 3 # other, log, leaves
+        n_classes = 4 # other, log, leaves, coal_ore
         depth = False
         net = GoodPoint(8, n_classes, n_channels=3, depth=depth, batchnorm=False).to(device)
         if os.path.exists(path):
@@ -290,7 +293,12 @@ class NeuralScan:
         img_data = None
         if img_frame is not None:
             img_data = numpy.frombuffer(img_frame.pixels, dtype=numpy.uint8)
-            img_data = img_data.reshape((240, 320, 3))
+            img_data = img_data.reshape((240 * SCALE, 320 * SCALE, 3))
+            if RESIZE != 1:
+                height, width, _ = img_data.shape
+                img_data = cv2.resize(img_data, (int(width * RESIZE), int(height * RESIZE)),
+                    fx=RESIZE, fy=RESIZE, interpolation=cv2.INTER_NEAREST)
+
             img_data = torch.as_tensor(img_data).permute(2,0,1)
             img_data = img_data.unsqueeze(0) / 255.0
         return img_data
@@ -298,9 +306,10 @@ class NeuralScan:
     def visualize(self, img, heatmaps):
         if self._visualize:
             cv2.imshow('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
-            cv2.imshow('leaves', heatmaps[0, 2].detach().numpy() * 255)
-            cv2.imshow('log', heatmaps[0, 1].detach().numpy() * 255)
-            cv2.waitKey(300)
+            cv2.imshow('leaves', (heatmaps[0, 2].detach().numpy() * 255).astype(numpy.uint8))
+            cv2.imshow('log', (heatmaps[0, 1].detach().numpy() * 255).astype(numpy.uint8))
+            cv2.imshow('coal_ore', (heatmaps[0, 3].detach().numpy() * 255).astype(numpy.uint8))
+            cv2.waitKey(200)
 
     def act(self):
         LOG = 1
@@ -317,16 +326,14 @@ class NeuralScan:
             stabilize = True
             log = pooled[0, 0]
             leaves = pooled[0, 1]
-            blocks = {'log': log, 'leaves': leaves}
-            for block in 'log', 'leaves':
+            coal_ore = pooled[0, 2]
+            blocks = {'log': log, 'leaves': leaves, 'coal_ore': coal_ore}
+            for block in blocks.keys():
                 self.visualize(img, heatmaps)
                 if block in self.blocks:
                     m = blocks[block].max()
                     if 0.1 < m:
-                        if block == 'log':
-                            logging.debug('log')
-                        if block == 'leaves':
-                            logging.debug('leaves')
+                        logging.debug('see %s', block)
                         idx = torch.argmax(blocks[block])
                         h_idx = idx // 10
                         w_idx = idx % 10
@@ -655,7 +662,7 @@ class TAgent:
 
 
 if __name__ == '__main__':
-    video_producer = mb.VideoProducer(width=320, height=240, want_depth=False)
+    video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
     agent_handlers = mb.AgentHandlers(video_producer=video_producer)
     miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
              agenthandlers=agent_handlers,)])

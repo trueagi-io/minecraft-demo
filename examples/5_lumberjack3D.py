@@ -10,7 +10,8 @@ from examples import minelogy
 import logging
 
 
-RESIZE = 1/4
+SCALE = 4
+RESIZE = 1/SCALE
 
 def normAngle(angle):
     while (angle < -math.pi): angle += 2 * math.pi
@@ -292,7 +293,7 @@ class NeuralScan:
         img_data = None
         if img_frame is not None:
             img_data = numpy.frombuffer(img_frame.pixels, dtype=numpy.uint8)
-            img_data = img_data.reshape((240 * 4, 320 * 4, 3))
+            img_data = img_data.reshape((240 * SCALE, 320 * SCALE, 3))
             if RESIZE != 1:
                 height, width, _ = img_data.shape
                 img_data = cv2.resize(img_data, (int(width * RESIZE), int(height * RESIZE)),
@@ -661,7 +662,7 @@ class TAgent:
 
 
 if __name__ == '__main__':
-    video_producer = mb.VideoProducer(width=320 * 4, height=240 * 4, want_depth=False)
+    video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
     agent_handlers = mb.AgentHandlers(video_producer=video_producer)
     miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
              agenthandlers=agent_handlers,)])

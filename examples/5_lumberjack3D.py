@@ -276,7 +276,7 @@ class NeuralScan:
             return model_cache[path]
         from experiments.goodpoint import GoodPoint
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        n_classes = 3 # other, log, leaves
+        n_classes = 4 # other, log, leaves, coal_ore
         depth = False
         net = GoodPoint(8, n_classes, n_channels=3, depth=depth, batchnorm=False).to(device)
         if os.path.exists(path):
@@ -300,6 +300,7 @@ class NeuralScan:
             cv2.imshow('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
             cv2.imshow('leaves', (heatmaps[0, 2].detach().numpy() * 255).astype(numpy.uint8))
             cv2.imshow('log', (heatmaps[0, 1].detach().numpy() * 255).astype(numpy.uint8))
+            cv2.imshow('coal_ore', (heatmaps[0, 3].detach().numpy() * 255).astype(numpy.uint8))
             cv2.waitKey(200)
 
     def act(self):
@@ -317,16 +318,14 @@ class NeuralScan:
             stabilize = True
             log = pooled[0, 0]
             leaves = pooled[0, 1]
-            blocks = {'log': log, 'leaves': leaves}
-            for block in 'log', 'leaves':
+            coal_ore = pooled[0, 2]
+            blocks = {'log': log, 'leaves': leaves, 'coal_ore': coal_ore}
+            for block in blocks.keys():
                 self.visualize(img, heatmaps)
                 if block in self.blocks:
                     m = blocks[block].max()
                     if 0.1 < m:
-                        if block == 'log':
-                            logging.debug('log')
-                        if block == 'leaves':
-                            logging.debug('leaves')
+                        logging.debug('see %s', block)
                         idx = torch.argmax(blocks[block])
                         h_idx = idx // 10
                         w_idx = idx % 10

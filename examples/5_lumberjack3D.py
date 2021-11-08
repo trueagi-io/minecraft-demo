@@ -1,4 +1,6 @@
 import math
+import threading
+from collections import deque
 import cv2
 import torch
 import numpy
@@ -265,13 +267,33 @@ class ApproachXZPos:
 model_cache = dict()
 
 
+class Visualizer(threading.Thread):
+    def __init__(self):
+        super().__init__(name='visualization', daemon=False)
+        self.queue = deque(maxlen=10)
+        self._lock = threading.Lock()
+
+    def __call__(self, *args):
+        with self._lock:
+            self.queue.append(args)
+    
+    def run(self):
+        while True:
+            while self.queue:
+                with self._lock:
+                    data = self.queue.pop()
+                cv2.imshow(*data)
+            cv2.waitKey(300)
+
+
 class NeuralScan:
-    def __init__(self, rob, blocks):
+    def __init__(self, rob, blocks, visualizer=None):
         self.rob = rob
         self.blocks = blocks
         self.net = self.load_model()
         # for debug purposes
         self._visualize = True
+        self.visualizer = visualizer
 
     def load_model(self):
         path = 'experiments/goodpoint.pt'
@@ -304,14 +326,14 @@ class NeuralScan:
         return img_data
 
     def visualize(self, img, heatmaps):
-        if self._visualize:
-            cv2.imshow('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
-            cv2.imshow('leaves', (heatmaps[0, 2].detach().numpy() * 255).astype(numpy.uint8))
-            cv2.imshow('log', (heatmaps[0, 1].detach().numpy() * 255).astype(numpy.uint8))
-            cv2.imshow('coal_ore', (heatmaps[0, 3].detach().numpy() * 255).astype(numpy.uint8))
-            cv2.waitKey(200)
+        if self._visualize and self.visualizer is not None:
+            self.visualizer('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
+            self.visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
+            self.visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
+            self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
 
     def act(self):
+        logging.debug("scanning for {0}".format(self.blocks))
         LOG = 1
         LEAVES = 2
         img = self._get_image()
@@ -344,15 +366,14 @@ class NeuralScan:
             if stabilize:
                 logging.debug('stabilizing')
                 pos = self.rob.waitNotNoneObserve('getAgentPos')
-                pitch = pos[3]
-                if pitch < -10:
+                current_pitch = pos[3]
+                if current_pitch < -10:
                     pitch = 0.03
-                if 10 < pitch:
+                if 10 < current_pitch:
                     pitch = - 0.03
         else:
             logging.warn('img is None')
         result = [["turn", str(turn)], ["pitch", str(pitch)]]
-        logging.debug(result)
         return result
 
     def stop(self):
@@ -360,11 +381,12 @@ class NeuralScan:
 
 
 class NeuralSearch:
-    def __init__(self, rob, blockMem, blocks):
+    def __init__(self, rob, blockMem, blocks, visualizer=None):
         self.blocks = blocks
         self.blockMem = blockMem
+        self.visualizer = None
         self.move = ForwardNJump(rob)
-        self.scan = NeuralScan(rob, blocks)
+        self.scan = NeuralScan(rob, blocks, visualizer=visualizer)
 
     def precond(self):
         return self.move.precond()
@@ -603,11 +625,13 @@ class TAgent:
         skill = self.skill
         if skill.precond() and not skill.finished():
             acts = skill.act()
+            logging.debug(acts)
             for act in acts:
                 self.rob.sendCommand(' '.join(act))
             return True
         else:
             acts = skill.stop()
+            logging.debug(acts)
             for act in acts:
                 self.rob.sendCommand(' '.join(act))
             return False
@@ -637,7 +661,7 @@ class TAgent:
             if target is None or howto == []:
                 break
             if howto[-1][0] == 'search':
-                self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
+                self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]), visualizer)
             if howto[-1][0] == 'craft':
                 t = minelogy.get_otype(howto[-1][1])
                 if t == 'planks': # hotfix
@@ -661,7 +685,23 @@ class TAgent:
             self.skill = None
 
 
+def setup_logger():
+ 
+    # create logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    # add ch to logger
+    logger.addHandler(ch)
+
+
 if __name__ == '__main__':
+    setup_logger()
+    visualizer = Visualizer()
+    visualizer.start()
     video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
     agent_handlers = mb.AgentHandlers(video_producer=video_producer)
     miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',

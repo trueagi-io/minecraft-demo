@@ -279,10 +279,10 @@ class Visualizer(threading.Thread):
     
     def run(self):
         while True:
-            with self._lock:
-                while self.queue:
+            while self.queue:
+                with self._lock:
                     data = self.queue.pop()
-                    cv2.imshow(*data)
+                cv2.imshow(*data)
             cv2.waitKey(300)
 
 
@@ -366,10 +366,10 @@ class NeuralScan:
             if stabilize:
                 logging.debug('stabilizing')
                 pos = self.rob.waitNotNoneObserve('getAgentPos')
-                pitch = pos[3]
-                if pitch < -10:
+                current_pitch = pos[3]
+                if current_pitch < -10:
                     pitch = 0.03
-                if 10 < pitch:
+                if 10 < current_pitch:
                     pitch = - 0.03
         else:
             logging.warn('img is None')

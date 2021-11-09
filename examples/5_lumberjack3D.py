@@ -387,6 +387,7 @@ class NeuralScan:
         else:
             logging.warn('img is None')
         result = [["turn", str(turn)], ["pitch", str(pitch)]]
+        self.rob.observeProcCached()
         return result
 
     def stop(self):
@@ -529,7 +530,8 @@ class TAgent:
         mc.safeStart()
         self.rob = RobustObserverWithCallbacks(mc)
         callback = NeuralWrapper(self.rob)
-        self.rob.addCallback('getNeuralSegmentation', callback)
+                                # cb_name, on_change event, callback
+        self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
         self.blockMem = NoticeBlocks()
         #Not necessary now
         #sleep(2)
@@ -701,13 +703,14 @@ class TAgent:
 
 
 def setup_logger():
- 
     # create logger
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
+    formatter = logging.Formatter('%(asctime)s: %(levelname)-8s %(message)s')
     # create console handler and set level to debug
     ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
     ch.setLevel(logging.DEBUG)
     # add ch to logger
     logger.addHandler(ch)

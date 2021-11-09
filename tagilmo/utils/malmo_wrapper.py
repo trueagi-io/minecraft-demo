@@ -4,6 +4,7 @@ import time
 import math
 import sys
 import concurrent.futures
+import threading
 import logging
 
 import MalmoPython
@@ -284,6 +285,10 @@ class RobustObserver:
             outdated = t_new - t > self.max_dt
             if v_new is not None or outdated: # or v is None
                 self.cached[method] = (v_new, t_new)
+                self.changed(method)
+
+    def changed(self, name):
+        pass
 
     def waitNotNoneObserve(self, method, updateReq=False, observeReq=True):
         # REM: do not use with 'getLineOfSights'
@@ -451,39 +456,45 @@ class RobustObserver:
 class RobustObserverWithCallbacks(RobustObserver):
     def __init__(self, mc, nAgent=0):
         super().__init__(mc, nAgent)
-        # name, function pairs
+        # name, on_change, function triples
         self.callbacks = []
         # future -> name pairs
         self._futures = dict()
         self._in_process = set()
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        self.lock = threading.RLock()
 
-    def addCallback(self, name, cb):
+    def changed(self, name):
+        for (cb_name, on_change, cb) in self.callbacks:
+            if name == on_change and cb_name not in self._in_process:
+                self.submit(cb, cb_name)
+
+    def addCallback(self, name, on_change, cb):
         self.cached[name] = (None, 0)
-        self.callbacks.append((name, cb))
+        self.callbacks.append((name, on_change, cb))
 
     def done_callback(self, fut):
         if fut in self._futures:
-            name = self._futures[fut]
-            del self._futures[fut]
-            result = fut.result()
             tm = time.time()
-            logging.debug('adding results from %s', name)
-            self.cached[name] = (result, tm)
-            self._in_process.discard(name)
-
-    def observeProcCached(self):
-        super().observeProcCached()
-        self.run_callbacks()
+            with self.lock:
+                name = self._futures[fut]
+                del self._futures[fut]
+                result = fut.result()
+                logging.debug('adding results from %s', name)
+                self.cached[name] = (result, tm)
+                self._in_process.discard(name)
 
     def run_callbacks(self):
         for (name, cb) in self.callbacks:
-            # break infinate recursion
-            # cb may call observeProcCached
+            # do not run cb if already running
             if name not in self._in_process:
-                logging.debug('run callback %s', name)
-                future = self.executor.submit(cb)
-                self._futures[future] = name
-                self._in_process.add(name)
-                future.add_done_callback(self.done_callback)
+                self.submit(cb, name)
+
+    def submit(self, cb, name):
+        logging.debug('run callback %s', name)
+        future = self.executor.submit(cb)
+        with self.lock:
+            self._futures[future] = name
+            self._in_process.add(name)
+        future.add_done_callback(self.done_callback)
 

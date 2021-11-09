@@ -6,7 +6,7 @@ import torch
 import numpy
 import os
 from time import sleep, time
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
+from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserverWithCallbacks
 import tagilmo.utils.mission_builder as mb
 from examples import minelogy
 import logging
@@ -286,17 +286,21 @@ class Visualizer(threading.Thread):
             cv2.waitKey(300)
 
 
-class NeuralScan:
-    def __init__(self, rob, blocks, visualizer=None):
-        self.rob = rob
-        self.blocks = blocks
+class NeuralWrapper:
+    def __init__(self, rob):
         self.net = self.load_model()
-        # for debug purposes
-        self._visualize = True
-        self.visualizer = visualizer
+        self.rob = rob
+
+    def __call__(self):
+        img = self._get_image()
+        if img is not None:
+            with torch.no_grad():
+                heatmaps = self.net(img)
+                return heatmaps, img
 
     def load_model(self):
         path = 'experiments/goodpoint.pt'
+        logging.info('loading model from %s', path)
         if path in model_cache:
             return model_cache[path]
         from experiments.goodpoint import GoodPoint
@@ -311,7 +315,7 @@ class NeuralScan:
         return net
 
     def _get_image(self):
-        img_frame = self.rob.waitNotNoneObserve('getImageFrame')
+        img_frame = self.rob.getCachedObserve('getImageFrame')
         img_data = None
         if img_frame is not None:
             img_data = numpy.frombuffer(img_frame.pixels, dtype=numpy.uint8)
@@ -325,6 +329,15 @@ class NeuralScan:
             img_data = img_data.unsqueeze(0) / 255.0
         return img_data
 
+   
+class NeuralScan:
+    def __init__(self, rob, blocks, visualizer=None):
+        self.rob = rob
+        self.blocks = blocks
+        # for debug purposes
+        self._visualize = True
+        self.visualizer = visualizer
+
     def visualize(self, img, heatmaps):
         if self._visualize and self.visualizer is not None:
             self.visualizer('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
@@ -333,15 +346,15 @@ class NeuralScan:
             self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
 
     def act(self):
+        self.rob.observeProcCached()
         logging.debug("scanning for {0}".format(self.blocks))
         LOG = 1
         LEAVES = 2
-        img = self._get_image()
         turn = 0
         pitch = 0
-        if img is not None:
-            with torch.no_grad():
-                heatmaps = self.net(img)
+        segm_data = self.rob.getCachedObserve('getNeuralSegmentation')
+        if segm_data is not None:
+            heatmaps, img = segm_data
             h, w = heatmaps.shape[-2:]
             size = (h // 10, w // 10)
             pooled = torch.nn.functional.avg_pool2d(heatmaps[:, 1:], kernel_size=size, stride=size)
@@ -374,6 +387,7 @@ class NeuralScan:
         else:
             logging.warn('img is None')
         result = [["turn", str(turn)], ["pitch", str(pitch)]]
+        self.rob.observeProcCached()
         return result
 
     def stop(self):
@@ -514,7 +528,10 @@ class TAgent:
     def __init__(self, miss):
         mc = MalmoConnector(miss)
         mc.safeStart()
-        self.rob = RobustObserver(mc)
+        self.rob = RobustObserverWithCallbacks(mc)
+        callback = NeuralWrapper(self.rob)
+                                # cb_name, on_change event, callback
+        self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
         self.blockMem = NoticeBlocks()
         #Not necessary now
         #sleep(2)
@@ -686,13 +703,14 @@ class TAgent:
 
 
 def setup_logger():
- 
     # create logger
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
+    formatter = logging.Formatter('%(asctime)s: %(levelname)-8s %(message)s')
     # create console handler and set level to debug
     ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
     ch.setLevel(logging.DEBUG)
     # add ch to logger
     logger.addHandler(ch)

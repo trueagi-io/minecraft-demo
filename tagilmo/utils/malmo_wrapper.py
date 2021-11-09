@@ -3,6 +3,8 @@ import uuid
 import time
 import math
 import sys
+import concurrent.futures
+import logging
 
 import MalmoPython
 
@@ -264,7 +266,7 @@ class RobustObserver:
         self.cached = {method : (None, 0) for method in self.methods}
 
     def clear(self):
-        self.cached = {method : (None, 0) for method in self.methods}
+        self.cached = {k: (None, 0) for k in self.cached}
     
     def getCachedObserve(self, method, key = None):
         val = self.cached[method][0]
@@ -444,4 +446,44 @@ class RobustObserver:
                 d2 = d2c
                 target = [x, y, z]
         return target
+
+
+class RobustObserverWithCallbacks(RobustObserver):
+    def __init__(self, mc, nAgent=0):
+        super().__init__(mc, nAgent)
+        # name, function pairs
+        self.callbacks = []
+        # future -> name pairs
+        self._futures = dict()
+        self._in_process = set()
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
+    def addCallback(self, name, cb):
+        self.cached[name] = (None, 0)
+        self.callbacks.append((name, cb))
+
+    def done_callback(self, fut):
+        if fut in self._futures:
+            name = self._futures[fut]
+            del self._futures[fut]
+            result = fut.result()
+            tm = time.time()
+            logging.debug('adding results from %s', name)
+            self.cached[name] = (result, tm)
+            self._in_process.discard(name)
+
+    def observeProcCached(self):
+        super().observeProcCached()
+        self.run_callbacks()
+
+    def run_callbacks(self):
+        for (name, cb) in self.callbacks:
+            # break infinate recursion
+            # cb may call observeProcCached
+            if name not in self._in_process:
+                logging.debug('run callback %s', name)
+                future = self.executor.submit(cb)
+                self._futures[future] = name
+                self._in_process.add(name)
+                future.add_done_callback(self.done_callback)
 

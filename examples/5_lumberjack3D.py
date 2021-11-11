@@ -305,7 +305,7 @@ class NeuralWrapper:
             return model_cache[path]
         from experiments.goodpoint import GoodPoint
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        n_classes = 4 # other, log, leaves, coal_ore
+        n_classes = 5 # other, log, leaves, coal_ore, stone
         depth = False
         net = GoodPoint(8, n_classes, n_channels=3, depth=depth, batchnorm=False).to(device)
         if os.path.exists(path):

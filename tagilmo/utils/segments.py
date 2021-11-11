@@ -19,6 +19,14 @@ s = """
 185,46,46 mushroom/stem
 
 0,162,23 coal_ore
+
+46,46,0 stone/stone
+185,116,23 stone/granite
+232,232,0 stone/diorite
+93,209,23 stone/cobblestone
+23,116,0 stone/andesite
+
+93,162,23 dirt
 """
 
 segment_mapping = dict()

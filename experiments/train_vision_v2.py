@@ -49,9 +49,11 @@ to_merge = ('log/oak', 'log/birch'), ('log/oak', 'log/spruce'),  \
     ('leaves/oak', 'leaves/birch'), ('leaves/oak', 'leaves/spruce'), \
     ('log/oak', 'log/oak1'), ('log/oak', 'log/birch1'), ('log/oak', 'log/spruce1'), \
     ('leaves/oak', 'leaves2/dark_oak'), \
-    ('log/oak', 'log2/dark_oak'), ('log/oak', 'log2/dark_oak1')
+    ('log/oak', 'log2/dark_oak'), ('log/oak', 'log2/dark_oak1'), \
+    ('stone/stone', 'stone/granite'), ('stone/stone', 'stone/diorite'), \
+    ('stone/stone', 'stone/cobblestone'), ('stone/stone', 'stone/andesite')
 
-to_train = ['log/oak', 'leaves/oak', 'coal_ore']
+to_train = ['log/oak', 'leaves/oak', 'coal_ore', 'stone/stone']
 train_id = [reverse_map[k] for k in to_train]
 
 RESIZE = 1/4
@@ -174,11 +176,10 @@ if __name__ == '__main__':
                 print(loss)
                 if show:
                     for i in range(len(blocks)):
-                        cv2.imshow('leaves_nn', (blocks[i][2] * 255).detach().cpu().numpy().astype(numpy.uint8))
-                        cv2.imshow('leaves', (target[i][2] * 255).detach().cpu().numpy().astype(numpy.uint8))
-                        cv2.imshow('coal_nn', (blocks[i][3] * 255).detach().cpu().numpy().astype(numpy.uint8))
+                        cv2.imshow('leaves', (blocks[i][1] * 255).detach().cpu().numpy().astype(numpy.uint8))
+                        cv2.imshow('target', (target[i][1] * 255).detach().cpu().numpy().astype(numpy.uint8))
                         cv2.imshow('image', (imgs[i].permute(1, 2, 0) * 255).detach().cpu().numpy().astype(numpy.uint8))
-                        cv2.waitKey()
+                        cv2.waitKey(1000)
         if train:
             snap = dict()
             snap['model'] = net.state_dict()

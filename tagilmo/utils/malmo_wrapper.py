@@ -458,7 +458,7 @@ class RobustObserverWithCallbacks(RobustObserver):
         super().__init__(mc, nAgent)
         # name, on_change, function triples
         self.callbacks = []
-        # future -> name pairs
+        # future -> name, cb pairs
         self._futures = dict()
         self._in_process = set()
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
@@ -466,35 +466,55 @@ class RobustObserverWithCallbacks(RobustObserver):
 
     def changed(self, name):
         for (cb_name, on_change, cb) in self.callbacks:
-            if name == on_change and cb_name not in self._in_process:
+            if name == on_change and cb not in self._in_process:
+                # submit with done callback
                 self.submit(cb, cb_name)
 
     def addCallback(self, name, on_change, cb):
-        self.cached[name] = (None, 0)
+        """
+        add callback to be called if data in robust observer's cache
+        is changed
+
+        name: str
+           name of callback, it is used to store returned data in the cache
+           if None returned value won't be saved
+        on_change: str
+           key to be monitored for change event
+        cb: Callable
+           callback
+        """
+        if name is not None:
+            self.cached[name] = (None, 0)
         self.callbacks.append((name, on_change, cb))
 
     def done_callback(self, fut):
         if fut in self._futures:
             tm = time.time()
             with self.lock:
-                name = self._futures[fut]
+                name, cb = self._futures[fut]
                 del self._futures[fut]
-                result = fut.result()
-                logging.debug('adding results from %s', name)
-                self.cached[name] = (result, tm)
-                self._in_process.discard(name)
+                result = None
+                exception = fut.exception()
+                if exception is None:
+                    result = fut.result()
+                else:
+                    logging.exception(exception)
+                if name is not None:
+                    logging.debug('adding results from %s', name)
+                    self.cached[name] = (result, tm)
+                self._in_process.discard(cb)
 
     def run_callbacks(self):
         for (name, cb) in self.callbacks:
             # do not run cb if already running
-            if name not in self._in_process:
+            if cb not in self._in_process:
                 self.submit(cb, name)
 
     def submit(self, cb, name):
         logging.debug('run callback %s', name)
         future = self.executor.submit(cb)
         with self.lock:
-            self._futures[future] = name
-            self._in_process.add(name)
+            self._futures[future] = (name, cb)
+            self._in_process.add(cb)
         future.add_done_callback(self.done_callback)
 

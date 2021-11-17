@@ -1,15 +1,16 @@
 import math
-import threading
-from collections import deque
-import cv2
 import torch
+import threading
+import cv2
 import numpy
 import os
 from time import sleep, time
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserverWithCallbacks
 import tagilmo.utils.mission_builder as mb
 from examples import minelogy
+from neural import NeuralWrapper
 import logging
+from vis import Visualizer
 
 
 SCALE = 4
@@ -267,69 +268,6 @@ class ApproachXZPos:
 model_cache = dict()
 
 
-class Visualizer(threading.Thread):
-    def __init__(self):
-        super().__init__(name='visualization', daemon=False)
-        self.queue = deque(maxlen=10)
-        self._lock = threading.Lock()
-
-    def __call__(self, *args):
-        with self._lock:
-            self.queue.append(args)
-    
-    def run(self):
-        while True:
-            while self.queue:
-                with self._lock:
-                    data = self.queue.pop()
-                cv2.imshow(*data)
-            cv2.waitKey(300)
-
-
-class NeuralWrapper:
-    def __init__(self, rob):
-        self.net = self.load_model()
-        self.rob = rob
-
-    def __call__(self):
-        img = self._get_image()
-        if img is not None:
-            with torch.no_grad():
-                heatmaps = self.net(img)
-                return heatmaps, img
-
-    def load_model(self):
-        path = 'experiments/goodpoint.pt'
-        logging.info('loading model from %s', path)
-        if path in model_cache:
-            return model_cache[path]
-        from experiments.goodpoint import GoodPoint
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        n_classes = 5 # other, log, leaves, coal_ore, stone
-        depth = False
-        net = GoodPoint(8, n_classes, n_channels=3, depth=depth, batchnorm=False).to(device)
-        if os.path.exists(path):
-            model_weights = torch.load(path, map_location=device)['model']
-            net.load_state_dict(model_weights)
-        model_cache[path] = net
-        return net
-
-    def _get_image(self):
-        img_frame = self.rob.getCachedObserve('getImageFrame')
-        img_data = None
-        if img_frame is not None:
-            img_data = numpy.frombuffer(img_frame.pixels, dtype=numpy.uint8)
-            img_data = img_data.reshape((240 * SCALE, 320 * SCALE, 3))
-            if RESIZE != 1:
-                height, width, _ = img_data.shape
-                img_data = cv2.resize(img_data, (int(width * RESIZE), int(height * RESIZE)),
-                    fx=RESIZE, fy=RESIZE, interpolation=cv2.INTER_NEAREST)
-
-            img_data = torch.as_tensor(img_data).permute(2,0,1)
-            img_data = img_data.unsqueeze(0) / 255.0
-        return img_data
-
-   
 class NeuralScan:
     def __init__(self, rob, blocks, visualizer=None):
         self.rob = rob
@@ -529,7 +467,7 @@ class TAgent:
         mc = MalmoConnector(miss)
         mc.safeStart()
         self.rob = RobustObserverWithCallbacks(mc)
-        callback = NeuralWrapper(self.rob)
+        callback = NeuralWrapper(self.rob, RESIZE, SCALE)
                                 # cb_name, on_change event, callback
         self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
         self.blockMem = NoticeBlocks()

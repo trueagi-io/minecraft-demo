@@ -91,10 +91,6 @@ def grid_to_real_feature_vec_walking(block_list):
     return codes
 
 
-def degree2rad(angle):
-    return angle * math.pi / 180
-
-
 def normAngle(angle):
     while (angle < -math.pi): angle += 2 * math.pi
     while (angle > math.pi): angle -= 2 * math.pi

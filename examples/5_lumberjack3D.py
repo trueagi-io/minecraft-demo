@@ -269,19 +269,9 @@ model_cache = dict()
 
 
 class NeuralScan:
-    def __init__(self, rob, blocks, visualizer=None):
+    def __init__(self, rob, blocks):
         self.rob = rob
         self.blocks = blocks
-        # for debug purposes
-        self._visualize = True
-        self.visualizer = visualizer
-
-    def visualize(self, img, heatmaps):
-        if self._visualize and self.visualizer is not None:
-            self.visualizer('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
-            self.visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
-            self.visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
-            self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
 
     def act(self):
         self.rob.observeProcCached()
@@ -302,7 +292,6 @@ class NeuralScan:
             coal_ore = pooled[0, 2]
             blocks = {'log': log, 'leaves': leaves, 'coal_ore': coal_ore}
             for block in blocks.keys():
-                self.visualize(img, heatmaps)
                 if block in self.blocks:
                     m = blocks[block].max()
                     if 0.1 < m:
@@ -333,12 +322,11 @@ class NeuralScan:
 
 
 class NeuralSearch:
-    def __init__(self, rob, blockMem, blocks, visualizer=None):
+    def __init__(self, rob, blockMem, blocks):
         self.blocks = blocks
         self.blockMem = blockMem
-        self.visualizer = None
         self.move = ForwardNJump(rob)
-        self.scan = NeuralScan(rob, blocks, visualizer=visualizer)
+        self.scan = NeuralScan(rob, blocks)
 
     def precond(self):
         return self.move.precond()
@@ -463,7 +451,7 @@ class MineAround:
 
 class TAgent:
 
-    def __init__(self, miss):
+    def __init__(self, miss, visualizer=None):
         mc = MalmoConnector(miss)
         mc.safeStart()
         self.rob = RobustObserverWithCallbacks(mc)
@@ -471,12 +459,19 @@ class TAgent:
                                 # cb_name, on_change event, callback
         self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
         self.blockMem = NoticeBlocks()
-        #Not necessary now
-        #sleep(2)
-        #self.rob.sendCommand("jump 1")
-        #sleep(2)
-        #self.rob.sendCommand("jump 0")
-        #sleep(0.1)
+        self.visualizer = visualizer
+
+    def visualize(self):
+        if self.visualizer is None:
+            return
+        segm_data = self.rob.getCachedObserve('getNeuralSegmentation')
+        if segm_data is None:
+            return
+        heatmaps, img = segm_data
+        self.visualizer('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
+        self.visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
+        self.visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
+        self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
 
     def howtoMine(self, targ):
         t = minelogy.get_otype(targ[0]) # TODO?: other blocks?
@@ -577,6 +572,7 @@ class TAgent:
     def ccycle(self):
         self.rob.updateAllObservations()
         self.blockMem.updateBlocks(self.rob)
+        self.visualize()
         skill = self.skill
         if skill.precond() and not skill.finished():
             acts = skill.act()
@@ -616,7 +612,7 @@ class TAgent:
             if target is None or howto == []:
                 break
             if howto[-1][0] == 'search':
-                self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]), visualizer)
+                self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
             if howto[-1][0] == 'craft':
                 t = minelogy.get_otype(howto[-1][1])
                 if t == 'planks': # hotfix
@@ -667,8 +663,9 @@ if __name__ == '__main__':
     world = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", seed='43', forceReset="false")
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
-    world1 = mb.defaultworld(forceReset="false")
-    miss.setWorld(world)
-    miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
-    agent = TAgent(miss)
+    world1 = mb.defaultworld(forceReset="true")
+    miss.setWorld(world1)
+    # miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
+    agent = TAgent(miss, visualizer=visualizer)
+    agent.rob.sendCommand("chat /difficulty peaceful")
     agent.loop()

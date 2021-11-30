@@ -505,6 +505,9 @@ class TAgent:
         proposes to approach it without planning to mine remaining quantity
         '''
 
+        if target is None or not isinstance(target, dict):
+            return []
+
         invent = self.rob.cached['getInventory'][0]
         nearEnt = self.rob.cached['getNearEntities'][0]
 
@@ -570,9 +573,7 @@ class TAgent:
         return ['UNKNOWN']
 
     def ccycle(self):
-        self.rob.updateAllObservations()
         self.blockMem.updateBlocks(self.rob)
-        self.visualize()
         skill = self.skill
         if skill.precond() and not skill.finished():
             acts = skill.act()
@@ -588,16 +589,39 @@ class TAgent:
             return False
         return True
 
-    def loop(self):
+    def loop(self, target = None):
         self.skill = None
-        target = {'type': 'wooden_pickaxe'}
-        while target:
-            sleep(0.2)
+        while target != 'terminate':
+            sleep(0.05)
             self.rob.updateAllObservations()
+            self.visualize()
+            # In Minecraft chat:
+            # '/say @p get stone_pickaxe'
+            # '/say @p stop'
+            # '/say @p terminate'
+            chat = self.rob.cached['getChat'][0]
+            if chat is not None:
+                print("Receive chat: ", chat[0])
+                words = chat[0].split(' ')
+                if words[-2] == 'get':
+                    target = {'type': words[-1]}
+                else:
+                    if words[-1] == 'stop':
+                        target = None
+                        self.skill = None
+                    elif words[-1] == 'terminate':
+                        break
+                self.rob.cached['getChat'] = (None, self.rob.cached['getChat'][1])
+            
+            if self.skill is not None:
+                if self.ccycle():
+                    continue
+                self.skill = None
+
             howto = self.howtoGet(target)
             if howto == []:
                 target = None
-                break
+                continue
             elif howto[-1][0] == 'UNKNOWN':
                 print("Panic. Don't know how to get " + str(target))
                 print(str(howto))
@@ -610,7 +634,8 @@ class TAgent:
                     target = None
                     break
             if target is None or howto == []:
-                break
+                target = None
+                continue
             if howto[-1][0] == 'search':
                 self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
             if howto[-1][0] == 'craft':
@@ -622,6 +647,7 @@ class TAgent:
                             t = item['variant'] + ' ' + t
                             break
                 self.rob.craft(t)
+                sleep(0.2)
                 continue
             if howto[-1][0] == 'approach':
                 self.skill = ApproachXZPos(self.rob,
@@ -630,10 +656,9 @@ class TAgent:
                 #self.skill = MineAround(self.rob, minelogy.get_otlist(howto[-1][1]))
                 self.skill = MineAtSight(self.rob)
             if self.skill is None:
+                print("Panic. No skill available for " + str(target))
+                print(str(howto))
                 break
-            while self.ccycle():
-                sleep(0.05)
-            self.skill = None
 
 
 def setup_logger():
@@ -668,4 +693,7 @@ if __name__ == '__main__':
     # miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     agent = TAgent(miss, visualizer=visualizer)
     agent.rob.sendCommand("chat /difficulty peaceful")
-    agent.loop()
+    # agent.loop()
+    agent.loop(target = {'type': 'wooden_pickaxe'})
+
+    visualizer.running = False

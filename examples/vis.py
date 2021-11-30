@@ -8,13 +8,14 @@ class Visualizer(threading.Thread):
         super().__init__(name='visualization', daemon=False)
         self.queue = deque(maxlen=10)
         self._lock = threading.Lock()
+        self.running = True
 
     def __call__(self, *args):
         with self._lock:
             self.queue.append(args)
     
     def run(self):
-        while True:
+        while self.running:
             while self.queue:
                 with self._lock:
                     data = self.queue.pop()

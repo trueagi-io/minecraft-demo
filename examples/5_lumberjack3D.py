@@ -479,6 +479,8 @@ class TAgent:
             target = targ + [{'type': 'log2'}, {'type': 'leaves'}, {'type': 'leaves2'}]
         elif t == 'stone':
             target = targ + [{'type': 'dirt'}, {'type': 'grass'}]
+        elif t == 'coal_ore' or t == 'iron_ore':
+            target = targ + [{'type': 'stone'}]
         else:
             target = targ
         for targ in target:
@@ -534,15 +536,24 @@ class TAgent:
         # TODO? combining similar actions with summing up amounts
         # (may not be necessary with the above)
 
+        # There can be multiple ways to craft something (e.g. planks from log or log2)
+        best_way = None
         for craft in minelogy.crafts:
             if not minelogy.matchEntity(craft[1], target):
                 continue
-            acts += [['craft', target]]
+            next_acts = [['craft', target]]
             for ingrid in craft[0]:
                 # TODO? amounts
                 act = self.howtoGet(ingrid, craft_only)
-                acts = None if act is None else acts + act
-            return acts
+                if act is None:
+                    next_acts = None
+                    break
+                next_acts += act
+            if next_acts is not None:
+                if best_way is None or len(best_way) > len(next_acts):
+                    best_way = next_acts
+        if best_way is not None:
+            return acts + best_way
 
         if craft_only:
             return None
@@ -643,7 +654,7 @@ class TAgent:
                 if t == 'planks': # hotfix
                     invent = self.rob.cached['getInventory'][0]
                     for item in invent:
-                        if item['type'] == 'log':
+                        if item['type'] == 'log' or item['type'] == 'log2':
                             t = item['variant'] + ' ' + t
                             break
                 self.rob.craft(t)

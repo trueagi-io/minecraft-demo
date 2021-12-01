@@ -696,4 +696,4 @@ if __name__ == '__main__':
     # agent.loop()
     agent.loop(target = {'type': 'wooden_pickaxe'})
 
-    visualizer.running = False
+    visualizer.stop()

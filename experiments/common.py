@@ -1,4 +1,5 @@
 import logging
+from math import cos, sin
 import torch
 import math
 import numpy
@@ -93,6 +94,28 @@ def grid_to_real_feature_vec_walking(block_list):
 
 def degree2rad(angle):
     return angle * math.pi / 180
+
+
+def rotation_matrix(roll, pitch, yaw):
+    # right-hand rule, different from minecraft and opengl naming convention!
+
+    # rotation around z axis (y in minecraft)
+    yaw_mat = numpy.asarray([[cos(yaw), -sin(yaw), 0],
+                              [sin(yaw), cos(yaw), 0],
+                              [0, 0, 1]])
+
+    # rotation around y axis(x in minecraft)
+    pitch_mat = numpy.asarray([[cos(pitch), 0 , sin(pitch)],
+                                [0,     1,  0],
+                                [-sin(pitch), 0, cos(pitch)]])
+
+    # rotation around x axis(z in minecraft)
+    roll_mat = numpy.asarray([[1, 0, 0],
+                               [0, cos(roll), -sin(roll)],
+                               [0, sin(roll), cos(roll)]])
+
+    result = yaw_mat @ pitch_mat @ roll_mat
+    return result
 
 
 def normAngle(angle):
@@ -271,3 +294,58 @@ def make_noisy_transformers():
                    ]
     return Compose([RandomTransformer(transformer), totensor])
 
+# opengl perspective projection matrix as returned by
+# GlStateManager.getFloat(GL11.GL_PROJECTION_MATRIX, projection)
+# 640x480, matrix depends only on fov and aspect ratio
+perspective_gl = {
+
+'max': [[ 0.5251556,   0. , 0., 0. ],
+ [ 0. , 0.70020753,   0. , 0.        ],
+ [ 0. , 0. ,-1.00036824,  -1.        ],
+ [ 0. , 0. ,-0.10001841,   0.        ]],
+
+100:
+[[ 0.62932473,  0.,          0.,          0.        ],
+ [ 0.,          0.83909965,  0.,          0.        ],
+ [ 0.,          0.,         -1.00036824, -1.        ],
+ [ 0.,          0.,         -0.10001841,  0.        ]],
+
+95:
+[[ 0.68724829,  0.,          0.,          0.        ],
+ [ 0.,          0.91633105,  0.,          0.        ],
+ [ 0.,          0.,         -1.00036824, -1.        ],
+ [ 0.,          0.,         -0.10001841,  0.        ]],
+
+90:
+[[ 0.75 ,        0.,  0.,  0. ],
+ [ 0.,  1.,  0.,  0.        ],
+ [ 0.,  0., -1.00036824, -1. ],
+ [ 0.,  0., -0.10001841,  0. ]],
+
+85:
+[[ 0.81848145,  0.,          0.,          0.        ],
+ [ 0.        ,  1.09130859,  0.,          0.        ],
+ [ 0.        ,  0.,         -1.00036824, -1.        ],
+ [ 0.        ,  0.,         -0.10001841,  0.        ]],
+
+80:
+ [[ 0.8938151,   0.,  0.,  0.        ],
+ [ 0.,  1.19175351,  0.,  0.        ],
+ [ 0.,  0., -1.00036824, -1.        ],
+ [ 0.,  0., -0.10001841,  0.        ]],
+
+70:
+[[ 1.07111084,  0.,          0.,          0.        ],
+ [ 0.,          1.42814779,  0.,          0.        ],
+ [ 0.,          0.,         -1.00036824, -1.        ],
+ [ 0.,          0.,         -0.10001841,  0.        ]],
+
+60:
+[[ 1.29903805,  0.,          0.,          0.        ],
+ [ 0.,          1.73205078,  0.,          0.        ],
+ [ 0.,          0.,         -1.00036824, -1.        ],
+ [ 0.,          0.,         -0.10001841,  0.        ]]
+
+}
+
+perspective_gl = {k: numpy.asarray(v) for (k, v) in perspective_gl.items()}

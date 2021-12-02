@@ -248,8 +248,8 @@ if __name__ == '__main__':
     visualizer = Visualizer() 
     visualizer.start()
     mc, obs = start_mission()
-    show_img = lambda: visualize(None, get_image(obs, RESIZE, SCALE, 'getImageFrame'))
-    show_segm = lambda: visualize(get_image(obs, RESIZE, SCALE, 'getSegmentationFrame'), None)
+    show_img = lambda: visualize(None, get_image(obs.getCachedObserve('getImageFrame'), RESIZE, SCALE))
+    show_segm = lambda: visualize(get_image(obs.getCachedObserve('getSegmentationFrame'), RESIZE, SCALE), None)
     neural_callback = NeuralWrapper(obs, RESIZE, SCALE)
                                 # cb_name, on_change event, callback
     obs.addCallback('getNeuralSegmentation', 'getImageFrame', neural_callback)

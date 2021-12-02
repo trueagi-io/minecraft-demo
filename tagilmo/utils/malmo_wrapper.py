@@ -501,7 +501,7 @@ class RobustObserverWithCallbacks(RobustObserver):
                 else:
                     logger.exception(exception)
                 if name is not None:
-                    logger.debug('adding results from %s', name)
+                    # logger.debug('adding results from %s', name)
                     self.cached[name] = (result, tm)
                 self._in_process.discard(cb)
 
@@ -512,7 +512,7 @@ class RobustObserverWithCallbacks(RobustObserver):
                 self.submit(cb, name)
 
     def submit(self, cb, name):
-        logger.debug('run callback %s', name)
+        # logger.debug('run callback %s', name)
         future = self.executor.submit(cb)
         with self.lock:
             self._futures[future] = (name, cb)

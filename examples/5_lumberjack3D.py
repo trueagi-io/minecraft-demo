@@ -269,19 +269,9 @@ model_cache = dict()
 
 
 class NeuralScan:
-    def __init__(self, rob, blocks, visualizer=None):
+    def __init__(self, rob, blocks):
         self.rob = rob
         self.blocks = blocks
-        # for debug purposes
-        self._visualize = True
-        self.visualizer = visualizer
-
-    def visualize(self, img, heatmaps):
-        if self._visualize and self.visualizer is not None:
-            self.visualizer('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
-            self.visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
-            self.visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
-            self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
 
     def act(self):
         self.rob.observeProcCached()
@@ -302,7 +292,6 @@ class NeuralScan:
             coal_ore = pooled[0, 2]
             blocks = {'log': log, 'leaves': leaves, 'coal_ore': coal_ore}
             for block in blocks.keys():
-                self.visualize(img, heatmaps)
                 if block in self.blocks:
                     m = blocks[block].max()
                     if 0.1 < m:
@@ -333,12 +322,11 @@ class NeuralScan:
 
 
 class NeuralSearch:
-    def __init__(self, rob, blockMem, blocks, visualizer=None):
+    def __init__(self, rob, blockMem, blocks):
         self.blocks = blocks
         self.blockMem = blockMem
-        self.visualizer = None
         self.move = ForwardNJump(rob)
-        self.scan = NeuralScan(rob, blocks, visualizer=visualizer)
+        self.scan = NeuralScan(rob, blocks)
 
     def precond(self):
         return self.move.precond()
@@ -463,7 +451,7 @@ class MineAround:
 
 class TAgent:
 
-    def __init__(self, miss):
+    def __init__(self, miss, visualizer=None):
         mc = MalmoConnector(miss)
         mc.safeStart()
         self.rob = RobustObserverWithCallbacks(mc)
@@ -471,12 +459,19 @@ class TAgent:
                                 # cb_name, on_change event, callback
         self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
         self.blockMem = NoticeBlocks()
-        #Not necessary now
-        #sleep(2)
-        #self.rob.sendCommand("jump 1")
-        #sleep(2)
-        #self.rob.sendCommand("jump 0")
-        #sleep(0.1)
+        self.visualizer = visualizer
+
+    def visualize(self):
+        if self.visualizer is None:
+            return
+        segm_data = self.rob.getCachedObserve('getNeuralSegmentation')
+        if segm_data is None:
+            return
+        heatmaps, img = segm_data
+        self.visualizer('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
+        self.visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
+        self.visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
+        self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
 
     def howtoMine(self, targ):
         t = minelogy.get_otype(targ[0]) # TODO?: other blocks?
@@ -484,6 +479,8 @@ class TAgent:
             target = targ + [{'type': 'log2'}, {'type': 'leaves'}, {'type': 'leaves2'}]
         elif t == 'stone':
             target = targ + [{'type': 'dirt'}, {'type': 'grass'}]
+        elif t == 'coal_ore' or t == 'iron_ore':
+            target = targ + [{'type': 'stone'}]
         else:
             target = targ
         for targ in target:
@@ -509,6 +506,9 @@ class TAgent:
         For example, if there is a matching nearby entity, it will
         proposes to approach it without planning to mine remaining quantity
         '''
+
+        if target is None or not isinstance(target, dict):
+            return []
 
         invent = self.rob.cached['getInventory'][0]
         nearEnt = self.rob.cached['getNearEntities'][0]
@@ -536,15 +536,24 @@ class TAgent:
         # TODO? combining similar actions with summing up amounts
         # (may not be necessary with the above)
 
+        # There can be multiple ways to craft something (e.g. planks from log or log2)
+        best_way = None
         for craft in minelogy.crafts:
             if not minelogy.matchEntity(craft[1], target):
                 continue
-            acts += [['craft', target]]
+            next_acts = [['craft', target]]
             for ingrid in craft[0]:
                 # TODO? amounts
                 act = self.howtoGet(ingrid, craft_only)
-                acts = None if act is None else acts + act
-            return acts
+                if act is None:
+                    next_acts = None
+                    break
+                next_acts += act
+            if next_acts is not None:
+                if best_way is None or len(best_way) > len(next_acts):
+                    best_way = next_acts
+        if best_way is not None:
+            return acts + best_way
 
         if craft_only:
             return None
@@ -575,7 +584,6 @@ class TAgent:
         return ['UNKNOWN']
 
     def ccycle(self):
-        self.rob.updateAllObservations()
         self.blockMem.updateBlocks(self.rob)
         skill = self.skill
         if skill.precond() and not skill.finished():
@@ -592,16 +600,39 @@ class TAgent:
             return False
         return True
 
-    def loop(self):
+    def loop(self, target = None):
         self.skill = None
-        target = {'type': 'wooden_pickaxe'}
-        while target:
-            sleep(0.2)
+        while target != 'terminate':
+            sleep(0.05)
             self.rob.updateAllObservations()
+            self.visualize()
+            # In Minecraft chat:
+            # '/say @p get stone_pickaxe'
+            # '/say @p stop'
+            # '/say @p terminate'
+            chat = self.rob.cached['getChat'][0]
+            if chat is not None:
+                print("Receive chat: ", chat[0])
+                words = chat[0].split(' ')
+                if words[-2] == 'get':
+                    target = {'type': words[-1]}
+                else:
+                    if words[-1] == 'stop':
+                        target = None
+                        self.skill = None
+                    elif words[-1] == 'terminate':
+                        break
+                self.rob.cached['getChat'] = (None, self.rob.cached['getChat'][1])
+            
+            if self.skill is not None:
+                if self.ccycle():
+                    continue
+                self.skill = None
+
             howto = self.howtoGet(target)
             if howto == []:
                 target = None
-                break
+                continue
             elif howto[-1][0] == 'UNKNOWN':
                 print("Panic. Don't know how to get " + str(target))
                 print(str(howto))
@@ -614,18 +645,20 @@ class TAgent:
                     target = None
                     break
             if target is None or howto == []:
-                break
+                target = None
+                continue
             if howto[-1][0] == 'search':
-                self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]), visualizer)
+                self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
             if howto[-1][0] == 'craft':
                 t = minelogy.get_otype(howto[-1][1])
                 if t == 'planks': # hotfix
                     invent = self.rob.cached['getInventory'][0]
                     for item in invent:
-                        if item['type'] == 'log':
+                        if item['type'] == 'log' or item['type'] == 'log2':
                             t = item['variant'] + ' ' + t
                             break
                 self.rob.craft(t)
+                sleep(0.2)
                 continue
             if howto[-1][0] == 'approach':
                 self.skill = ApproachXZPos(self.rob,
@@ -634,10 +667,9 @@ class TAgent:
                 #self.skill = MineAround(self.rob, minelogy.get_otlist(howto[-1][1]))
                 self.skill = MineAtSight(self.rob)
             if self.skill is None:
+                print("Panic. No skill available for " + str(target))
+                print(str(howto))
                 break
-            while self.ccycle():
-                sleep(0.05)
-            self.skill = None
 
 
 def setup_logger():
@@ -667,8 +699,12 @@ if __name__ == '__main__':
     world = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", seed='43', forceReset="false")
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
-    world1 = mb.defaultworld(forceReset="false")
-    miss.setWorld(world)
-    miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
-    agent = TAgent(miss)
-    agent.loop()
+    world1 = mb.defaultworld(forceReset="true")
+    miss.setWorld(world1)
+    # miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
+    agent = TAgent(miss, visualizer=visualizer)
+    agent.rob.sendCommand("chat /difficulty peaceful")
+    # agent.loop()
+    agent.loop(target = {'type': 'wooden_pickaxe'})
+
+    visualizer.stop()

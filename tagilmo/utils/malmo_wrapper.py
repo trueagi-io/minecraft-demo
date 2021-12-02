@@ -503,19 +503,15 @@ class RobustObserverWithCallbacks(RobustObserver):
                 if name is not None:
                     logger.debug('adding results from %s', name)
                     self.cached[name] = (result, tm)
+                    self.changed(name)
                 self._in_process.discard(cb)
 
-    def run_callbacks(self):
-        for (name, cb) in self.callbacks:
-            # do not run cb if already running
-            if cb not in self._in_process:
-                self.submit(cb, name)
-
     def submit(self, cb, name):
-        logger.debug('run callback %s', name)
-        future = self.executor.submit(cb)
-        with self.lock:
-            self._futures[future] = (name, cb)
-            self._in_process.add(cb)
-        future.add_done_callback(self.done_callback)
+        if cb not in self._in_process:
+            logger.debug('run callback %s', name)
+            future = self.executor.submit(cb)
+            with self.lock:
+                self._futures[future] = (name, cb)
+                self._in_process.add(cb)
+            future.add_done_callback(self.done_callback)
 

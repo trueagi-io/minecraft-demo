@@ -127,7 +127,8 @@ class MalmoConnector:
             self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
-            segments = self.worldStates[n].video_frames_colourmap
+            segments = None
+            # segments = self.worldStates[n].video_frames_colourmap
             if frames:
                 self.pixels[n] = numpy.frombuffer(frames[0].pixels, dtype=numpy.uint8)
             else:
@@ -364,6 +365,34 @@ class RobustObserver:
             if ground[0] != 'water' and underground[0] != 'water':
                 safe = False
         return {'solid': solid, 'passWay': passWay, 'level': lvl, 'safe': safe}
+
+    def analyzeGridInYawAbove(self, observeReq=True):
+        passableBlocks = RobustObserver.passableBlocks
+        deadlyBlocks = RobustObserver.deadlyBlocks
+        gridSlice = self.gridInYaw(observeReq)
+        underground = gridSlice[(len(gridSlice) - 1) // 2 - 2]
+        ground = gridSlice[(len(gridSlice) - 1) // 2 - 1]
+        solid = all([b not in passableBlocks for b in ground])
+        wayLv0 = gridSlice[(len(gridSlice) - 1) // 2]
+        wayLv1 = gridSlice[(len(gridSlice) - 1) // 2 + 1]
+        wayLv2 = gridSlice[(len(gridSlice) - 1) // 2 + 2]
+        passWay = all([b in passableBlocks for b in wayLv0]) and \
+                  all([b in passableBlocks for b in wayLv1])
+        jumpBlocker = not all([b in passableBlocks for b in wayLv2])
+        lvl = (len(gridSlice) + 1) // 2
+        for h in range(len(gridSlice)):
+            if gridSlice[-h-1][0] not in passableBlocks:
+                break
+            lvl -= 1
+        safe = all([b not in deadlyBlocks for b in ground]) and \
+               all([b not in deadlyBlocks for b in wayLv0]) and \
+               all([b not in deadlyBlocks for b in wayLv1])
+        if lvl < -1:
+            safe = safe and all([b not in deadlyBlocks for b in underground])
+            if ground[0] != 'water' and underground[0] != 'water':
+                safe = False
+        return {'solid': solid, 'passWay': passWay, 'level': lvl, 'safe': safe,
+                'jumpBlocker': jumpBlocker}
 
     def craft(self, item):
         self.sendCommand('craft ' + item)

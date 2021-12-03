@@ -168,7 +168,6 @@ class LookDir:
     def act(self):
         acts = []
         self.fin = True
-        #aPos = rob.waitNotNoneObserve('getAgentPos')
         aPos = self.rob.cached['getAgentPos'][0]
         if self.pitch is not None:
             dPitch = normAngle(self.pitch - aPos[3] * math.pi / 180.)
@@ -195,16 +194,14 @@ class LookAt:
 
     def __init__(self, rob, pos):
         self.rob = rob
-        self.target_pos = pos
-        pitch, yaw = self.rob.dirToAgentPos(self.target_pos, observeReq=True)
-        self.lookDir = LookDir(rob, pitch, yaw)
+        self.lookDir = LookDir(rob, 0, 0)
+        self.update_target(pos, True)
 
     def precond(self):
         return True
 
     def act(self):
-        pitch, yaw = self.rob.dirToAgentPos(self.target_pos, observeReq=False)
-        self.lookDir.update_target(pitch, yaw)
+        self.update_target()
         return self.lookDir.act()
 
     def finished(self):
@@ -212,6 +209,13 @@ class LookAt:
 
     def stop(self):
         return self.lookDir.stop()
+
+    def update_target(self, pos=None, observeReq=False):
+        if pos is not None:
+            self.target_pos = pos
+        print(pos)
+        pitch, yaw = self.rob.dirToAgentPos(self.target_pos, observeReq)
+        self.lookDir.update_target(pitch, yaw)
 
 
 class VisScan:
@@ -253,9 +257,9 @@ class ApproachXZPos:
         acts = []
         if los is not None:
             if los['inRange']:
-                acts = [['attack 1']]
+                acts = [['attack', '1']]
             else:
-                acts = [['attack 0']]
+                acts = [['attack', '0']]
         return self.move.act() + self.lookAt.act() + acts
 
     def stop(self):
@@ -468,7 +472,7 @@ class TAgent:
         if segm_data is None:
             return
         heatmaps, img = segm_data
-        self.visualizer('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
+        # self.visualizer('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
         self.visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
         self.visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
         self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
@@ -620,6 +624,9 @@ class TAgent:
                     if words[-1] == 'stop':
                         target = None
                         self.skill = None
+                        self.rob.sendCommand('move 0')
+                        self.rob.sendCommand('jump 0')
+                        self.rob.sendCommand('attack 0')
                     elif words[-1] == 'terminate':
                         break
                 self.rob.cached['getChat'] = (None, self.rob.cached['getChat'][1])

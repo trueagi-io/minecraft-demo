@@ -213,7 +213,6 @@ class LookAt:
     def update_target(self, pos=None, observeReq=False):
         if pos is not None:
             self.target_pos = pos
-        print(pos)
         pitch, yaw = self.rob.dirToAgentPos(self.target_pos, observeReq)
         self.lookDir.update_target(pitch, yaw)
 

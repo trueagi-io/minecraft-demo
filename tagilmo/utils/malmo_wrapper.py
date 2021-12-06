@@ -3,6 +3,9 @@ import uuid
 import time
 import math
 import sys
+import concurrent.futures
+import threading
+import logging
 
 import MalmoPython
 
@@ -10,6 +13,7 @@ import numpy
 import tagilmo.utils.malmoutils as malmoutils
 from tagilmo.utils.mission_builder import MissionXML
 
+logger = logging.getLogger('malmo')
 
 
 class MalmoConnector:
@@ -41,13 +45,13 @@ class MalmoConnector:
             if self.agent_hosts[0].receivedArgument("record_video"):
                 self.mission_record.recordMP4(24, 2000000)
         self.client_pool = MalmoPython.ClientPool()
-        for x in range(10000, 10000 + nAgents+5):
+        for x in range(10000, 10000 + nAgents):
             self.client_pool.add( MalmoPython.ClientInfo(serverIp, x) )
         self.worldStates = [None]*nAgents
         self.observe = [None]*nAgents
         self.isAlive = [True] * nAgents
-        self.pixels = [None] * nAgents 
-        self.segmentation = [None] * nAgents
+        self.frames = [None] * nAgents
+        self.segmentation_frames = [None] * nAgents
 
     def receivedArgument(self, arg):
         return self.agent_hosts[0].receivedArgument(arg)
@@ -127,23 +131,31 @@ class MalmoConnector:
             self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
-            segments = None
-            # segments = self.worldStates[n].video_frames_colourmap
+            segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None
             if frames:
-                self.pixels[n] = numpy.frombuffer(frames[0].pixels, dtype=numpy.uint8)
+                self.frames[n] = frames[0]
             else:
-                self.pixels[n] = None
+                self.frames[n] = None
             if segments:
-                self.segmentation[n] = numpy.frombuffer(segments[0].pixels, dtype=numpy.uint8)
+                self.segmentation_frames[n] = segments[0]
             else:
-                self.segmentation[n] = None
+                self.segmentation_frames[n] = None
+
+    def getImageFrame(self, nAgent=0):
+        return self.frames[nAgent]
+
+    def getSegmentationFrame(self, nAgent=0):
+        return self.segmentation_frames[nAgent]
 
     def getImage(self, nAgent=0):
-        return self.pixels[nAgent]
+        if self.frames[nAgent] is not None:
+            return numpy.frombuffer(self.frames[nAgent].pixels, dtype=numpy.uint8)
+        return None
 
     def getSegmentation(self, nAgent=0):
-        if self.segmentation:
-            return self.segmentation[nAgent]
+        if self.segmentation_frames[nAgent] is not None:
+            return numpy.frombuffer(self.segmentation_frames[nAgent].pixels, dtype=numpy.uint8)
+        return None
 
     def getAgentPos(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('XPos' in self.observe[nAgent]):
@@ -177,7 +189,7 @@ class MalmoConnector:
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
         los = self.getLineOfSights(nAgent)
         return los[key] if los is not None and key in los else None
-    
+
     def getNearEntities(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('ents_near' in self.observe[nAgent]):
             return self.observe[nAgent]['ents_near']
@@ -193,6 +205,12 @@ class MalmoConnector:
     def getLife(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('Life' in self.observe[nAgent]):
             return self.observe[nAgent]['Life']
+        else:
+            return None
+
+    def getChat(self, nAgent=0):
+        if (self.observe[nAgent] is not None) and ('Chat' in self.observe[nAgent]):
+            return self.observe[nAgent]['Chat']
         else:
             return None
 
@@ -222,6 +240,12 @@ class MalmoConnector:
         pitch = -math.atan2(pos[1] - aPos[1] - 1, math.sqrt(dx * dx + dz * dz))
         return [pitch, yaw]
 
+    def supportsVideo(self):
+        return self.missionDesc.hasVideo()
+
+    def supportsSegmentation(self):
+        return self.missionDesc.hasSegmentation()
+
 
 class RobustObserver:
 
@@ -234,9 +258,17 @@ class RobustObserver:
         self.tick = 0.02
         self.max_dt = 1.0
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights',
-                        'getLife', 'getInventory']
-        self.canBeNone = ['getLineOfSights']
+                        'getLife', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat']
+        self.canBeNone = ['getLineOfSights', 'getChat']
+
+        if not self.mc.supportsVideo():
+            self.canBeNone.append('getImageFrame')
+        if not self.mc.supportsSegmentation():
+            self.canBeNone.append('getSegmentationFrame')
         self.cached = {method : (None, 0) for method in self.methods}
+
+    def clear(self):
+        self.cached = {k: (None, 0) for k in self.cached}
     
     def getCachedObserve(self, method, key = None):
         val = self.cached[method][0]
@@ -251,8 +283,13 @@ class RobustObserver:
         for method in self.methods:
             v_new = getattr(self.mc, method)(self.nAgent)
             v, t = self.cached[method]
-            if v_new is not None or t_new - t > self.max_dt: # or v is None
+            outdated = t_new - t > self.max_dt
+            if v_new is not None or outdated: # or v is None
                 self.cached[method] = (v_new, t_new)
+                self.changed(method)
+
+    def changed(self, name):
+        pass
 
     def waitNotNoneObserve(self, method, updateReq=False, observeReq=True):
         # REM: do not use with 'getLineOfSights'
@@ -260,6 +297,8 @@ class RobustObserver:
         # Do not force observeProcCached if the value was updated less than tick ago
         if time.time() - tm > self.tick and observeReq:
             self.observeProcCached()
+            tm = self.cached[method][1]
+
         # if updated observation is required, observation time should be changed
         # (is not recommended while moving)
         while self.getCachedObserve(method) is None or\
@@ -366,34 +405,6 @@ class RobustObserver:
                 safe = False
         return {'solid': solid, 'passWay': passWay, 'level': lvl, 'safe': safe}
 
-    def analyzeGridInYawAbove(self, observeReq=True):
-        passableBlocks = RobustObserver.passableBlocks
-        deadlyBlocks = RobustObserver.deadlyBlocks
-        gridSlice = self.gridInYaw(observeReq)
-        underground = gridSlice[(len(gridSlice) - 1) // 2 - 2]
-        ground = gridSlice[(len(gridSlice) - 1) // 2 - 1]
-        solid = all([b not in passableBlocks for b in ground])
-        wayLv0 = gridSlice[(len(gridSlice) - 1) // 2]
-        wayLv1 = gridSlice[(len(gridSlice) - 1) // 2 + 1]
-        wayLv2 = gridSlice[(len(gridSlice) - 1) // 2 + 2]
-        passWay = all([b in passableBlocks for b in wayLv0]) and \
-                  all([b in passableBlocks for b in wayLv1])
-        jumpBlocker = not all([b in passableBlocks for b in wayLv2])
-        lvl = (len(gridSlice) + 1) // 2
-        for h in range(len(gridSlice)):
-            if gridSlice[-h-1][0] not in passableBlocks:
-                break
-            lvl -= 1
-        safe = all([b not in deadlyBlocks for b in ground]) and \
-               all([b not in deadlyBlocks for b in wayLv0]) and \
-               all([b not in deadlyBlocks for b in wayLv1])
-        if lvl < -1:
-            safe = safe and all([b not in deadlyBlocks for b in underground])
-            if ground[0] != 'water' and underground[0] != 'water':
-                safe = False
-        return {'solid': solid, 'passWay': passWay, 'level': lvl, 'safe': safe,
-                'jumpBlocker': jumpBlocker}
-
     def craft(self, item):
         self.sendCommand('craft ' + item)
         # always sleep after crafting, so information about the crafted item
@@ -420,7 +431,7 @@ class RobustObserver:
         for i in range(len(grid)):
             if grid[i] != obj: continue
             [x, y, z] = self.mc.gridIndexToPos(i)
-            d2c = x * x + y * y + z * z
+            d2c = x * x + (y - 0.75) * (y - 0.75) + z * z
             if d2c < d2:
                 d2 = d2c
                 # target = self.gridIndexToAbsPos(i, observeReq)
@@ -443,4 +454,61 @@ class RobustObserver:
         return target
 
 
+class RobustObserverWithCallbacks(RobustObserver):
+    def __init__(self, mc, nAgent=0):
+        super().__init__(mc, nAgent)
+        # name, on_change, function triples
+        self.callbacks = []
+        # future -> name, cb pairs
+        self._futures = dict()
+        self._in_process = set()
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        self.lock = threading.RLock()
 
+    def changed(self, name):
+        for (cb_name, on_change, cb) in self.callbacks:
+            if name == on_change and cb not in self._in_process:
+                # submit to the thread pool
+                self.submit(cb, cb_name)
+
+    def addCallback(self, name, on_change, cb):
+        """
+        add callback to be called if data in robust observer's cache
+        is changed
+
+        name: str
+           name of callback, it is used to store returned data in the cache
+           if None returned value won't be saved
+        on_change: str
+           key to be monitored for change event
+        cb: Callable
+           callback
+        """
+        if name is not None:
+            self.cached[name] = (None, 0)
+        self.callbacks.append((name, on_change, cb))
+
+    def done_callback(self, fut):
+        if fut in self._futures:
+            tm = time.time()
+            with self.lock:
+                name, cb = self._futures[fut]
+                del self._futures[fut]
+                result = None
+                exception = fut.exception()
+                if exception is None:
+                    result = fut.result()
+                else:
+                    logger.exception(exception)
+                if name is not None:
+                    # logger.debug('adding results from %s', name)
+                    self.cached[name] = (result, tm)
+                    self.changed(name)
+                self._in_process.discard(cb)
+
+    def submit(self, cb, name):
+        future = self.executor.submit(cb)
+        with self.lock:
+            self._futures[future] = (name, cb)
+            self._in_process.add(cb)
+        future.add_done_callback(self.done_callback)

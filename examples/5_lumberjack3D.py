@@ -1,8 +1,20 @@
 import math
-import random
+import torch
+import threading
+import cv2
+import numpy
+import os
 from time import sleep, time
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
+from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserverWithCallbacks
 import tagilmo.utils.mission_builder as mb
+from examples import minelogy
+from neural import NeuralWrapper
+import logging
+from vis import Visualizer
+
+
+SCALE = 4
+RESIZE = 1/SCALE
 
 def normAngle(angle):
     while (angle < -math.pi): angle += 2 * math.pi
@@ -15,53 +27,15 @@ def int_coord(x):
 def int_coords(xs):
     return list(map(int_coord, xs))
 
-# class StatePredictor:
-#     def __init__(self, rob, actionList):
-#         self.rob = rob
-#         self.aPos = rob.waitNotNoneObserve('getAgentPos')
-#         self.actionList = actionList
-#
-#     def precond(self):
-#         self.grid = self.rob.getNearGrid3D(True)
-#         return self.grid
-#
-#     # def expect(self):
-#
-#     def predict(self):
-#         agentRelTrans = []
-#         agentRelYaw = 0
-#         agentRelPitch = 0
-#         for action in self.actionList:
-#             agentRelTrans += action.getRelCoord()
-#             agentRelYaw += action.getRelYaw()
-#             agentRelPitch += action.getRelPitch()
-#         agent_rel_pose = [agent_rel_pose, agentRelYaw, agentRelPitch]
-#         return self._transform_grid(self.precond(), agent_rel_pose)
-#
-#     def _transform_grid(self, precond_grid, agent_rel_pose):
-#         grid = rob.cached['getNearGrid'][0]
-#         sight = rob.cached['getLineOfSights'][0]
-#         if sight is not None and (sight['type'] not in ignore_blocks or sight['type'] in focus_blocks):
-#             updateBlock(sight['type'], int_coords([sight['x'], sight['y'], sight['z']]))
-#         for i in range(len(grid)):
-#             bUpdate = grid[i] not in ignore_blocks or grid[i] in focus_blocks
-#             if bUpdate or focus_blocks:
-#                 pos = rob.gridIndexToAbsPos(i, observeReq=False)
-#                 pos = int_coords(pos)
-#             if focus_blocks:
-#                 removeIfMissing(grid[i], focus_blocks, pos)
-#             if bUpdate:
-#                 updateBlock(grid[i], pos)
-
 
 class NoticeBlocks:
-    
+
     def __init__(self):
         self.blocks = {}
         self.max_len = 5
         self.ignore_blocks = ['air', 'grass', 'tallgrass', 'double_plant', 'dirt', 'stone']
         self.dx = 4
-    
+
     def updateBlock(self, block, pos):
         if block not in self.blocks:
             self.blocks[block] = []
@@ -73,7 +47,7 @@ class NoticeBlocks:
                    return
         ps.append(pos)
         self.blocks[block] = ps[1:] if len(ps) > self.max_len else ps
-    
+
     def removeIfMissing(self, current_block, blocks, pos):
         for block in blocks:
             if block not in self.blocks or block == current_block:
@@ -112,7 +86,7 @@ class MoveForward:
     def act(self):
         self.isAct = True
         return [['move', '1']]
-    
+
     def stop(self):
         self.isAct = False
         return [['move', '0']]
@@ -123,13 +97,11 @@ class MoveForward:
 
 class Jump:
 
-    def __init__(self, rob):
+    def __init__(self):
         self.isAct = False
-        self.rob = rob
 
     def precond(self):
-        path = self.rob.analyzeGridInYawAbove(observeReq=False)
-        return not path['jumpBlocker'] # actually, should check the grid above
+        return True # actually, should check the grid above
 
     def act(self):
         self.isAct = True
@@ -144,17 +116,16 @@ class Jump:
 
 
 class ForwardNJump:
-    
+
     def __init__(self, rob):
         self.rob = rob
         self.move = MoveForward(rob)
-        self.jump = Jump(rob)
+        self.jump = Jump()
         self.fin = False
         # dist = ?
 
     def precond(self):
-        res = self.jump.precond()
-        path = self.rob.analyzeGridInYaw(observeReq=False)
+        # path = self.rob.analyzeGridInYaw(observeReq=False)
         # return path['level'] < 2 and path['safe']
         return True
 
@@ -167,7 +138,7 @@ class ForwardNJump:
         slc = grid[len(grid)//2]
         slc = slc[len(slc)//2]
         block = slc[len(slc)//2]
-        if block == 'water' or path['level'] == 1 and self.jump.precond():
+        if block == 'water' or path['level'] == 1:
             acts += self.jump.act()
         elif self.jump.isAct:
             acts += self.jump.stop()
@@ -185,7 +156,7 @@ class ForwardNJump:
 
 
 class LookDir:
-    
+
     def __init__(self, rob, pitch, yaw):
         self.fin = False
         self.update_target(pitch, yaw)
@@ -197,7 +168,6 @@ class LookDir:
     def act(self):
         acts = []
         self.fin = True
-        #aPos = rob.waitNotNoneObserve('getAgentPos')
         aPos = self.rob.cached['getAgentPos'][0]
         if self.pitch is not None:
             dPitch = normAngle(self.pitch - aPos[3] * math.pi / 180.)
@@ -221,36 +191,40 @@ class LookDir:
 
 
 class LookAt:
-    
+
     def __init__(self, rob, pos):
         self.rob = rob
-        self.target_pos = pos
-        pitch, yaw = self.rob.dirToAgentPos(self.target_pos, observeReq=True)
-        self.lookDir = LookDir(rob, pitch, yaw)
+        self.lookDir = LookDir(rob, 0, 0)
+        self.update_target(pos, True)
 
     def precond(self):
         return True
 
     def act(self):
-        pitch, yaw = self.rob.dirToAgentPos(self.target_pos, observeReq=False)
-        self.lookDir.update_target(pitch, yaw)
+        self.update_target()
         return self.lookDir.act()
 
     def finished(self):
         return self.lookDir.finished()
-    
+
     def stop(self):
         return self.lookDir.stop()
 
+    def update_target(self, pos=None, observeReq=False):
+        if pos is not None:
+            self.target_pos = pos
+        pitch, yaw = self.rob.dirToAgentPos(self.target_pos, observeReq)
+        self.lookDir.update_target(pitch, yaw)
+
 
 class VisScan:
-    
+
     def __init__(self):
         self.t0 = time()
 
     def precond(self):
         return True
-    
+
     def act(self):
         t = time()
         turnVel = 0.1 * math.cos((t-self.t0) * 1.3)
@@ -262,7 +236,7 @@ class VisScan:
 
 
 class ApproachXZPos:
-    
+
     def __init__(self, rob, pos):
         self.rob = rob
         self.target_pos = pos
@@ -276,9 +250,16 @@ class ApproachXZPos:
     def act(self):
         aPos = self.rob.cached['getAgentPos'][0]
         pos = self.target_pos
-        if abs(aPos[0] - pos[0]) < 2 and abs(aPos[2] - pos[2]) < 2 and not self.move.finished():
+        if abs(aPos[0] - pos[0]) < 1.4 and abs(aPos[2] - pos[2]) < 1.4 and not self.move.finished():
             return self.move.stop()
-        return self.move.act() + self.lookAt.act()
+        los = self.rob.cached['getLineOfSights'][0]
+        acts = []
+        if los is not None:
+            if los['inRange']:
+                acts = [['attack', '1']]
+            else:
+                acts = [['attack', '0']]
+        return self.move.act() + self.lookAt.act() + acts
 
     def stop(self):
         return self.move.stop() + self.lookAt.stop()
@@ -287,8 +268,89 @@ class ApproachXZPos:
         return self.move.finished() and self.lookAt.finished()
 
 
+model_cache = dict()
+
+
+class NeuralScan:
+    def __init__(self, rob, blocks):
+        self.rob = rob
+        self.blocks = blocks
+
+    def act(self):
+        self.rob.observeProcCached()
+        logging.debug("scanning for {0}".format(self.blocks))
+        LOG = 1
+        LEAVES = 2
+        turn = 0
+        pitch = 0
+        segm_data = self.rob.getCachedObserve('getNeuralSegmentation')
+        if segm_data is not None:
+            heatmaps, img = segm_data
+            h, w = heatmaps.shape[-2:]
+            size = (h // 10, w // 10)
+            pooled = torch.nn.functional.avg_pool2d(heatmaps[:, 1:], kernel_size=size, stride=size)
+            stabilize = True
+            log = pooled[0, 0]
+            leaves = pooled[0, 1]
+            coal_ore = pooled[0, 2]
+            blocks = {'log': log, 'leaves': leaves, 'coal_ore': coal_ore}
+            for block in blocks.keys():
+                if block in self.blocks:
+                    m = blocks[block].max()
+                    if 0.1 < m:
+                        logging.debug('see %s', block)
+                        idx = torch.argmax(blocks[block])
+                        h_idx = idx // 10
+                        w_idx = idx % 10
+                        pitch = (h_idx.item() - 4) / 80
+                        turn = (w_idx.item() - 4) / 60
+                        stabilize = False
+                        break
+            if stabilize:
+                logging.debug('stabilizing')
+                pos = self.rob.waitNotNoneObserve('getAgentPos')
+                current_pitch = pos[3]
+                if current_pitch < -10:
+                    pitch = 0.03
+                if 10 < current_pitch:
+                    pitch = - 0.03
+        else:
+            logging.warn('img is None')
+        result = [["turn", str(turn)], ["pitch", str(pitch)]]
+        self.rob.observeProcCached()
+        return result
+
+    def stop(self):
+        return [["turn", "0"], ["pitch", "0"]]
+
+
+class NeuralSearch:
+    def __init__(self, rob, blockMem, blocks):
+        self.blocks = blocks
+        self.blockMem = blockMem
+        self.move = ForwardNJump(rob)
+        self.scan = NeuralScan(rob, blocks)
+
+    def precond(self):
+        return self.move.precond()
+
+    def act(self):
+        return self.move.act() + self.scan.act()
+
+    def stop(self):
+        return self.move.stop() + self.scan.stop()
+
+    def finished(self):
+        for block in self.blocks:
+            # TODO: blocks in ignore_blocks are missed even if they are searched; need to add focus_blocks
+            # if self.blockMem.nearestBlock(block) is not None
+            if block in self.blockMem.blocks and len(self.blockMem.blocks[block]) > 0:
+                return True
+        return False
+
+
 class Search4Blocks:
-    
+
     def __init__(self, rob, blockMem, blocks):
         self.blocks = blocks
         self.blockMem = blockMem
@@ -307,6 +369,7 @@ class Search4Blocks:
 
     def finished(self):
         for block in self.blocks:
+            # TODO: blocks in ignore_blocks are missed even if they are searched; need to add focus_blocks
             # if self.blockMem.nearestBlock(block) is not None
             if block in self.blockMem.blocks and len(self.blockMem.blocks[block]) > 0:
                 return True
@@ -314,7 +377,7 @@ class Search4Blocks:
 
 
 class MineAtSight:
-    
+
     def __init__(self, rob):
         self.rob = rob
         self.isAct = False
@@ -326,7 +389,7 @@ class MineAtSight:
 
     def precond(self):
         return self.dist is not None
-    
+
     def act(self):
         return [['attack', '1']]
 
@@ -341,24 +404,24 @@ class MineAtSight:
 
 
 class MineAround:
-    
+
     def __init__(self, rob, objs):
         self.rob = rob
         self.objs = objs
         self.mine = None
         self.approach = None
         self._set_target()
-    
+
     def _set_target(self):
         for obj in self.objs:
             self.target = self.rob.nearestFromGrid(obj, observeReq=False)
             if self.target is not None:
                 self.approach = ApproachXZPos(self.rob, self.target)
                 break
-    
+
     def precond(self):
         return self.target is not None
-    
+
     def act(self):
         acts = []
         if self.mine is not None:
@@ -390,188 +453,264 @@ class MineAround:
 
 
 class TAgent:
-    
-    def __init__(self, miss):
+
+    def __init__(self, miss, visualizer=None):
         mc = MalmoConnector(miss)
         mc.safeStart()
-        self.rob = RobustObserver(mc)
+        self.rob = RobustObserverWithCallbacks(mc)
+        callback = NeuralWrapper(self.rob, RESIZE, SCALE)
+                                # cb_name, on_change event, callback
+        self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
         self.blockMem = NoticeBlocks()
-        #Not necessary now
-        #sleep(2)
-        #self.rob.sendCommand("jump 1")
-        #sleep(2)
-        #self.rob.sendCommand("jump 0")
-        #sleep(0.1)
+        self.visualizer = visualizer
+
+    def visualize(self):
+        if self.visualizer is None:
+            return
+        segm_data = self.rob.getCachedObserve('getNeuralSegmentation')
+        if segm_data is None:
+            return
+        heatmaps, img = segm_data
+        # self.visualizer('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
+        self.visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
+        self.visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
+        self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
+
+    def howtoMine(self, targ):
+        t = minelogy.get_otype(targ[0]) # TODO?: other blocks?
+        if t == 'log':
+            target = targ + [{'type': 'log2'}, {'type': 'leaves'}, {'type': 'leaves2'}]
+        elif t == 'stone':
+            target = targ + [{'type': 'dirt'}, {'type': 'grass'}]
+        elif t == 'coal_ore' or t == 'iron_ore':
+            target = targ + [{'type': 'stone'}]
+        else:
+            target = targ
+        for targ in target:
+            t = minelogy.get_otype(targ)
+            ray = self.rob.cached['getLineOfSights'][0]
+            if minelogy.matchEntity(ray, targ):
+                if ray['inRange']:
+                    return [['mine', [ray]]]
+                return [['mine', [ray]], ['approach', ray]]
+            known = self.rob.nearestFromGrid(t, observeReq=False)
+            if known is None:
+                if t in self.blockMem.blocks:
+                    # TODO? updateBlocks
+                    known = self.blockMem.blocks[t][-1]
+            # REM: 'approach' should include lookAt
+            if known is not None:
+                return [['mine', [targ]], ['approach', {'type': t, 'x': known[0], 'y': known[1], 'z': known[2]}]]
+        return [['mine', target], ['search', target]]
+
+    def howtoGet(self, target, craft_only=False, tool=False):
+        '''
+        This method doesn't try to return a complete plan.
+        For example, if there is a matching nearby entity, it will
+        proposes to approach it without planning to mine remaining quantity
+        '''
+
+        if target is None or not isinstance(target, dict):
+            return []
+
+        invent = self.rob.cached['getInventory'][0]
+        nearEnt = self.rob.cached['getNearEntities'][0]
+
+        acts = []
+
+        for item in invent:
+            if not minelogy.matchEntity(item, target):
+                continue
+            if 'quantity' in target:
+                if item['quantity'] < target['quantity']:
+                    continue
+            return acts + [['tool' if tool else 'inventory', item]]
+
+        for ent in nearEnt:
+            if not minelogy.matchEntity(ent, target):
+                continue
+            return acts + [['approach', ent]]
+
+        # TODO actions can be kept hierarchically, or we can somehow else
+        # analyze/represent that some actions can be done in parallel
+        # (e.g. mining of different blocks which don't require unavailable tools)
+        # while others cannot be done right away
+        # (craft requiring mining, mining requiring tools)
+        # TODO? combining similar actions with summing up amounts
+        # (may not be necessary with the above)
+
+        # There can be multiple ways to craft something (e.g. planks from log or log2)
+        best_way = None
+        for craft in minelogy.crafts:
+            if not minelogy.matchEntity(craft[1], target):
+                continue
+            next_acts = [['craft', target]]
+            for ingrid in craft[0]:
+                # TODO? amounts
+                act = self.howtoGet(ingrid, craft_only)
+                if act is None:
+                    next_acts = None
+                    break
+                next_acts += act
+            if next_acts is not None:
+                if best_way is None or len(best_way) > len(next_acts):
+                    best_way = next_acts
+        if best_way is not None:
+            return acts + best_way
+
+        if craft_only:
+            return None
+
+        for mine in minelogy.mines:
+            if not minelogy.matchEntity(mine[1], target):
+                continue
+            # TODO: there can be alternative blocks to mine (OR instead of AND)
+            acts += self.howtoMine(mine[0]['blocks'])
+            best_cnd = None
+            for tool in mine[0]['tools']:
+                if tool is None:
+                    best_cnd = []
+                    break
+                cnd = self.howtoGet({'type': tool}, craft_only=True, tool=True)
+                if cnd is None:
+                    continue
+                if len(cnd) <= 1:
+                    best_cnd = cnd
+                    break
+                if best_cnd is None or len(cnd) < len(best_cnd):
+                    best_cnd = cnd
+            if best_cnd is None:
+                best_cnd = self.howtoGet({'type': mine[0]['tools'][-1]}, craft_only=False)
+            acts += best_cnd
+            return acts
+
+        return ['UNKNOWN']
 
     def ccycle(self):
-        self.rob.updateAllObservations()
         self.blockMem.updateBlocks(self.rob)
         skill = self.skill
         if skill.precond() and not skill.finished():
             acts = skill.act()
+            logging.debug(acts)
             for act in acts:
                 self.rob.sendCommand(' '.join(act))
             return True
         else:
             acts = skill.stop()
+            logging.debug(acts)
             for act in acts:
                 self.rob.sendCommand(' '.join(act))
             return False
         return True
-    
-    def loop(self):
-        target = None
-        while target is None:
-            self.skill = Search4Blocks(self.rob, self.blockMem, ['log', 'leaves'])
-            while self.ccycle():
-                sleep(0.05)
-            b = self.blockMem.blocks
-            if 'leaves' in b and b['leaves']:
-                target = b['leaves'][-1]
-            if 'log' in b and b['log']:
-                target = b['log'][-1]
-        self.skill = ApproachXZPos(self.rob, target)
-        while self.ccycle():
+
+    def loop(self, target = None):
+        self.skill = None
+        while target != 'terminate':
             sleep(0.05)
-        self.skill = MineAround(self.rob, ['log', 'leaves'])
-        while self.ccycle():
-            sleep(0.05)
+            self.rob.updateAllObservations()
+            self.visualize()
+            # In Minecraft chat:
+            # '/say @p get stone_pickaxe'
+            # '/say @p stop'
+            # '/say @p terminate'
+            chat = self.rob.cached['getChat'][0]
+            if chat is not None:
+                print("Receive chat: ", chat[0])
+                words = chat[0].split(' ')
+                if words[-2] == 'get':
+                    target = {'type': words[-1]}
+                else:
+                    if words[-1] == 'stop':
+                        target = None
+                        self.skill = None
+                        self.rob.sendCommand('move 0')
+                        self.rob.sendCommand('jump 0')
+                        self.rob.sendCommand('attack 0')
+                    elif words[-1] == 'terminate':
+                        break
+                self.rob.cached['getChat'] = (None, self.rob.cached['getChat'][1])
+            
+            if self.skill is not None:
+                if self.ccycle():
+                    continue
+                self.skill = None
+
+            howto = self.howtoGet(target)
+            if howto == []:
+                target = None
+                continue
+            elif howto[-1][0] == 'UNKNOWN':
+                print("Panic. Don't know how to get " + str(target))
+                print(str(howto))
+                break
+            while howto[-1][0] == 'inventory' or howto[-1][0] == 'tool':
+                if howto[-1][0] == 'tool' and howto[-1][1]['index'] != 0:
+                    self.rob.mc.sendCommand('swapInventoryItems 0 ' + str(howto[-1][1]['index']))
+                howto = howto[:-1]
+                if howto == []:
+                    target = None
+                    break
+            if target is None or howto == []:
+                target = None
+                continue
+            if howto[-1][0] == 'search':
+                self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
+            if howto[-1][0] == 'craft':
+                t = minelogy.get_otype(howto[-1][1])
+                if t == 'planks': # hotfix
+                    invent = self.rob.cached['getInventory'][0]
+                    for item in invent:
+                        if item['type'] == 'log' or item['type'] == 'log2':
+                            t = item['variant'] + ' ' + t
+                            break
+                self.rob.craft(t)
+                sleep(0.2)
+                continue
+            if howto[-1][0] == 'approach':
+                self.skill = ApproachXZPos(self.rob,
+                                [howto[-1][1]['x'], howto[-1][1]['y'], howto[-1][1]['z']])
+            if howto[-1][0] == 'mine':
+                #self.skill = MineAround(self.rob, minelogy.get_otlist(howto[-1][1]))
+                self.skill = MineAtSight(self.rob)
+            if self.skill is None:
+                print("Panic. No skill available for " + str(target))
+                print(str(howto))
+                break
 
 
-class RRT:
+def setup_logger():
+    # create logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
-    def __init__(self, local_map, curren_pose, rob):
-        self.local_map = local_map
-        self.current_pose = curren_pose
-
-    def sample_configuration(self):
-        sampled_yaw = 360 * random.random()
-        # sampled_pitch = 180 * random.random()
-        sampled_z = random.randint(self.min_z, self.max_z)
-        sampled_x = random.randint(self.min_x, self.max_x)
-        sampled_y = random.randint(self.min_y, self.max_y)
-        return sampled_x, sampled_z, sampled_y, sampled_yaw
-
-    def is_configuration_valid(self, configuration):
-        x = configuration[0]
-        z = configuration[1]
-        y = configuration[2]
-        if self.local_map[x][z][y] in blockable or self.local_map[x][z][y-1] is 'air':
-            return False
-        else:
-            return True
-
-    def explore_n_times(self, num_of_samples):
-        tree = [None]*100
-        last_index = 0
-        tree[0] = self.current_pose
-        for i in range(num_of_samples):
-            None
-
-
-
-# def rapidlyExploringRandomTree(ax, img, start, goal, seed=None):
-#   hundreds = 100
-#   random.seed(seed)
-#   points = []
-#   graph = []
-#   points.append(start)
-#   graph.append((start, []))
-#   print 'Generating and conecting random points'
-#   occupied = True
-#   phaseTwo = False
-#
-#   # Phase two values (points 5 step distances around the goal point)
-#   minX = max(goal[0] - 5 * STEP_DISTANCE, 0)
-#   maxX = min(goal[0] + 5 * STEP_DISTANCE, len(img[0]) - 1)
-#   minY = max(goal[1] - 5 * STEP_DISTANCE, 0)
-#   maxY = min(goal[1] + 5 * STEP_DISTANCE, len(img) - 1)
-#
-#   i = 0
-#   while (goal not in points) and (len(points) < MAX_NUM_VERT):
-#     if (i % 100) == 0:
-#       print i, 'points randomly generated'
-#
-#     if (len(points) % hundreds) == 0:
-#       print len(points), 'vertex generated'
-#       hundreds = hundreds + 100
-#
-#     while(occupied):
-#       if phaseTwo and (random.random() > 0.8):
-#         point = [ random.randint(minX, maxX), random.randint(minY, maxY) ]
-#       else:
-#         point = [ random.randint(0, len(img[0]) - 1), random.randint(0, len(img) - 1) ]
-#
-#       if(img[point[1]][point[0]][0] == 255):
-#         occupied = False
-#
-#     occupied = True
-#
-#     nearest = findNearestPoint(points, point)
-#     newPoints = connectPoints(point, nearest, img)
-#     addToGraph(ax, graph, newPoints, point)
-#     newPoints.pop(0) # The first element is already in the points list
-#     points.extend(newPoints)
-#     ppl.draw()
-#     i = i + 1
-#
-#     if len(points) >= MIN_NUM_VERT:
-#       if not phaseTwo:
-#         print 'Phase Two'
-#       phaseTwo = True
-#
-#     if phaseTwo:
-#       nearest = findNearestPoint(points, goal)
-#       newPoints = connectPoints(goal, nearest, img)
-#       addToGraph(ax, graph, newPoints, goal)
-#       newPoints.pop(0)
-#       points.extend(newPoints)
-#       ppl.draw()
-#
-#   if goal in points:
-#     print 'Goal found, total vertex in graph:', len(points), 'total random points generated:', i
-#     path = searchPath(graph, start, [start])
-#
-#     for i in range(len(path)-1):
-#       ax.plot([ path[i][0], path[i+1][0] ], [ path[i][1], path[i+1][1] ], color='g', linestyle='-', linewidth=2)
-#       ppl.draw()
-#
-#     print 'Showing resulting map'
-#     print 'Final path:', path
-#     print 'The final path is made from:', len(path),'connected points'
-#   else:
-#     path = None
-#     print 'Reached maximum number of vertex and goal was not found'
-#     print 'Total vertex in graph:', len(points), 'total random points generated:', i
-#     print 'Showing resulting map'
-#
-#   ppl.show()
-#   return path
-#
-#
-# def searchPath(graph, point, path):
-#   for i in graph:
-#     if point == i[0]:
-#       p = i
-#
-#   if p[0] == graph[-1][0]:
-#     return path
-#
-#   for link in p[1]:
-#     path.append(link)
-#     finalPath = searchPath(graph, link, path)
-#
-#     if finalPath != None:
-#       return finalPath
-#     else:
-#       path.pop()
-
+    formatter = logging.Formatter('%(asctime)s: %(levelname)-8s %(message)s')
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    ch.setLevel(logging.DEBUG)
+    # add ch to logger
+    logger.addHandler(ch)
 
 
 if __name__ == '__main__':
-    
-    miss = mb.MissionXML()
-    miss.setWorld(mb.defaultworld(forceReset="true"))
-    miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
-    agent = TAgent(miss)
-    agent.loop()
+    setup_logger()
+    visualizer = Visualizer()
+    visualizer.start()
+    video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
+    agent_handlers = mb.AgentHandlers(video_producer=video_producer)
+    miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
+             agenthandlers=agent_handlers,)])
+
+
+    world = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", seed='43', forceReset="false")
+    miss.serverSection.initial_conditions.time_pass = 'false'
+    miss.serverSection.initial_conditions.time_start = "1000"
+    world1 = mb.defaultworld(forceReset="true")
+    miss.setWorld(world1)
+    # miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
+    agent = TAgent(miss, visualizer=visualizer)
+    agent.rob.sendCommand("chat /difficulty peaceful")
+    # agent.loop()
+    agent.loop(target = {'type': 'wooden_pickaxe'})
+
+    visualizer.stop()

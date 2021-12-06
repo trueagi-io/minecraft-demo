@@ -1,5 +1,6 @@
 import math
 import torch
+import random
 import threading
 import cv2
 import numpy
@@ -258,7 +259,12 @@ class ApproachXZPos:
             if los['inRange']:
                 acts = [['attack', '1']]
             else:
-                acts = [['attack', '0']]
+                prob = 0.3
+                rnd_samp = random.random()
+                if rnd_samp < prob:
+                    acts = [['attack', '1']]
+                else:
+                    acts = [['attack', '0']]
         return self.move.act() + self.lookAt.act() + acts
 
     def stop(self):

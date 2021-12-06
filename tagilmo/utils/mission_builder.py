@@ -115,7 +115,7 @@ class ServerSection:
     def __init__(self, handlers=ServerHandlers(), initial_conditions=ServerInitialConditions()):
         self.handlers = handlers
         self.initial_conditions = initial_conditions
-        
+
     def xml(self):
         return '<ServerSection>\n'+self.initial_conditions.xml()+self.handlers.xml()+'</ServerSection>\n'
 
@@ -147,13 +147,12 @@ class Commands:
         #<MissionQuitCommands /> --
         #<HumanLevelCommands/> --
         #<TurnBasedCommands/> --
-        #<ObservationFromRecentCommands/> --
         return _xml
 
 
 class Observations:
 
-    def __init__(self, bAll=True, bRay=None, bFullStats=None, bInvent=None, bNearby=None, bGrid=None):
+    def __init__(self, bAll=True, bRay=None, bFullStats=None, bInvent=None, bNearby=None, bGrid=None, bChat=None):
         self.bAll = bAll
         self.bRay = bRay
         self.bFullStats = bFullStats
@@ -161,6 +160,7 @@ class Observations:
         self.bNearby = bNearby
         self.bGrid = bGrid
         self.gridNear = [[-5, 5], [-2, 2], [-5, 5]]
+        self.bChat = bChat
 
     def xml(self):
         _xml = ""
@@ -192,7 +192,9 @@ class Observations:
     </Grid>
 </ObservationFromGrid>
 '''
-        #<ObservationFromFullInventory/>
+        if (self.bAll or self.bChat) and not (self.bChat == False):
+            _xml += "<ObservationFromChat />\n"
+        #<ObservationFromRecentCommands/>
         #<ObservationFromDiscreteCell/>
         #<ObservationFromSubgoalPositionList>
         #<ObservationFromDistance><Marker name="Start" x="0.5" y="227" z="0.5"/></ObservationFromDistance>
@@ -251,6 +253,16 @@ class AgentHandlers:
         # ...
         return _xml
 
+    def hasVideo(self):
+        if self.video_producer is None:
+            return False
+        return True
+
+    def hasSegmentation(self):
+        if self.colourmap_producer is None:
+            return False
+        return True
+
 
 class AgentStart:
 
@@ -297,6 +309,16 @@ class AgentSection:
         _xml += '</AgentSection>\n'
         return _xml
 
+    def hasVideo(self):
+        if self.agenthandlers.hasVideo():
+            return True
+        return False
+
+    def hasSegmentation(self):
+        if self.agenthandlers.hasSegmentation():
+            return True
+        return False
+
 
 class MissionXML:
 
@@ -305,6 +327,18 @@ class MissionXML:
         self.serverSection = serverSection
         self.agentSections = agentSections
     
+    def hasVideo(self):
+        for section in self.agentSections:
+            if section.hasVideo():
+                return True
+        return False
+
+    def hasSegmentation(self):
+        for section in self.agentSections:
+           if section.hasSegmentation():
+               return True
+        return False
+
     def setSummary(self, summary_string):
         self.about.summary = summary_string
     

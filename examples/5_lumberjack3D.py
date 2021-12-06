@@ -1,4 +1,5 @@
 import math
+import random
 from time import sleep, time
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
@@ -13,6 +14,44 @@ def int_coord(x):
 
 def int_coords(xs):
     return list(map(int_coord, xs))
+
+# class StatePredictor:
+#     def __init__(self, rob, actionList):
+#         self.rob = rob
+#         self.aPos = rob.waitNotNoneObserve('getAgentPos')
+#         self.actionList = actionList
+#
+#     def precond(self):
+#         self.grid = self.rob.getNearGrid3D(True)
+#         return self.grid
+#
+#     # def expect(self):
+#
+#     def predict(self):
+#         agentRelTrans = []
+#         agentRelYaw = 0
+#         agentRelPitch = 0
+#         for action in self.actionList:
+#             agentRelTrans += action.getRelCoord()
+#             agentRelYaw += action.getRelYaw()
+#             agentRelPitch += action.getRelPitch()
+#         agent_rel_pose = [agent_rel_pose, agentRelYaw, agentRelPitch]
+#         return self._transform_grid(self.precond(), agent_rel_pose)
+#
+#     def _transform_grid(self, precond_grid, agent_rel_pose):
+#         grid = rob.cached['getNearGrid'][0]
+#         sight = rob.cached['getLineOfSights'][0]
+#         if sight is not None and (sight['type'] not in ignore_blocks or sight['type'] in focus_blocks):
+#             updateBlock(sight['type'], int_coords([sight['x'], sight['y'], sight['z']]))
+#         for i in range(len(grid)):
+#             bUpdate = grid[i] not in ignore_blocks or grid[i] in focus_blocks
+#             if bUpdate or focus_blocks:
+#                 pos = rob.gridIndexToAbsPos(i, observeReq=False)
+#                 pos = int_coords(pos)
+#             if focus_blocks:
+#                 removeIfMissing(grid[i], focus_blocks, pos)
+#             if bUpdate:
+#                 updateBlock(grid[i], pos)
 
 
 class NoticeBlocks:
@@ -84,11 +123,13 @@ class MoveForward:
 
 class Jump:
 
-    def __init__(self):
+    def __init__(self, rob):
         self.isAct = False
+        self.rob = rob
 
     def precond(self):
-        return True # actually, should check the grid above
+        path = self.rob.analyzeGridInYawAbove(observeReq=False)
+        return not path['jumpBlocker'] # actually, should check the grid above
 
     def act(self):
         self.isAct = True
@@ -107,12 +148,13 @@ class ForwardNJump:
     def __init__(self, rob):
         self.rob = rob
         self.move = MoveForward(rob)
-        self.jump = Jump()
+        self.jump = Jump(rob)
         self.fin = False
         # dist = ?
 
     def precond(self):
-        # path = self.rob.analyzeGridInYaw(observeReq=False)
+        res = self.jump.precond()
+        path = self.rob.analyzeGridInYaw(observeReq=False)
         # return path['level'] < 2 and path['safe']
         return True
 
@@ -125,7 +167,7 @@ class ForwardNJump:
         slc = grid[len(grid)//2]
         slc = slc[len(slc)//2]
         block = slc[len(slc)//2]
-        if block == 'water' or path['level'] == 1:
+        if block == 'water' or path['level'] == 1 and self.jump.precond():
             acts += self.jump.act()
         elif self.jump.isAct:
             acts += self.jump.stop()
@@ -394,6 +436,136 @@ class TAgent:
         self.skill = MineAround(self.rob, ['log', 'leaves'])
         while self.ccycle():
             sleep(0.05)
+
+
+class RRT:
+
+    def __init__(self, local_map, curren_pose, rob):
+        self.local_map = local_map
+        self.current_pose = curren_pose
+
+    def sample_configuration(self):
+        sampled_yaw = 360 * random.random()
+        # sampled_pitch = 180 * random.random()
+        sampled_z = random.randint(self.min_z, self.max_z)
+        sampled_x = random.randint(self.min_x, self.max_x)
+        sampled_y = random.randint(self.min_y, self.max_y)
+        return sampled_x, sampled_z, sampled_y, sampled_yaw
+
+    def is_configuration_valid(self, configuration):
+        x = configuration[0]
+        z = configuration[1]
+        y = configuration[2]
+        if self.local_map[x][z][y] in blockable or self.local_map[x][z][y-1] is 'air':
+            return False
+        else:
+            return True
+
+    def explore_n_times(self, num_of_samples):
+        tree = [None]*100
+        last_index = 0
+        tree[0] = self.current_pose
+        for i in range(num_of_samples):
+            None
+
+
+
+# def rapidlyExploringRandomTree(ax, img, start, goal, seed=None):
+#   hundreds = 100
+#   random.seed(seed)
+#   points = []
+#   graph = []
+#   points.append(start)
+#   graph.append((start, []))
+#   print 'Generating and conecting random points'
+#   occupied = True
+#   phaseTwo = False
+#
+#   # Phase two values (points 5 step distances around the goal point)
+#   minX = max(goal[0] - 5 * STEP_DISTANCE, 0)
+#   maxX = min(goal[0] + 5 * STEP_DISTANCE, len(img[0]) - 1)
+#   minY = max(goal[1] - 5 * STEP_DISTANCE, 0)
+#   maxY = min(goal[1] + 5 * STEP_DISTANCE, len(img) - 1)
+#
+#   i = 0
+#   while (goal not in points) and (len(points) < MAX_NUM_VERT):
+#     if (i % 100) == 0:
+#       print i, 'points randomly generated'
+#
+#     if (len(points) % hundreds) == 0:
+#       print len(points), 'vertex generated'
+#       hundreds = hundreds + 100
+#
+#     while(occupied):
+#       if phaseTwo and (random.random() > 0.8):
+#         point = [ random.randint(minX, maxX), random.randint(minY, maxY) ]
+#       else:
+#         point = [ random.randint(0, len(img[0]) - 1), random.randint(0, len(img) - 1) ]
+#
+#       if(img[point[1]][point[0]][0] == 255):
+#         occupied = False
+#
+#     occupied = True
+#
+#     nearest = findNearestPoint(points, point)
+#     newPoints = connectPoints(point, nearest, img)
+#     addToGraph(ax, graph, newPoints, point)
+#     newPoints.pop(0) # The first element is already in the points list
+#     points.extend(newPoints)
+#     ppl.draw()
+#     i = i + 1
+#
+#     if len(points) >= MIN_NUM_VERT:
+#       if not phaseTwo:
+#         print 'Phase Two'
+#       phaseTwo = True
+#
+#     if phaseTwo:
+#       nearest = findNearestPoint(points, goal)
+#       newPoints = connectPoints(goal, nearest, img)
+#       addToGraph(ax, graph, newPoints, goal)
+#       newPoints.pop(0)
+#       points.extend(newPoints)
+#       ppl.draw()
+#
+#   if goal in points:
+#     print 'Goal found, total vertex in graph:', len(points), 'total random points generated:', i
+#     path = searchPath(graph, start, [start])
+#
+#     for i in range(len(path)-1):
+#       ax.plot([ path[i][0], path[i+1][0] ], [ path[i][1], path[i+1][1] ], color='g', linestyle='-', linewidth=2)
+#       ppl.draw()
+#
+#     print 'Showing resulting map'
+#     print 'Final path:', path
+#     print 'The final path is made from:', len(path),'connected points'
+#   else:
+#     path = None
+#     print 'Reached maximum number of vertex and goal was not found'
+#     print 'Total vertex in graph:', len(points), 'total random points generated:', i
+#     print 'Showing resulting map'
+#
+#   ppl.show()
+#   return path
+#
+#
+# def searchPath(graph, point, path):
+#   for i in graph:
+#     if point == i[0]:
+#       p = i
+#
+#   if p[0] == graph[-1][0]:
+#     return path
+#
+#   for link in p[1]:
+#     path.append(link)
+#     finalPath = searchPath(graph, link, path)
+#
+#     if finalPath != None:
+#       return finalPath
+#     else:
+#       path.pop()
+
 
 
 if __name__ == '__main__':

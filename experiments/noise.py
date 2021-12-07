@@ -4,10 +4,8 @@ from scipy import ndimage
 import numpy
 import cv2
 
-#from fem.hom import bilinear_sampling
 import scipy.ndimage
 from skimage import util
-#from fem.util import calculate_h
 
 
 def random_brightness(images, per_color=True, channel=0, range=(0, 70)):
@@ -125,7 +123,6 @@ def speckle(image, var=0.125):
 def additive_shade(image, nb_ellipses=20, transparency_range=[-0.6, 0.2],
                    kernel_size_range=[250, 350]):
 
-    assert len(image.shape) == 3
     def _py_additive_shade(img):
         dtype = img.dtype
         min_dim = min(img.shape[1:]) / 4
@@ -206,7 +203,14 @@ def motion_blur(img, max_kernel_size=10):
     if shape[0] == 1:
         img = cv2.filter2D(img[0], -1, kernel).reshape(shape)
     else:
-        img = cv2.filter2D(img, -1, kernel)
+        # opencv filter2d fails with
+        # cv2.error: OpenCV(4.5.1) /tmp/pip-req-build-7m_g9lbm/opencv/modules/core/src/matrix.cpp:1102: error: (-215:Assertion failed) dims <= 2 && step[0] > 0 in function 'locateROI'
+        import torch.nn.functional
+        import torch
+        img_copy = torch.as_tensor(img.copy()).clone().unsqueeze(1).float()
+        weights = torch.as_tensor(kernel.copy().T).float()
+        res = torch.nn.functional.conv2d(img_copy, weights.unsqueeze(0).unsqueeze(0), padding='same')
+        return res.squeeze().numpy()
     return img
 
 

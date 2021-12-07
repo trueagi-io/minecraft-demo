@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__file__)
 
 SCALE = 2
-RESIZE = 1 / SCALE
+RESIZE = 1
 HEIGHT = 240 * SCALE
 WIDTH = 320 * SCALE
 
@@ -188,9 +188,11 @@ def visualize(img, segm):
     if segm is not None:
        visualizer('segm', segm)
 
-    #visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
-    #visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
-    #visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
+
+def show_heatmaps(obs):
+    segm_data = obs.getCachedObserve('getNeuralSegmentation')
+    heatmaps, img = segm_data
+    visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
 
 
 def start_mission():
@@ -248,14 +250,16 @@ if __name__ == '__main__':
     visualizer = Visualizer() 
     visualizer.start()
     mc, obs = start_mission()
-    show_img = lambda: visualize(None, get_image(obs, RESIZE, SCALE, 'getImageFrame'))
-    show_segm = lambda: visualize(get_image(obs, RESIZE, SCALE, 'getSegmentationFrame'), None)
+    show_img = lambda: visualize(None, get_image(obs.getCachedObserve('getImageFrame'), RESIZE, SCALE))
+    show_segm = lambda: visualize(get_image(obs.getCachedObserve('getSegmentationFrame'), RESIZE, SCALE), None)
     neural_callback = NeuralWrapper(obs, RESIZE, SCALE)
                                 # cb_name, on_change event, callback
     obs.addCallback('getNeuralSegmentation', 'getImageFrame', neural_callback)
 
     obs.addCallback(None, 'getImageFrame', show_img)
     obs.addCallback(None, 'getSegmentationFrame', show_segm) 
+    # attach visualization callback to getNeuralSegmentation
+    obs.addCallback(None, 'getNeuralSegmentation', lambda: show_heatmaps(obs)) 
     mc.safeStart()
     runSkill(obs)
     visualizer.stop()

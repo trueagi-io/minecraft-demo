@@ -13,10 +13,36 @@ mines = [({'blocks': [{'type': 'log'}],
          ({'blocks': [{'type': 'stone', 'variant': 'stone'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'cobblestone'}
+         ),
+         ({'blocks': [{'type': 'coal_ore'}],
+           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+          {'type': 'coal'}
+         ),
+         ({'blocks': [{'type': 'iron_ore'}],
+           'tools': ['stone_pickaxe']},
+          {'type': 'iron_ore'}
+         ),
+         ({'blocks': [{'type': 'pumpkin'}],
+           'tools': [None]},
+          {'type': 'pumpkin'}
+         ),
+         ({'blocks': [{'type': 'leaves', 'variant': 'oak'}],
+           'tools': [None]},
+          {'type': 'apple'}
+         ),
+         ({'blocks': [{'type': 'leaves'}],
+           'tools': [None]},
+          {'type': 'sapling'}
+         ),
+         ({'blocks': [{'type': 'tallgrass'}],
+           'tools': [None]},
+          {'type': 'wheat_seeds'}
          )
         ]
 
 crafts = [([{'type': 'log', 'quantity': 1}],
+           {'type': 'planks', 'quantity': 4}),
+          ([{'type': 'log2', 'quantity': 1}],
            {'type': 'planks', 'quantity': 4}),
           ([{'type': 'planks', 'quantity': 2}],
             {'type': 'stick', 'quantity': 4}),
@@ -31,7 +57,36 @@ crafts = [([{'type': 'log', 'quantity': 1}],
           ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 3}],
            {'type': 'stone_pickaxe'}),
           ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 1}],
-           {'type': 'stone_shovel'})
+           {'type': 'stone_shovel'}),
+          # we don't actually need coal with simplified furnance
+          ([{'type': 'iron_ore', 'quantity': 1}], #{'type': 'coal', 'quantity': 1}],
+           {'type': 'iron_ingot'}),
+          ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
+           {'type': 'iron_axe'}),
+          ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
+           {'type': 'iron_pickaxe'}),
+          ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 1}],
+           {'type': 'iron_shovel'}),
+          ([{'type': 'stick', 'quantity': 1}, {'type': 'coal', 'quantity': 1}],
+           {'type': 'torch', 'quantity': 4}),
+          ([{'type': 'planks', 'quantity': 2}],
+            {'type': 'wooden_pressure_plate'}),
+          ([{'type': 'planks', 'quantity': 3}],
+            {'type': 'wooden_slab', 'quantity': 6}),
+          ([{'type': 'planks', 'quantity': 1}],
+            {'type': 'wooden_button'}),
+          ([{'type': 'planks', 'quantity': 6}],
+            {'type': 'wooden_door', 'quantity': 3}),
+          ([{'type': 'planks', 'quantity': 6}],
+            {'type': 'trapdoor', 'quantity': 2}),
+          ([{'type': 'cobblestone', 'quantity': 3}],
+            {'type': 'stone_slab', 'quantity': 6}),
+          ([{'type': 'cobblestone', 'quantity': 3}],
+            {'type': 'cobblestone_wall', 'quantity': 6}),
+          ([{'type': 'stick', 'quantity': 1}, {'type': 'cobblestone', 'quantity': 1}],
+           {'type': 'lever'}),
+          ([{'type': 'pumpkin', 'quantity': 1}],
+            {'type': 'pumpkin_seeds'})
          ]
 
 def get_otype(obj):

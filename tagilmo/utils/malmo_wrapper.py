@@ -468,7 +468,7 @@ class RobustObserverWithCallbacks(RobustObserver):
     def changed(self, name):
         for (cb_name, on_change, cb) in self.callbacks:
             if name == on_change and cb not in self._in_process:
-                # submit with done callback
+                # submit to the thread pool
                 self.submit(cb, cb_name)
 
     def addCallback(self, name, on_change, cb):
@@ -501,17 +501,14 @@ class RobustObserverWithCallbacks(RobustObserver):
                 else:
                     logger.exception(exception)
                 if name is not None:
-                    logger.debug('adding results from %s', name)
+                    # logger.debug('adding results from %s', name)
                     self.cached[name] = (result, tm)
                     self.changed(name)
                 self._in_process.discard(cb)
 
     def submit(self, cb, name):
-        if cb not in self._in_process:
-            logger.debug('run callback %s', name)
-            future = self.executor.submit(cb)
-            with self.lock:
-                self._futures[future] = (name, cb)
-                self._in_process.add(cb)
-            future.add_done_callback(self.done_callback)
-
+        future = self.executor.submit(cb)
+        with self.lock:
+            self._futures[future] = (name, cb)
+            self._in_process.add(cb)
+        future.add_done_callback(self.done_callback)

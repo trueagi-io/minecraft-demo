@@ -44,7 +44,8 @@ class And(Node):
                 self.finished = True
                 return 'success', result
             logger.debug("{0} succeded, choosing next".format(node))
-            return self() 
+            status, t_res = self()
+            return status, result + t_res
         if status == 'failed':
            logger.debug("{0} failed, we are done".format(node))
            self.finished = True
@@ -84,5 +85,6 @@ class Or(Node):
             logger.debug('{0} failed, selecting next node'.format(node))
             # failed, so run text
             self.idx += 1
-            return self()
+            status, res = self()
+            return status, result + res
 

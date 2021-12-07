@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__file__)
 
 SCALE = 2
-RESIZE = 1 / SCALE
+RESIZE = 1
 HEIGHT = 240 * SCALE
 WIDTH = 320 * SCALE
 
@@ -188,9 +188,11 @@ def visualize(img, segm):
     if segm is not None:
        visualizer('segm', segm)
 
-    #visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
-    #visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
-    #visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
+
+def show_heatmaps(obs):
+    segm_data = obs.getCachedObserve('getNeuralSegmentation')
+    heatmaps, img = segm_data
+    visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
 
 
 def start_mission():
@@ -256,6 +258,8 @@ if __name__ == '__main__':
 
     obs.addCallback(None, 'getImageFrame', show_img)
     obs.addCallback(None, 'getSegmentationFrame', show_segm) 
+    # attach visualization callback to getNeuralSegmentation
+    obs.addCallback(None, 'getNeuralSegmentation', lambda: show_heatmaps(obs)) 
     mc.safeStart()
     runSkill(obs)
     visualizer.stop()

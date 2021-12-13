@@ -236,6 +236,58 @@ class VisScan:
         return [["turn", "0"], ["pitch", "0"]]
 
 
+class StatePredictor:
+
+    def __init__(self, rob):
+        self.rob = rob
+        self.stuck_thresh = 0.01
+
+    def precond(self):
+        return True
+
+    def is_stucked(self):
+        curr_pos = numpy.array(self.rob.cached['getAgentPos'][0])
+        prev_pos = numpy.array(self.rob.cached_buffer['getAgentPos'][0])
+        action_magnitude = numpy.linalg.norm(curr_pos-prev_pos)
+        if action_magnitude < self.stuck_thresh:
+            return True
+        else:
+            return False
+
+
+class Perturbation:
+    def __init__(self, rob):
+        self.rob = rob
+        sigma_trans = 5
+        self.stuck_pred = StatePredictor(rob)
+        self.move = ForwardNJump(rob)
+        self.pos = self.rob.cached['getAgentPos'][0]
+        new_x = random.gauss(self.pos[0], sigma_trans)
+        new_y = self.pos[1]
+        new_z = random.gauss(self.pos[2], sigma_trans)
+        new_yaw = 0
+        new_pitch = 0
+        self.target_pos = [new_x, new_y, new_z, new_yaw, new_pitch]
+        self.lookAt = LookAt(rob, self.target_pos)
+
+    def precond(self):
+        return self.stuck_pred.is_stucked()
+
+    def act(self):
+        aPos = self.rob.cached['getAgentPos'][0]
+        pos = self.target_pos
+        if abs(aPos[0] - pos[0]) < 1.4 and abs(aPos[2] - pos[2]) < 1.4 and not self.move.finished():
+            return self.move.stop()
+        los = self.rob.cached['getLineOfSights'][0]
+        acts = []
+        if los is not None:
+            if los['inRange']:
+                acts = [['attack', '1']]
+            else:
+                acts = [['attack', '0']]
+        return self.move.act() + self.lookAt.act() + acts
+
+
 class ApproachXZPos:
 
     def __init__(self, rob, pos):
@@ -243,6 +295,7 @@ class ApproachXZPos:
         self.target_pos = pos
         self.move = ForwardNJump(rob)
         self.lookAt = LookAt(rob, pos)
+        self.perturb = Perturbation(rob)
 
     def precond(self):
         # return self.move.precond()
@@ -260,6 +313,9 @@ class ApproachXZPos:
                 acts = [['attack', '1']]
             else:
                 acts = [['attack', '0']]
+        if self.perturb.precond():
+            acts += self.perturb.act()
+            print("Got stucked. Need perturbation.")
         return self.move.act() + self.lookAt.act() + acts
 
     def stop(self):
@@ -611,8 +667,8 @@ class TAgent:
             self.rob.updateAllObservations()
             self.visualize()
 
-            print("Current state: ", self.rob.cached['getAgentPos'])
-            print("Prev state: ", self.rob.cached_buffer['getAgentPos'])
+            # print("Current state: ", self.rob.cached['getAgentPos'])
+            # print("Prev state: ", self.rob.cached_buffer['getAgentPos'])
 
             # In Minecraft chat:
             # '/say @p get stone_pickaxe'

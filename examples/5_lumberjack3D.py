@@ -650,13 +650,13 @@ class TAgent:
             acts = skill.act()
             logging.debug(acts)
             for act in acts:
-                self.rob.sendCommand(' '.join(act))
+                self.rob.sendCommand(act)
             return True
         else:
             acts = skill.stop()
             logging.debug(acts)
             for act in acts:
-                self.rob.sendCommand(' '.join(act))
+                self.rob.sendCommand(act)
             return False
         return True
 
@@ -684,9 +684,9 @@ class TAgent:
                     if words[-1] == 'stop':
                         target = None
                         self.skill = None
-                        self.rob.sendCommand('move 0')
-                        self.rob.sendCommand('jump 0')
-                        self.rob.sendCommand('attack 0')
+                        self.rob.sendCommand(['move 0'])
+                        self.rob.sendCommand(['jump 0'])
+                        self.rob.sendCommand(['attack 0'])
                     elif words[-1] == 'terminate':
                         break
                 self.rob.cached['getChat'] = (None, self.rob.cached['getChat'][1])
@@ -706,7 +706,7 @@ class TAgent:
                 break
             while howto[-1][0] == 'inventory' or howto[-1][0] == 'tool':
                 if howto[-1][0] == 'tool' and howto[-1][1]['index'] != 0:
-                    self.rob.mc.sendCommand('swapInventoryItems 0 ' + str(howto[-1][1]['index']))
+                    self.rob.mc.sendCommand(['swapInventoryItems 0 ' + str(howto[-1][1]['index'])])
                 howto = howto[:-1]
                 if howto == []:
                     target = None
@@ -770,7 +770,7 @@ if __name__ == '__main__':
     miss.setWorld(world1)
     # miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     agent = TAgent(miss, visualizer=visualizer)
-    agent.rob.sendCommand("chat /difficulty peaceful")
+    agent.rob.sendCommand(["chat /difficulty peaceful"])
     # agent.loop()
     agent.loop(target = {'type': 'wooden_pickaxe'})
 

@@ -267,6 +267,7 @@ class RobustObserver:
             self.canBeNone.append('getSegmentationFrame')
         self.cached = {method : (None, 0) for method in self.methods}
         self.cached_buffer = {method: (None, 0) for method in self.methods}
+        self.commandBuffer = []
 
     def clear(self):
         self.cached = {k: (None, 0) for k in self.cached}
@@ -318,9 +319,16 @@ class RobustObserver:
         while not all([self.cached[method][0] is not None or method in self.canBeNone for method in self.methods]):
             time.sleep(self.tick)
             self.observeProcCached()
-    
+
+    def addCommandsToBuffer(self, commanList):
+        self.commandBuffer .append(commanList)
+
+    def clearCommandBuffer(self, commanList):
+        self.commandBuffer.clear()
+
     def sendCommand(self, command):
-        self.mc.sendCommand(command, self.nAgent)
+        self.addCommandsToBuffer(command)
+        self.mc.sendCommand(' '.join(command), self.nAgent)
 
     # ===== specific methods =====
 

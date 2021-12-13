@@ -259,12 +259,7 @@ class ApproachXZPos:
             if los['inRange']:
                 acts = [['attack', '1']]
             else:
-                prob = 0.3
-                rnd_samp = random.random()
-                if rnd_samp < prob:
-                    acts = [['attack', '1']]
-                else:
-                    acts = [['attack', '0']]
+                acts = [['attack', '0']]
         return self.move.act() + self.lookAt.act() + acts
 
     def stop(self):
@@ -615,6 +610,10 @@ class TAgent:
             sleep(0.05)
             self.rob.updateAllObservations()
             self.visualize()
+
+            print("Current state: ", self.rob.cached['getAgentPos'])
+            print("Prev state: ", self.rob.cached_buffer['getAgentPos'])
+
             # In Minecraft chat:
             # '/say @p get stone_pickaxe'
             # '/say @p stop'

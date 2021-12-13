@@ -266,6 +266,7 @@ class RobustObserver:
         if not self.mc.supportsSegmentation():
             self.canBeNone.append('getSegmentationFrame')
         self.cached = {method : (None, 0) for method in self.methods}
+        self.cached_buffer = {method: (None, 0) for method in self.methods}
 
     def clear(self):
         self.cached = {k: (None, 0) for k in self.cached}
@@ -285,6 +286,7 @@ class RobustObserver:
             v, t = self.cached[method]
             outdated = t_new - t > self.max_dt
             if v_new is not None or outdated: # or v is None
+                self.cached_buffer[method] = self.cached[method]
                 self.cached[method] = (v_new, t_new)
                 self.changed(method)
 

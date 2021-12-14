@@ -240,7 +240,7 @@ class StatePredictor:
 
     def __init__(self, rob):
         self.rob = rob
-        self.stuck_thresh = 0.01
+        self.stuck_thresh = 0.005
 
     def precond(self):
         return True

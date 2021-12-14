@@ -6,6 +6,7 @@ import sys
 import concurrent.futures
 import threading
 import logging
+import collections
 
 import MalmoPython
 
@@ -251,6 +252,9 @@ class RobustObserver:
 
     passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass', 'reeds', 'red_flower', 'yellow_flower']
     deadlyBlocks = ['lava']
+    # Should we merge these types of commands in one list?
+    explicitlyPoseChangingCommands = ['move', 'jump', 'pitch', 'turn']
+    implicitlyPoseChangingCommands = ['attack']
 
     def __init__(self, mc, nAgent = 0):
         self.mc = mc
@@ -266,8 +270,11 @@ class RobustObserver:
         if not self.mc.supportsSegmentation():
             self.canBeNone.append('getSegmentationFrame')
         self.cached = {method : (None, 0) for method in self.methods}
+        self.cbuff_history_len = 10
         self.cached_buffer = {method: (None, 0) for method in self.methods}
+        self.cached_buffer_list = [self.cached_buffer]
         self.commandBuffer = []
+        self.expectedCommandsBuffer = []
 
     def clear(self):
         self.cached = {k: (None, 0) for k in self.cached}
@@ -290,6 +297,8 @@ class RobustObserver:
                 self.cached_buffer[method] = self.cached[method]
                 self.cached[method] = (v_new, t_new)
                 self.changed(method)
+        self.cached_buffer_list.append(self.cached_buffer)
+        self.cached_buffer_list = self.cached_buffer_list[-self.cbuff_history_len:]
 
     def changed(self, name):
         pass
@@ -321,10 +330,17 @@ class RobustObserver:
             self.observeProcCached()
 
     def addCommandsToBuffer(self, commanList):
-        self.commandBuffer .append(commanList)
+        self.commandBuffer.append(commanList)
 
     def clearCommandBuffer(self, commanList):
         self.commandBuffer.clear()
+
+    def isCommandPoseChanging(self, command):
+        if command[0] in RobustObserver.explicitlyPoseChangingCommands or\
+            command[0] in RobustObserver.implicitlyPoseChangingCommands:
+            return True
+        else:
+            return False
 
     def sendCommand(self, command):
         self.addCommandsToBuffer(command)

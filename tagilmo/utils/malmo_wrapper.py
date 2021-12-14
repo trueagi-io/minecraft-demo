@@ -289,6 +289,7 @@ class RobustObserver:
     def observeProcCached(self):
         self.mc.observeProc()
         t_new = time.time()
+        updated = False
         for method in self.methods:
             v_new = getattr(self.mc, method)(self.nAgent)
             v, t = self.cached[method]
@@ -297,8 +298,10 @@ class RobustObserver:
                 self.cached_buffer[method] = self.cached[method]
                 self.cached[method] = (v_new, t_new)
                 self.changed(method)
-        self.cached_buffer_list.append(self.cached_buffer)
-        self.cached_buffer_list = self.cached_buffer_list[-self.cbuff_history_len:]
+                updated = True
+        if updated:
+            self.cached_buffer_list.append(self.cached_buffer.copy())
+            self.cached_buffer_list = self.cached_buffer_list[-self.cbuff_history_len:]
 
     def changed(self, name):
         pass

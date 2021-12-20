@@ -346,7 +346,7 @@ class RobustObserver:
             return False
 
     def sendCommand(self, command):
-        # TODO isinstance
+        # TODO isinstance check for list err otherwise
         if isinstance(command, str):
             cmd = command.split(' ')
             self.addCommandsToBuffer(cmd)

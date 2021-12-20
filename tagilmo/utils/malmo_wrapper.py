@@ -238,7 +238,7 @@ class MalmoConnector:
         dx = pos[0] - aPos[0]
         dz = pos[2] - aPos[2]
         yaw = -math.atan2(dx, dz)
-        pitch = -math.atan2(pos[1] - aPos[1] - 1, math.sqrt(dx * dx + dz * dz))
+        pitch = -math.atan2(pos[1] - aPos[1], math.sqrt(dx * dx + dz * dz))
         return [pitch, yaw]
 
     def supportsVideo(self):
@@ -359,7 +359,7 @@ class RobustObserver:
 
     def dirToAgentPos(self, pos, observeReq=True):
         aPos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
-        return self.mc.dirToPos(aPos, pos)
+        return self.mc.dirToPos([aPos[0], aPos[1]+1.66, aPos[2]], pos)
 
     def gridIndexToAbsPos(self, index, observeReq=True):
         [x, y, z] = self.mc.gridIndexToPos(index, self.nAgent)

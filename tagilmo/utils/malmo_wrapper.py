@@ -235,6 +235,10 @@ class MalmoConnector:
         return [x, y, z]
 
     def dirToPos(self, aPos, pos):
+        '''
+        Get pitch and yaw between two arbitrary positions
+        (agent height is not taken into account)
+        '''
         dx = pos[0] - aPos[0]
         dz = pos[2] - aPos[2]
         yaw = -math.atan2(dx, dz)

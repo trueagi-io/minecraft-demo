@@ -346,8 +346,14 @@ class RobustObserver:
             return False
 
     def sendCommand(self, command):
-        self.addCommandsToBuffer(command)
-        self.mc.sendCommand(' '.join(command), self.nAgent)
+        # TODO isinstance
+        if isinstance(command, str):
+            cmd = command.split(' ')
+            self.addCommandsToBuffer(cmd)
+            self.mc.sendCommand(command, self.nAgent)
+        else:
+            self.addCommandsToBuffer(command)
+            self.mc.sendCommand(' '.join(command), self.nAgent)
 
     # ===== specific methods =====
 

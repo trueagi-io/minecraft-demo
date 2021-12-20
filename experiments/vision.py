@@ -13,8 +13,8 @@ import numpy
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector
 import common
-from common import stop_motion, grid_to_vec_walking, \
-    direction_to_target, normAngle
+from common import stop_motion, grid_to_vec_walking, direction_to_target
+from tagilmo.utils.mathutils import normAngle
 
 import tree
 from goodpoint import GoodPoint

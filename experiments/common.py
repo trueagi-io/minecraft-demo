@@ -5,6 +5,7 @@ import math
 import numpy
 import numpy.linalg
 from time import sleep
+from tagilmo.utils.mathutils import normAngle
 
 logger = logging.getLogger()
 
@@ -92,10 +93,6 @@ def grid_to_real_feature_vec_walking(block_list):
     return codes
 
 
-def degree2rad(angle):
-    return angle * math.pi / 180
-
-
 def rotation_matrix(roll, pitch, yaw):
     # right-hand rule, different from minecraft and opengl naming convention!
 
@@ -116,12 +113,6 @@ def rotation_matrix(roll, pitch, yaw):
 
     result = yaw_mat @ pitch_mat @ roll_mat
     return result
-
-
-def normAngle(angle):
-    while (angle < -math.pi): angle += 2 * math.pi
-    while (angle > math.pi): angle -= 2 * math.pi
-    return angle
 
 
 # Look at a specified location
@@ -154,7 +145,7 @@ def stopMove(mc):
 
 def direction_to_target(mc, pos):
     aPos = mc.getAgentPos()
-    aPos = [aPos[0], aPos[1] + 1.66, aPos[2]]
+    aPos = [aPos[0], aPos[1] + 1.66, aPos[2], aPos[3], aPos[4]]
     [pitch, yaw] = mc.dirToPos(aPos, pos)
     pitch = normAngle(pitch - aPos[3]*math.pi/180.)
     yaw = normAngle(yaw - aPos[4]*math.pi/180.)

@@ -13,21 +13,10 @@ from neural import NeuralWrapper
 import logging
 from vis import Visualizer
 
+from tagilmo.utils.mathutils import *
 
 SCALE = 4
 RESIZE = 1/SCALE
-
-def normAngle(angle):
-    while (angle < -math.pi): angle += 2 * math.pi
-    while (angle > math.pi): angle -= 2 * math.pi
-    return angle
-
-def int_coord(x):
-    return int(x) if x >= 0 else int(x-0.999)
-
-def int_coords(xs):
-    return list(map(int_coord, xs))
-
 
 class NoticeBlocks:
 
@@ -171,11 +160,11 @@ class LookDir:
         self.fin = True
         aPos = self.rob.cached['getAgentPos'][0]
         if self.pitch is not None:
-            dPitch = normAngle(self.pitch - aPos[3] * math.pi / 180.)
+            dPitch = normAngle(self.pitch - degree2rad(aPos[3]))
             self.fin = self.fin and abs(dPitch) < 0.02
             acts += [["pitch", str(dPitch * 0.4)]]
         if self.yaw is not None:
-            dYaw = normAngle(self.yaw - aPos[4] * math.pi / 180.)
+            dYaw = normAngle(self.yaw - degree2rad(aPos[4]))
             self.fin = self.fin and abs(dYaw) < 0.02
             acts += [["turn", str(dYaw * 0.4)]]
         return acts

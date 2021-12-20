@@ -11,6 +11,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mission_builder import AgentStart
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserverWithCallbacks
 from tagilmo.utils import segment_mapping
+from tagilmo.utils.mathutils import degree2rad
 import tagilmo.utils.mission_builder as mb
 
 

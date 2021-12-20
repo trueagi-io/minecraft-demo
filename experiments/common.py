@@ -133,7 +133,7 @@ def lookAt(mc, pos):
         aPos = mc.getAgentPos()
         if aPos is None:
             continue
-        [pitch, yaw] = mc.dirToPos(aPos, pos)
+        [pitch, yaw] = mc.dirToPos([aPos[0], aPos[1] + 1.66, aPos[2]], pos)
         pitch = normAngle(pitch - aPos[3]*math.pi/180.)
         yaw = normAngle(yaw - aPos[4]*math.pi/180.)
         if abs(pitch)<0.02 and abs(yaw)<0.02: break
@@ -154,6 +154,7 @@ def stopMove(mc):
 
 def direction_to_target(mc, pos):
     aPos = mc.getAgentPos()
+    aPos = [aPos[0], aPos[1] + 1.66, aPos[2]]
     [pitch, yaw] = mc.dirToPos(aPos, pos)
     pitch = normAngle(pitch - aPos[3]*math.pi/180.)
     yaw = normAngle(yaw - aPos[4]*math.pi/180.)

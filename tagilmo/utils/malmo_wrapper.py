@@ -6,6 +6,7 @@ import sys
 import concurrent.futures
 import threading
 import logging
+import collections
 
 import MalmoPython
 
@@ -251,6 +252,9 @@ class RobustObserver:
 
     passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass', 'reeds', 'red_flower', 'yellow_flower']
     deadlyBlocks = ['lava']
+    # Should we merge these types of commands in one list?
+    explicitlyPoseChangingCommands = ['move', 'jump', 'pitch', 'turn']
+    implicitlyPoseChangingCommands = ['attack']
 
     def __init__(self, mc, nAgent = 0):
         self.mc = mc
@@ -266,7 +270,11 @@ class RobustObserver:
         if not self.mc.supportsSegmentation():
             self.canBeNone.append('getSegmentationFrame')
         self.cached = {method : (None, 0) for method in self.methods}
+        self.cbuff_history_len = 10
         self.cached_buffer = {method: (None, 0) for method in self.methods}
+        self.cached_buffer_list = [self.cached_buffer]
+        self.commandBuffer = []
+        self.expectedCommandsBuffer = []
 
     def clear(self):
         self.cached = {k: (None, 0) for k in self.cached}
@@ -281,6 +289,7 @@ class RobustObserver:
     def observeProcCached(self):
         self.mc.observeProc()
         t_new = time.time()
+        updated = False
         for method in self.methods:
             v_new = getattr(self.mc, method)(self.nAgent)
             v, t = self.cached[method]
@@ -289,6 +298,10 @@ class RobustObserver:
                 self.cached_buffer[method] = self.cached[method]
                 self.cached[method] = (v_new, t_new)
                 self.changed(method)
+                updated = True
+        if updated:
+            self.cached_buffer_list.append(self.cached_buffer.copy())
+            self.cached_buffer_list = self.cached_buffer_list[-self.cbuff_history_len:]
 
     def changed(self, name):
         pass
@@ -318,9 +331,29 @@ class RobustObserver:
         while not all([self.cached[method][0] is not None or method in self.canBeNone for method in self.methods]):
             time.sleep(self.tick)
             self.observeProcCached()
-    
+
+    def addCommandsToBuffer(self, commanList):
+        self.commandBuffer.append(commanList)
+
+    def clearCommandBuffer(self, commanList):
+        self.commandBuffer.clear()
+
+    def isCommandPoseChanging(self, command):
+        if command[0] in RobustObserver.explicitlyPoseChangingCommands or\
+            command[0] in RobustObserver.implicitlyPoseChangingCommands:
+            return True
+        else:
+            return False
+
     def sendCommand(self, command):
-        self.mc.sendCommand(command, self.nAgent)
+        # TODO isinstance check for list err otherwise
+        if isinstance(command, str):
+            cmd = command.split(' ')
+            self.addCommandsToBuffer(cmd)
+            self.mc.sendCommand(command, self.nAgent)
+        else:
+            self.addCommandsToBuffer(command)
+            self.mc.sendCommand(' '.join(command), self.nAgent)
 
     # ===== specific methods =====
 

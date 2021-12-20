@@ -249,7 +249,7 @@ class StatePredictor:
         curr_pos = numpy.array(self.rob.cached['getAgentPos'][0])
         prev_pos = numpy.array(self.rob.cached_buffer['getAgentPos'][0])
         action_magnitude = numpy.linalg.norm(curr_pos-prev_pos)
-        if action_magnitude < self.stuck_thresh:
+        if action_magnitude < self.stuck_thresh and action_magnitude > 1e-6:
             return True
         else:
             return False

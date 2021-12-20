@@ -18,7 +18,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector
 import common
 from common import stop_motion, grid_to_vec_walking, direction_to_target
-from tagilmo.utils.mathutils import normAngle
+from tagilmo.utils.mathutils import toRadAndNorm
 
 from network import QVisualNetwork
 
@@ -203,7 +203,7 @@ class Trainer(common.Trainer):
 
         # use relative change for yaws
         for i in range(len(yaws) - 1):
-            yaws[i] =  normAngle((yaws[i] - yaws[i + 1]) * math.pi/180.)
+            yaws[i] =  toRadAndNorm(yaws[i] - yaws[i + 1])
         yaws.pop()
         pitches.pop()
         state = torch.as_tensor(actions + pitches + yaws)

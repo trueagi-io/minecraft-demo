@@ -16,7 +16,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector
 import common
 from common import stop_motion, grid_to_vec_walking, direction_to_target
-from tagilmo.utils.mathutils import normAngle
+from tagilmo.utils.mathutils import toRadAndNorm
 
 
 mission_ending = """
@@ -86,8 +86,8 @@ class Trainer(common.Trainer):
             data = self.mc.getImage()
             aPos = self.mc.getAgentPos()
             if not any(x is None for x in (data, aPos)):
-                self_pitch = normAngle(aPos[3]*math.pi/180.)
-                self_yaw = normAngle(aPos[4]*math.pi/180.)
+                self_pitch = toRadAndNorm(aPos[3])
+                self_yaw = toRadAndNorm(aPos[4])
 
                 data = data.reshape((240, 320, 3 + self.want_depth)).transpose(2, 0, 1) / 255.
                 pitch_yaw = torch.as_tensor([self_pitch, self_yaw])

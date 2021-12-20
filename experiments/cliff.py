@@ -14,7 +14,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector
 import common
 from common import stop_motion, grid_to_vec_walking, direction_to_target
-from tagilmo.utils.mathutils import normAngle
+from tagilmo.utils.mathutils import toRadAndNorm
 
 
 class DeadException(RuntimeError):
@@ -128,8 +128,8 @@ class Trainer(common.Trainer):
         # 'XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw'
         # take pitch, yaw
         # take XPos, YPos, ZPos modulo 1
-        self_pitch = normAngle(aPos[3]*math.pi/180.)
-        self_yaw = normAngle(aPos[4]*math.pi/180.)
+        self_pitch = toRadAndNorm(aPos[3])
+        self_yaw = toRadAndNorm(aPos[4])
         xpos, ypos, zpos = [_ % 1 for _ in aPos[0:3]]
         logging.debug("%.2f %.2f %.2f ", xpos, ypos, zpos)
         self_pos_enc = torch.as_tensor([self_pitch, self_yaw, xpos, ypos, zpos])

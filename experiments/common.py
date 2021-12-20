@@ -5,7 +5,7 @@ import math
 import numpy
 import numpy.linalg
 from time import sleep
-from tagilmo.utils.mathutils import normAngle
+from tagilmo.utils.mathutils import normAngle, degree2rad
 
 logger = logging.getLogger()
 
@@ -125,8 +125,8 @@ def lookAt(mc, pos):
         if aPos is None:
             continue
         [pitch, yaw] = mc.dirToPos([aPos[0], aPos[1] + 1.66, aPos[2]], pos)
-        pitch = normAngle(pitch - aPos[3]*math.pi/180.)
-        yaw = normAngle(yaw - aPos[4]*math.pi/180.)
+        pitch = normAngle(pitch - degree2rad(aPos[3]))
+        yaw = normAngle(yaw - degree2rad(aPos[4]))
         if abs(pitch)<0.02 and abs(yaw)<0.02: break
         mc.sendCommand("turn " + str(yaw*0.4))
         mc.sendCommand("pitch " + str(pitch*0.4))
@@ -147,8 +147,8 @@ def direction_to_target(mc, pos):
     aPos = mc.getAgentPos()
     aPos = [aPos[0], aPos[1] + 1.66, aPos[2], aPos[3], aPos[4]]
     [pitch, yaw] = mc.dirToPos(aPos, pos)
-    pitch = normAngle(pitch - aPos[3]*math.pi/180.)
-    yaw = normAngle(yaw - aPos[4]*math.pi/180.)
+    pitch = normAngle(pitch - degree2rad(aPos[3]))
+    yaw = normAngle(yaw - degree2rad(aPos[4]))
     dist = math.sqrt((aPos[0] - pos[0]) * (aPos[0] - pos[0]) + (aPos[2] - pos[2]) * (aPos[2] - pos[2]))
     return pitch, yaw, dist
 

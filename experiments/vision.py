@@ -14,7 +14,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector
 import common
 from common import stop_motion, grid_to_vec_walking, direction_to_target
-from tagilmo.utils.mathutils import normAngle
+from tagilmo.utils.mathutils import normAngle, toRadAndNorm, degree2rad
 
 import tree
 from goodpoint import GoodPoint
@@ -62,8 +62,8 @@ class Trainer(tree.Trainer):
             aPos = mc.getAgentPos()
             if aPos is None:
                 continue
-            current_pitch = normAngle(aPos[3]*math.pi/180.)
-            current_yaw = normAngle(aPos[4]*math.pi/180.)
+            current_pitch = toRadAndNorm(aPos[3])
+            current_yaw = toRadAndNorm(aPos[4])
             pitch = normAngle(normAngle(pitch_new) - current_pitch)
             yaw = normAngle(normAngle(yaw_new) - current_yaw)
             if abs(pitch)<0.02 and abs(yaw)<0.02: break
@@ -143,10 +143,10 @@ class Trainer(tree.Trainer):
             aPos = self.mc.getAgentPos()
 
             if not any(x is None for x in (data, aPos)):
-                pitch_raw = aPos[3] * math.pi/180.
-                yaw_raw = aPos[4] * math.pi/180.
-                self_pitch = normAngle(aPos[3] * math.pi/180.)
-                self_yaw = normAngle(aPos[4] * math.pi/180.)
+                pitch_raw = degree2rad(aPos[3])
+                yaw_raw = degree2rad(aPos[4])
+                self_pitch = toRadAndNorm(aPos[3])
+                self_yaw = toRadAndNorm(aPos[4])
 
                 data = data.reshape((240, 320, 3 + self.want_depth)).transpose(2, 0, 1) / 255.
                 pitch_yaw = torch.as_tensor([self_pitch, self_yaw])

@@ -2,7 +2,7 @@ import math
 from time import sleep
 from tagilmo.utils.malmo_wrapper import MalmoConnector
 import tagilmo.utils.mission_builder as mb
-
+from tagilmo.utils.mathutils import degree2rad
 
 class TargetRunner:
     
@@ -12,7 +12,7 @@ class TargetRunner:
         xs = mc.getAgentPos()
         if crossObj is None:
             print("Warning: no object selected. Just running a little")
-            self.target = [xs[0] - 10 * math.sin(math.pi*xs[4]/180.), xs[1], xs[2] + 10 * math.cos(math.pi*xs[4]/180.)]
+            self.target = [xs[0] - 10 * math.sin(degree2rad(xs[4])), xs[1], xs[2] + 10 * math.cos(degree2rad(xs[4]))]
         else:
             self.target = [mc.getLineOfSight('x'), mc.getLineOfSight('y'), mc.getLineOfSight('z')]
 

@@ -4,6 +4,8 @@ from time import sleep
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
 
+from tagilmo.utils.mathutils import normAngle, degree2rad
+
 # This script shows a relatively complex behavior of gathering resources
 # for an iron pickaxe. It includes searchng for logs, mining stones, etc.
 # There are many heurisics and many things that can go wrong,
@@ -16,14 +18,6 @@ import tagilmo.utils.mission_builder as mb
 # * high-level plan (the agent can run out of sticks, when the plan assumes it has enough)
 # The longer the plan, the more things can go wrong.
 # It is instructive to examine failure cases.
-
-
-# ============== some helper functions ==============
-
-def normAngle(angle):
-    while (angle < -math.pi): angle += 2 * math.pi
-    while (angle > math.pi): angle -= 2 * math.pi
-    return angle
 
 
 # ============== some hand-coded skills ==============
@@ -65,8 +59,8 @@ def lookDir(rob, pitch, yaw):
     for t in range(3000):
         sleep(0.02) # wait for action
         aPos = rob.waitNotNoneObserve('getAgentPos')
-        dPitch = normAngle(pitch - aPos[3]*math.pi/180.)
-        dYaw = normAngle(yaw - aPos[4]*math.pi/180.)
+        dPitch = normAngle(pitch - degree2rad(aPos[3]))
+        dYaw = normAngle(yaw - degree2rad(aPos[4]))
         if abs(dPitch)<0.02 and abs(dYaw)<0.02: break
         rob.sendCommand("turn " + str(dYaw*0.4))
         rob.sendCommand("pitch " + str(dPitch*0.4))
@@ -80,8 +74,8 @@ def lookAt(rob, pos):
         sleep(0.02)
         aPos = rob.waitNotNoneObserve('getAgentPos')
         [pitch, yaw] = rob.dirToAgentPos(pos)
-        pitch = normAngle(pitch - aPos[3]*math.pi/180.)
-        yaw = normAngle(yaw - aPos[4]*math.pi/180.)
+        pitch = normAngle(pitch - degree2rad(aPos[3]))
+        yaw = normAngle(yaw - degree2rad(aPos[4]))
         if abs(pitch)<0.02 and abs(yaw)<0.02: break
         rob.sendCommand("turn " + str(yaw*0.4))
         rob.sendCommand("pitch " + str(pitch*0.4))

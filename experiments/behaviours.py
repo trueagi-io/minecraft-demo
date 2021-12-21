@@ -3,7 +3,7 @@ import math
 import numpy
 import torch
 import time
-from common import normAngle, degree2rad
+from tagilmo.utils.mathutils import normAngle, degree2rad
 from b_tree import *
 
 

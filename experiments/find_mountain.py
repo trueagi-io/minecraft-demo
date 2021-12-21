@@ -1,6 +1,6 @@
 import cv2
 import sys
-from common import normAngle, degree2rad
+from tagilmo.utils.mathutils import normAngle, degree2rad
 from examples.neural import NeuralWrapper
 from b_tree import *
 import torch

@@ -10,10 +10,11 @@ class TAgent:
         mc = MalmoConnector(miss)
         mc.safeStart()
         self.rob = RobustObserverWithCallbacks(mc)
-        w = miss.agentSections[0].agenthandlers.video_producer.width
-        callback = NeuralWrapper(self.rob, 320/w, w//320)
-                                # cb_name, on_change event, callback
-        self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
+        vp = miss.agentSections[0].agenthandlers.video_producer
+        if vp is not None:
+            callback = NeuralWrapper(self.rob, 320/vp.width, vp.width//320)
+                                    # cb_name, on_change event, callback
+            self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
         self.blockMem = NoticeBlocks()
         self.visualizer = visualizer
 

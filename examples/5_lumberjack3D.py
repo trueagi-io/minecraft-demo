@@ -6,59 +6,15 @@ import cv2
 import numpy
 import os
 from time import sleep, time
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserverWithCallbacks
 import tagilmo.utils.mission_builder as mb
 from examples import minelogy
-from neural import NeuralWrapper
+from examples.agent import TAgent
 import logging
 from vis import Visualizer
 
 from tagilmo.utils.mathutils import *
 
 SCALE = 4
-RESIZE = 1/SCALE
-
-class NoticeBlocks:
-
-    def __init__(self):
-        self.blocks = {}
-        self.max_len = 5
-        self.ignore_blocks = ['air', 'grass', 'tallgrass', 'double_plant', 'dirt', 'stone']
-        self.dx = 4
-
-    def updateBlock(self, block, pos):
-        if block not in self.blocks:
-            self.blocks[block] = []
-        ps = self.blocks[block]
-        for p in ps:
-            if abs(p[0] - pos[0]) <= self.dx and \
-               abs(p[1] - pos[1]) <= self.dx and \
-               abs(p[2] - pos[2]) <= self.dx:
-                   return
-        ps.append(pos)
-        self.blocks[block] = ps[1:] if len(ps) > self.max_len else ps
-
-    def removeIfMissing(self, current_block, blocks, pos):
-        for block in blocks:
-            if block not in self.blocks or block == current_block:
-                continue
-            self.blocks[block].remove(pos)
-
-    def updateBlocks(self, rob, focus_blocks=[]):
-        grid = rob.cached['getNearGrid'][0]
-        sight = rob.cached['getLineOfSights'][0]
-        if sight is not None and (sight['type'] not in self.ignore_blocks or sight['type'] in focus_blocks):
-            self.updateBlock(sight['type'], int_coords([sight['x'], sight['y'], sight['z']]))
-        for i in range(len(grid)):
-            bUpdate = grid[i] not in self.ignore_blocks or grid[i] in focus_blocks
-            if bUpdate or focus_blocks:
-                pos = rob.gridIndexToAbsPos(i, observeReq=False)
-                pos = int_coords(pos)
-            if focus_blocks:
-                self.removeIfMissing(grid[i], focus_blocks, pos)
-            if bUpdate:
-                self.updateBlock(grid[i], pos)
-
 
 class MoveForward:
 
@@ -237,6 +193,8 @@ class StatePredictor:
     def is_stucked(self):
         curr_pos = numpy.array(self.rob.cached['getAgentPos'][0])
         prev_pos = numpy.array(self.rob.cached_buffer['getAgentPos'][0])
+        if prev_pos is None or curr_pos is None:
+            return False
         action_magnitude = numpy.linalg.norm(curr_pos-prev_pos)
         if action_magnitude < self.stuck_thresh and action_magnitude > 1e-6:
             return True
@@ -498,29 +456,7 @@ class MineAround:
         return not self.precond()
 
 
-class TAgent:
-
-    def __init__(self, miss, visualizer=None):
-        mc = MalmoConnector(miss)
-        mc.safeStart()
-        self.rob = RobustObserverWithCallbacks(mc)
-        callback = NeuralWrapper(self.rob, RESIZE, SCALE)
-                                # cb_name, on_change event, callback
-        self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
-        self.blockMem = NoticeBlocks()
-        self.visualizer = visualizer
-
-    def visualize(self):
-        if self.visualizer is None:
-            return
-        segm_data = self.rob.getCachedObserve('getNeuralSegmentation')
-        if segm_data is None:
-            return
-        heatmaps, img = segm_data
-        # self.visualizer('image', (img * 255).long().numpy().astype(numpy.uint8)[0].transpose(1,2,0))
-        self.visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
-        self.visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
-        self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
+class LJAgent(TAgent):
 
     def howtoMine(self, targ):
         t = minelogy.get_otype(targ[0]) # TODO?: other blocks?
@@ -758,7 +694,7 @@ if __name__ == '__main__':
     world1 = mb.defaultworld(forceReset="true")
     miss.setWorld(world1)
     # miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
-    agent = TAgent(miss, visualizer=visualizer)
+    agent = LJAgent(miss, visualizer=visualizer)
     agent.rob.sendCommand("chat /difficulty peaceful")
     # agent.loop()
     agent.loop(target = {'type': 'wooden_pickaxe'})

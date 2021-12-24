@@ -13,6 +13,7 @@ import MalmoPython
 import numpy
 import tagilmo.utils.malmoutils as malmoutils
 from tagilmo.utils.mission_builder import MissionXML
+from tagilmo.utils.mathutils import *
 
 logger = logging.getLogger('malmo')
 
@@ -209,6 +210,12 @@ class MalmoConnector:
         else:
             return None
 
+    def getAir(self, nAgent=0):
+        if (self.observe[nAgent] is not None) and ('Air' in self.observe[nAgent]):
+            return self.observe[nAgent]['Air']
+        else:
+            return None
+
     def getChat(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('Chat' in self.observe[nAgent]):
             return self.observe[nAgent]['Chat']
@@ -265,8 +272,8 @@ class RobustObserver:
         self.nAgent = nAgent
         self.tick = 0.02
         self.max_dt = 1.0
-        self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights',
-                        'getLife', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat']
+        self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
+                        'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat']
         self.canBeNone = ['getLineOfSights', 'getChat']
 
         if not self.mc.supportsVideo():
@@ -365,6 +372,20 @@ class RobustObserver:
         aPos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
         return self.mc.dirToPos([aPos[0], aPos[1]+1.66, aPos[2]], pos)
 
+    def blockCenterFromPos(self, pos):
+        ''' Get block center assuming that `pos` is in its observed face '''
+        aPos = self.getCachedObserve('getAgentPos')
+        aPos = [aPos[0], aPos[1] + 1.66, aPos[2]]
+        dist = dist_vec(aPos, pos)
+        # more slightly inside the block before `int_coord`
+        return [int_coord(tx + 0.01 * (tx - ax) / dist) + 0.5 for ax, tx in zip(aPos, pos)]
+
+    def blockCenterFromRay(self):
+        los = self.getCachedObserve('getLineOfSights')
+        if los is None or 'hitType' not in los or los['hitType'] != 'block':
+            return None
+        return self.blockCenterFromPos([los['x'], los['y'], los['z']])
+
     def gridIndexToAbsPos(self, index, observeReq=True):
         [x, y, z] = self.mc.gridIndexToPos(index, self.nAgent)
         pos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
@@ -380,7 +401,7 @@ class RobustObserver:
 
     def getYawDeltas(self, observeReq=True):
         pos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
-        return MalmoConnector.yawDelta(pos[4] * math.pi / 180.)
+        return MalmoConnector.yawDelta(degree2rad(pos[4]))
     
     def gridInYaw(self, observeReq=True):
         '''Vertical slice of the grid in the line-of-sight direction'''

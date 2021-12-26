@@ -261,7 +261,8 @@ class MalmoConnector:
 
 class RobustObserver:
 
-    passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass', 'reeds', 'red_flower', 'yellow_flower']
+    passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass',
+                      'reeds', 'red_flower', 'yellow_flower', 'vine', 'red_mushroom', 'brown_mushroom']
     deadlyBlocks = ['lava']
     # Should we merge these types of commands in one list?
     explicitlyPoseChangingCommands = ['move', 'jump', 'pitch', 'turn']
@@ -483,13 +484,15 @@ class RobustObserver:
         inv = self.waitNotNoneObserve('getInventory', True, observeReq=observeReq)
         return list(filter(lambda entry: entry['type']==item, inv))
 
-    def nearestFromGrid(self, obj, observeReq=True):
+    def nearestFromGrid(self, objs, observeReq=True):
+        if not isinstance(objs, list):
+            objs = [objs]
         grid = self.waitNotNoneObserve('getNearGrid', observeReq=observeReq)
         pos  = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
         d2 = 10000
         target = None
         for i in range(len(grid)):
-            if grid[i] != obj: continue
+            if grid[i] not in objs: continue
             [x, y, z] = self.mc.gridIndexToPos(i)
             d2c = x * x + (y - 0.75) * (y - 0.75) + z * z
             if d2c < d2:

@@ -10,6 +10,10 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_shovel', 'wooden_shovel', None]},
           {'type': 'dirt'}
          ),
+         ({'blocks': [{'type': 'stone'}],
+           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+          {'type': 'stone'}
+         ),
          ({'blocks': [{'type': 'stone', 'variant': 'stone'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'cobblestone'}
@@ -119,3 +123,64 @@ def matchEntity(source, target):
         if target_v != get_ovariant(source) and target_v[0] != '$':
             return False
     return True
+
+def find_mine_by_block(block):
+    for mine in mines:
+        for b in mine[0]['blocks']:
+            if matchEntity(b, block):
+                return mine
+    return None
+
+def find_mines_by_result(entity):
+    return list(filter(lambda mine: matchEntity(mine[1], entity), mines))
+
+def find_crafts_by_result(entity):
+    return list(filter(lambda craft: matchEntity(craft[1], entity), crafts))
+
+def select_minetool(invent, mine_entry):
+    if mine_entry is None:
+        return None
+    inv = [{'type': 'air', 'index': n, 'quantity': 64} for n in range(36)]
+    for item in invent:
+        inv[item['index']] = item
+    result = None
+    for tool in mine_entry[0]['tools']:
+        for item in inv:
+            if tool is None and (result is None or result['quantity'] < item['quantity']):
+                result = item
+            elif tool == item['type']:
+                return item
+    return result
+
+def findInInventory(invent, target):
+    for item in invent:
+        if not matchEntity(item, target):
+            continue
+        if 'quantity' in target:
+            if item['quantity'] < target['quantity']:
+                continue
+        return item
+    return None
+
+def isInInventory(invent, target):
+    return findInInventory(invent, target) is not None
+
+def lackCraftItems(invent, craft_entry):
+    missing = []
+    for item in craft_entry[0]:
+        if not isInInventory(invent, item):
+            missing += [item]
+    return missing
+
+def assoc_blocks(blocks):
+    assoc = {'log': ['log2', 'leaves', 'leaves2'],
+             'log2': ['log', 'leaves2', 'leaves'],
+             'coal_ore': ['stone'],
+             'iron_ore': ['stone']}
+    blocks2 = []
+    for b in blocks:
+        if b in assoc:
+            blocks2 += assoc[b]
+    return blocks2
+
+

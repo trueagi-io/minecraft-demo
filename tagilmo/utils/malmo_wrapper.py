@@ -494,7 +494,7 @@ class RobustObserver:
         for i in range(len(grid)):
             if grid[i] not in objs: continue
             [x, y, z] = self.mc.gridIndexToPos(i)
-            d2c = x * x + (y - 0.75) * (y - 0.75) + z * z
+            d2c = x * x + (y - 1.66) * (y - 1.66) + z * z
             if d2c < d2:
                 d2 = d2c
                 # target = self.gridIndexToAbsPos(i, observeReq)

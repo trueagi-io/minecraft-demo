@@ -10,6 +10,14 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_shovel', 'wooden_shovel', None]},
           {'type': 'dirt'}
          ),
+         ({'blocks': [{'type': 'sand'}],
+           'tools': ['stone_shovel', 'wooden_shovel', None]},
+          {'type': 'sand'}
+         ),
+         ({'blocks': [{'type': 'sandstone'}],
+           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+          {'type': 'sandstone'}
+         ),
          ({'blocks': [{'type': 'stone'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'stone'}
@@ -42,6 +50,10 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': [None]},
           {'type': 'wheat_seeds'}
          )
+         #({'blocks': [{'type': 'deadbush'}],
+         #  'tools': [None]},
+         # {'type': 'stick'}
+         #)
         ]
 
 crafts = [([{'type': 'log', 'quantity': 1}],
@@ -90,7 +102,9 @@ crafts = [([{'type': 'log', 'quantity': 1}],
           ([{'type': 'stick', 'quantity': 1}, {'type': 'cobblestone', 'quantity': 1}],
            {'type': 'lever'}),
           ([{'type': 'pumpkin', 'quantity': 1}],
-            {'type': 'pumpkin_seeds'})
+            {'type': 'pumpkin_seeds'}),
+          ([{'type': 'sand', 'quantity': 1}],
+            {'type': 'glass'})
          ]
 
 def get_otype(obj):

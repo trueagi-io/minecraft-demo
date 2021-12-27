@@ -261,7 +261,7 @@ class MalmoConnector:
 
 class RobustObserver:
 
-    passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass', 'snow_layer',
+    passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass', 'snow_layer', 'deadbush',
                       'reeds', 'red_flower', 'yellow_flower', 'vine', 'red_mushroom', 'brown_mushroom']
     deadlyBlocks = ['lava', 'cactus']
     # Should we merge these types of commands in one list?
@@ -494,7 +494,8 @@ class RobustObserver:
         for i in range(len(grid)):
             if grid[i] not in objs: continue
             [x, y, z] = self.mc.gridIndexToPos(i)
-            d2c = x * x + (y - 1.66) * (y - 1.66) + z * z
+            # penalty for height
+            d2c = x * x + (y - 1.66) * (y - 1.66) * 4 + z * z
             if d2c < d2:
                 d2 = d2c
                 # target = self.gridIndexToAbsPos(i, observeReq)

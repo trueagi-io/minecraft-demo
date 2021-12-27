@@ -539,6 +539,12 @@ class Obtain(Switcher):
         invent = self.rob.waitNotNoneObserve('getInventory', False)
         new_items = list(filter(lambda item: not minelogy.isInInventory(invent, item), self.items))
         if self.delegate is not None:
+            # TODO TODO: the problem here is that the agent can decide to find log,
+            # but encounter log2, start mining it and doesn't reconsider its plan
+            # (although it can make plank, it will not)
+            # A non-hacky solution is to introduce SOr, which selects one branch
+            # to consider, although update other branches checking if they become more
+            # achievable (also, it would be nice to associate costs with plans) -- TODO
             self.stopDelegate = new_items != self.items
         if self.delegate is None:
             for item in new_items:
@@ -791,3 +797,4 @@ if __name__ == '__main__':
 
     agent = Achiever(miss, visualizer=visualizer)
     agent.run()
+    visualizer.stop()

@@ -261,9 +261,9 @@ class MalmoConnector:
 
 class RobustObserver:
 
-    passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass',
+    passableBlocks = ['air', 'water', 'lava', 'double_plant', 'tallgrass', 'snow_layer',
                       'reeds', 'red_flower', 'yellow_flower', 'vine', 'red_mushroom', 'brown_mushroom']
-    deadlyBlocks = ['lava']
+    deadlyBlocks = ['lava', 'cactus']
     # Should we merge these types of commands in one list?
     explicitlyPoseChangingCommands = ['move', 'jump', 'pitch', 'turn']
     implicitlyPoseChangingCommands = ['attack']

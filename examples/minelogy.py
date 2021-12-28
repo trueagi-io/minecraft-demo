@@ -2,6 +2,18 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
           {'type': 'log'}
          ),
+         ({'blocks': [{'type': 'log', 'variant': 'oak'}],
+           'tools': ['stone_axe', 'wooden_axe', None]},
+          {'type': 'log', 'variant': 'oak'}
+         ),
+         ({'blocks': [{'type': 'log', 'variant': 'birch'}],
+           'tools': ['stone_axe', 'wooden_axe', None]},
+          {'type': 'log', 'variant': 'birch'}
+         ),
+         ({'blocks': [{'type': 'log', 'variant': 'spruce'}],
+           'tools': ['stone_axe', 'wooden_axe', None]},
+          {'type': 'log', 'variant': 'spruce'}
+         ),
          ({'blocks': [{'type': 'log2'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
           {'type': 'log2'}
@@ -9,6 +21,26 @@ mines = [({'blocks': [{'type': 'log'}],
          ({'blocks': [{'type': 'grass'}, {'type': 'dirt'}],
            'tools': ['stone_shovel', 'wooden_shovel', None]},
           {'type': 'dirt'}
+         ),
+         ({'blocks': [{'type': 'sand'}],
+           'tools': ['stone_shovel', 'wooden_shovel', None]},
+          {'type': 'sand'}
+         ),
+         ({'blocks': [{'type': 'sand'}],
+           'tools': ['stone_shovel', 'wooden_shovel', None]},
+          {'type': 'sand'}
+         ),
+         ({'blocks': [{'type': 'clay'}],
+           'tools': ['stone_shovel', 'wooden_shovel', None]},
+          {'type': 'clay_ball'}
+         ),
+         ({'blocks': [{'type': 'gravel'}],
+           'tools': [None]},
+          {'type': 'gravel'}
+         ),
+         ({'blocks': [{'type': 'sandstone'}],
+           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+          {'type': 'sandstone'}
          ),
          ({'blocks': [{'type': 'stone'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
@@ -42,10 +74,20 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': [None]},
           {'type': 'wheat_seeds'}
          )
+         #({'blocks': [{'type': 'deadbush'}],
+         #  'tools': [None]},
+         # {'type': 'stick'}
+         #)
         ]
 
 crafts = [([{'type': 'log', 'quantity': 1}],
            {'type': 'planks', 'quantity': 4}),
+          ([{'type': 'log', 'variant': 'oak', 'quantity': 1}],
+           {'type': 'planks', 'variant': 'oak', 'quantity': 4}),
+          ([{'type': 'log', 'variant': 'spruce', 'quantity': 1}],
+           {'type': 'planks', 'variant': 'spruce', 'quantity': 4}),
+          ([{'type': 'log', 'variant': 'birch', 'quantity': 1}],
+           {'type': 'planks', 'variant': 'birch', 'quantity': 4}),
           ([{'type': 'log2', 'quantity': 1}],
            {'type': 'planks', 'quantity': 4}),
           ([{'type': 'planks', 'quantity': 2}],
@@ -79,7 +121,11 @@ crafts = [([{'type': 'log', 'quantity': 1}],
             {'type': 'wooden_slab', 'quantity': 6}),
           ([{'type': 'planks', 'quantity': 1}],
             {'type': 'wooden_button'}),
-          ([{'type': 'planks', 'quantity': 6}],
+          ([{'type': 'planks', 'variant': 'spruce', 'quantity': 6}],
+            {'type': 'spruce_door', 'quantity': 3}),
+          ([{'type': 'planks', 'variant': 'birch', 'quantity': 6}],
+            {'type': 'birch_door', 'quantity': 3}),
+          ([{'type': 'planks', 'variant': 'oak', 'quantity': 6}],
             {'type': 'wooden_door', 'quantity': 3}),
           ([{'type': 'planks', 'quantity': 6}],
             {'type': 'trapdoor', 'quantity': 2}),
@@ -90,7 +136,9 @@ crafts = [([{'type': 'log', 'quantity': 1}],
           ([{'type': 'stick', 'quantity': 1}, {'type': 'cobblestone', 'quantity': 1}],
            {'type': 'lever'}),
           ([{'type': 'pumpkin', 'quantity': 1}],
-            {'type': 'pumpkin_seeds'})
+            {'type': 'pumpkin_seeds'}),
+          ([{'type': 'sand', 'quantity': 1}],
+            {'type': 'glass'})
          ]
 
 def get_otype(obj):

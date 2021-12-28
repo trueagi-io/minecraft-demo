@@ -215,7 +215,6 @@ class MoveXZBlind(RobGoal):
         else:
             proj_x *= 0.33
             proj_y *= 0.33
-        acts = []
         return [['strafe', str(proj_y)], ['move', str(proj_x)]]
 
     def stop(self):
@@ -836,7 +835,7 @@ if __name__ == '__main__':
                 agenthandlers=agent_handlers,)])
 
     world0 = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake")
-    world1 = mb.defaultworld(forceReset="true", seed = "71899")
+    world1 = mb.defaultworld(forceReset="true")
     miss.setWorld(world1)
 
     agent = Achiever(miss, visualizer=visualizer)

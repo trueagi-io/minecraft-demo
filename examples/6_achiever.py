@@ -630,7 +630,7 @@ class Obtain(Switcher):
             self.delegate = best_goal
         if self.delegate is None and new_items != []:
             logging.warn("PANIC: don't know how to obtain %s", str(new_items))
-            self.items = []
+            new_items = []
         self.items = new_items
         super().update()
 

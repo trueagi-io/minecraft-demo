@@ -268,12 +268,14 @@ class ActT(Goal):
     def __init__(self, a, s, tm, once=False):
         super().__init__()
         self.tm = tm
-        self.t0 = time()
+        self.t0 = None
         self.a = [a]
         self.s = [s]
         self.once = once
 
     def act(self):
+        if self.t0 is None:
+            self.t0 = time()
         if self.once:
             a = self.a.copy()
             self.a = []
@@ -285,15 +287,35 @@ class ActT(Goal):
         return self.s
 
     def finished(self):
-        return time() - self.t0 > self.tm
+        return (self.t0 is not None) and (time() - self.t0 > self.tm)
+
+
+class JumpUpOrObtain(RobGoal):
+
+    def __init__(self, agent):
+        rob = agent.rob
+        build_blocks = ['dirt', 'grass', 'stone', 'sand', 'sandstone', 'gravel']
+        invent = rob.cached['getInventory'][0]
+        for block in build_blocks:
+            item = minelogy.findInInventory(invent, {'type': block})
+            if item:
+                super().__init__(rob,
+                    SAnd([ActT(['swapInventoryItems', '0', str(item['index'])], [], 0.2, True),
+                          LookPitch(rob, 3.14/2),
+                          MoveBlockCenter(rob),
+                          CAnd([ActT(['jump', '1'], ['jump', '0'], 0.5),
+                                ActT(['use', '1'], ['use', '0'], 0.5)])]))
+                return
+        super().__init__(agent, Obtain(agent, [{'type': 'dirt', 'quantity': 10}]))
 
 
 class ApproachPos(Switcher):
 
-    def __init__(self, rob, pos, dist_thresh=0.9):
-        super().__init__(rob)
+    def __init__(self, agent, pos, dist_thresh=0.9):
+        self.agent = agent
+        super().__init__(agent.rob)
         self.target = pos
-        self.move = MoveAndDirectBlind(rob, pos, dist_thresh)
+        self.move = MoveAndDirectBlind(agent.rob, pos, dist_thresh)
         self.dist_thresh = dist_thresh
         self.current_state = ['start']
         self.last_state = None
@@ -322,6 +344,9 @@ class ApproachPos(Switcher):
             elif self.current_state[0] == 'dig' or self.current_state[0] == 'cliff':
                 self.delegate = DigUnder(self.rob)
                 strafe = None
+            elif self.current_state[0] == 'fly':
+                self.delegate = JumpUpOrObtain(self.agent)
+                strafe = None
             else:
                 return #TODO
             if strafe is not None:
@@ -342,9 +367,9 @@ class ApproachPos(Switcher):
 
 class BasicSearch(RobGoal):
 
-    def __init__(self, rob, blocks):
-        super().__init__(rob)
-        self.delegate = ApproachPos(rob, self.__get_target_pos(0, 0))
+    def __init__(self, agent, blocks):
+        super().__init__(agent.rob)
+        self.delegate = ApproachPos(agent, self.__get_target_pos(0, 0))
         self.blocks = blocks
         self.t0 = time()
 
@@ -381,7 +406,7 @@ class BasicSearch(RobGoal):
 class NoticeSearch(BasicSearch):
 
     def __init__(self, agent, blocks):
-        super().__init__(agent.rob, blocks)
+        super().__init__(agent, blocks)
         self.agent = agent
         self.agent.blockMem.add_focus_blocks(blocks)
 
@@ -430,8 +455,9 @@ class NeuralSearch(NoticeSearch):
 
 class PickNear(Switcher):
 
-    def __init__(self, rob, items, max_cnt=None):
-        super().__init__(rob)
+    def __init__(self, agent, items, max_cnt=None):
+        super().__init__(agent.rob)
+        self.agent = agent
         self.items = items
         self.cnt = max_cnt if max_cnt is not None else \
             (5 if items[0] == '*' else 20)
@@ -449,7 +475,8 @@ class PickNear(Switcher):
                    break
         if self.delegate is None and target is not None and self.cnt > 0:
             self.cnt -= 1
-            self.delegate = ApproachPos(self.rob, [target['x'], target['y'], target['z']])
+            # TODO? better finish criterium (entity is picked?)
+            self.delegate = ApproachPos(self.agent, [target['x'], target['y'], target['z']], 0.5)
         if self.delegate is not None and target is None:
             self.stopDelegate = True
         super().update()
@@ -470,10 +497,12 @@ class SelectMineTool(RobGoal):
             tool = minelogy.select_minetool(inv, mine_entry)
             self.tool_idx = 0 if tool is None else tool['index']
             self.last_target = los['type']
+            # TODO: if tool is None and mine_entry is not None:
 
     def act(self):
         if self.finished():
             return []
+        # TODO: if self.tool_idx != 0 +++ hotbar once?
         a = ['swapInventoryItems', '0', str(self.tool_idx)]
         self.tool_idx = 0
         return [a, ['hotbar.1', '1'], ['hotbar.1', '0']]
@@ -509,7 +538,7 @@ class FindAndMine(Switcher):
                 self.stage = 1
                 self.last_targ = targ
                 targ = list(map(lambda x: x+0.5, self.last_targ))
-                self.delegate = ApproachPos(self.rob, targ, 2.5)
+                self.delegate = ApproachPos(self.agent, targ, 2.5)
             elif self.stage == 1:
                 self.stage = 2
                 self.delegate = SAnd([
@@ -551,8 +580,8 @@ class Obtain(Switcher):
                 name = minelogy.get_otype(item)
                 target = self.rob.nearestFromEntities(name)
                 if target is not None:
-                    # self.delegate = ApproachPos(self.rob, target)
-                    self.delegate = PickNear(self.rob, [name]) #TODO: add radius?
+                    # self.delegate = ApproachPos(self.agent, target)
+                    self.delegate = PickNear(self.agent, [name]) #TODO: add radius?
                     break
         if self.delegate is None:
             # we could consider lacking items in parallel, but it's difficult,
@@ -601,6 +630,7 @@ class Obtain(Switcher):
             self.delegate = best_goal
         if self.delegate is None and new_items != []:
             logging.warn("PANIC: don't know how to obtain %s", str(new_items))
+            self.items = []
         self.items = new_items
         super().update()
 
@@ -692,6 +722,8 @@ class GridAnalyzer:
                 return ['cliff', ut]
             return ['down', ut]
         else: # obstacles
+            # TODO TODO: the logic can be made more complex:
+            #   - if dy<-self.dist than mine ladders, else ok to jump or even 'fly'
             # TODO: what if not 'obstacle'???
             if res[3]['d'] <= DIST_CL and res[3]['status'] == 'obstacle':
                 return ['mine', res[3]['d'], res[3]['o']]
@@ -718,7 +750,8 @@ class GridAnalyzer:
             if self.target[1] < self.pa[1] and r[0] == 'down':
                 res = r + ['left' if s <= 1 else 'right']
                 continue
-            if r[0] == 'clean' or (res[0] != 'clean' and r[0] == 'jump'):
+            if r[0] == 'clean' or (res[0] != 'clean' and r[0] == 'jump') or \
+               (r[0] != 'deadly' and res[0] == 'deadly'):
                 res = r + ['left' if s <= 1 else 'right']
         return res
 
@@ -752,9 +785,15 @@ class ListenAndDo(Switcher):
 
 class Achiever(TAgent):
 
+    def __init__(self, miss, visualizer=None, goal=None):
+        super().__init__(miss, visualizer)
+        self.set_goal(goal)
+
+    def set_goal(self, goal=None):
+        self.goal = ListenAndDo(self) if goal is None else goal
+
     def run(self):
         running = True
-        self.goal = ListenAndDo(self)
         while running:
             acts, running = self.goal.cycle()
             for act in acts:
@@ -765,7 +804,7 @@ class Achiever(TAgent):
             self.visualize()
         acts = self.goal.stop()
         for act in acts:
-            rob.sendCommand(act)
+            self.rob.sendCommand(act)
 
 
 def setup_logger():
@@ -792,7 +831,7 @@ if __name__ == '__main__':
                 agenthandlers=agent_handlers,)])
 
     world0 = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake")
-    world1 = mb.defaultworld(forceReset="true")
+    world1 = mb.defaultworld(forceReset="true", seed = "62655")
     miss.setWorld(world1)
 
     agent = Achiever(miss, visualizer=visualizer)

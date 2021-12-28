@@ -14,6 +14,18 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_shovel', 'wooden_shovel', None]},
           {'type': 'sand'}
          ),
+         ({'blocks': [{'type': 'sand'}],
+           'tools': ['stone_shovel', 'wooden_shovel', None]},
+          {'type': 'sand'}
+         ),
+         ({'blocks': [{'type': 'clay'}],
+           'tools': ['stone_shovel', 'wooden_shovel', None]},
+          {'type': 'clay_ball'}
+         ),
+         ({'blocks': [{'type': 'gravel'}],
+           'tools': [None]},
+          {'type': 'gravel'}
+         ),
          ({'blocks': [{'type': 'sandstone'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'sandstone'}

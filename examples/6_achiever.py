@@ -215,6 +215,7 @@ class MoveXZBlind(RobGoal):
         else:
             proj_x *= 0.33
             proj_y *= 0.33
+        acts = []
         return [['strafe', str(proj_y)], ['move', str(proj_x)]]
 
     def stop(self):
@@ -697,6 +698,7 @@ class GridAnalyzer:
 
     def analyzePath(self, pos):
         DIST_CL = 9
+        self.last_r2 = 0
         dy = self.target[1] - self.pa[1]
         rd = math.hypot(self.dist, dy-1.66)
         if rd < self.dist_thresh or (self.dist < self.dist_thresh and dy < 2.66 and dy > -0.99):
@@ -708,6 +710,7 @@ class GridAnalyzer:
         res = [self.analyzeLine(pos, level-2) for level in range(5)]
         mt = min(res[2]['d'], res[3]['d'])
         md = min(self.dist * 10, DIST_CL)
+        self.last_r2 = res[2]['d']
         # TODO check if in water; where to check? : just to avoid obstacles or to float? or outside?
         if self.underWater():
             return ['swim', 0]
@@ -727,7 +730,7 @@ class GridAnalyzer:
             # TODO: what if not 'obstacle'???
             if res[3]['d'] <= DIST_CL and res[3]['status'] == 'obstacle':
                 return ['mine', res[3]['d'], res[3]['o']]
-            if self.target[1] - self.pa[1] >= -1:
+            if self.target[1] - self.pa[1] >= -1 or self.inWater():
                 # prefer to jump
                 if res[3]['d'] >= DIST_CL and res[4]['d'] >= DIST_CL:
                     return ['jump', 1]
@@ -745,6 +748,8 @@ class GridAnalyzer:
             dx = (1.5 - s) * self.dp[2] / 1.5
             dz = (s - 1.5) * self.dp[0] / 1.5
             r = self.analyzePath([self.pa[0] + dx, self.pa[1], self.pa[2] + dz])
+            if self.last_r2 < 3: # avoid considering strafing inside blocks (should be improved?)
+                continue
             if r[0] == res[0]:
                 continue
             if self.target[1] < self.pa[1] and r[0] == 'down':
@@ -831,7 +836,7 @@ if __name__ == '__main__':
                 agenthandlers=agent_handlers,)])
 
     world0 = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake")
-    world1 = mb.defaultworld(forceReset="true", seed = "62655")
+    world1 = mb.defaultworld(forceReset="true", seed = "71899")
     miss.setWorld(world1)
 
     agent = Achiever(miss, visualizer=visualizer)

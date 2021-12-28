@@ -8,10 +8,10 @@ import os
 import json
 from time import sleep, time
 import tagilmo.utils.mission_builder as mb
-from examples import minelogy
+
 from examples.agent import TAgent
 import logging
-from vis import Visualizer
+from examples.vis import Visualizer
 
 from tagilmo.utils.mathutils import *
 

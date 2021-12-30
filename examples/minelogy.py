@@ -50,6 +50,10 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'cobblestone'}
          ),
+         #({'blocks': [{'type': 'cobblestone'}],
+         #  'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+         # {'type': 'cobblestone'}
+         #),
          ({'blocks': [{'type': 'coal_ore'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'coal'}

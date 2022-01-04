@@ -148,7 +148,8 @@ class Explorer(TAgent):
 
     def __init__(self, miss, visualizer=None, goal=None):
         super().__init__(miss, visualizer)
-        self.goal = Explore(self)
+        self.goal = ListenAndDo(self)
+        self.goal.delegate = Explore(self)
         self.kb = StaticKnowledge(self.rob)
 
     def run(self):
@@ -167,34 +168,32 @@ class Explorer(TAgent):
             self.rob.sendCommand(act)
 
 
-SCALE = 3
-#setup_logger()
-visualizer = Visualizer()
-visualizer.start()
-video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
-agent_handlers = mb.AgentHandlers(video_producer=video_producer)
-miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Robbo',
-            agenthandlers=agent_handlers,)])
+if __name__ == '__main__':
+    SCALE = 3
+    #setup_logger()
+    visualizer = Visualizer()
+    visualizer.start()
+    video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
+    agent_handlers = mb.AgentHandlers(video_producer=video_producer)
+    miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Robo',
+                agenthandlers=agent_handlers,)])
 
+    world = mb.defaultworld(forceReset="true")
+    miss.setWorld(world)
 
-# https://www.chunkbase.com/apps/superflat-generator
-world0 = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake")
-world1 = mb.defaultworld(forceReset="true")
-miss.setWorld(world1)
+    agent = Explorer(miss, visualizer=visualizer)
+    agent.run()
 
-agent = Explorer(miss, visualizer=visualizer)
-agent.run()
+    '''
+    rob = agent.rob
+    skb = StaticKnowledge(rob)
+    for i in range(600):
+        sleep(0.2)
+        rob.observeProcCached()
+        skb.update()
+        if skb.novelty_list != []:
+            print(skb.novelty_list)
+        skb.novelty_list = []
+    '''
 
-'''
-rob = agent.rob
-
-skb = StaticKnowledge(rob)
-
-for i in range(600):
-    sleep(0.2)
-    rob.observeProcCached()
-    skb.update()
-    if skb.novelty_list != []:
-        print(skb.novelty_list)
-    skb.novelty_list = []
-'''
+    visualizer.stop()

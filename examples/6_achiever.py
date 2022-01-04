@@ -15,33 +15,6 @@ from examples.agent import TAgent
 
 SCALE = 3
 
-class ListenAndDo(Switcher):
-
-    def __init__(self, agent):
-        super().__init__(agent.rob)
-        self.agent = agent
-        self.next_command = None
-        self.terminate = False
-
-    def update(self):
-        self.next_command = self.rob.cached['getChat'][0]
-        if self.next_command is not None:
-            words = self.next_command[0].split(' ')
-            self.rob.cached['getChat'] = (None, self.rob.cached['getChat'][1])
-            if self.delegate is not None:
-                self.stopDelegate = True
-            else:
-                print("Receive command: ", self.next_command)
-                if words[-1] == 'terminate':
-                    self.terminate = True
-                if words[-2] == 'get':
-                    self.delegate = Obtain(self.agent, [{'type': words[-1]}])
-        super().update()
-
-    def finished(self):
-        return self.terminate
-
-
 class Achiever(TAgent):
 
     def __init__(self, miss, visualizer=None, goal=None):

@@ -766,3 +766,33 @@ class GridAnalyzer:
         return res
 
 
+class ListenAndDo(Switcher):
+
+    def __init__(self, agent):
+        super().__init__(agent.rob)
+        self.agent = agent
+        self.next_goal = None
+        self.terminate = False
+
+    def update(self):
+        command = self.rob.cached['getChat'][0]
+        if self.next_goal is not None:
+            self.delegate = self.next_goal
+            self.next_goal = None
+        elif command is not None:
+            words = command[0].split(' ')
+            self.rob.cached['getChat'] = (None, self.rob.cached['getChat'][1])
+            if words[-1] == 'terminate':
+                self.terminate = True
+            if words[-2] == 'get':
+                self.next_goal = Obtain(self.agent, [{'type': words[-1]}])
+            if self.next_goal is not None:
+                print("Received command: ", command)
+                if self.delegate is not None:
+                    self.stopDelegate = True
+        super().update()
+
+    def finished(self):
+        return self.terminate
+
+

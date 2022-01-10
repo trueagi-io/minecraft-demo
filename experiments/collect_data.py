@@ -75,7 +75,8 @@ class DataCollection:
     def store_item(self, item, idx):
         img_path = os.path.join(self.datadir, 'img' + str(idx) + '.png')
         segm_path = os.path.join(self.datadir, 'seg' + str(idx) + '.png')
-        cv2.imwrite(img_path, item[IMAGE])
+        # save image with right colours
+        cv2.imwrite(img_path, cv2.cvtColor(item[IMAGE], cv2.COLOR_RGB2BGR))
         cv2.imwrite(segm_path, item[SEGMENT])
         return img_path, segm_path
 
@@ -130,6 +131,7 @@ def start_mission():
 
     # good point seed='2', x=-90, y=71, z=375
     # good point seed='3', x=6, y=71, z=350
+    # good point seed='31'
     world = mb.defaultworld(
         seed='2',
         forceReset="false")
@@ -188,11 +190,11 @@ def extract(data):
 def main():
     mc, obs = start_mission()
     mc.safeStart()
-    test_model = True
-    dataset = DataCollection(400, 'train')
+    dataset = DataCollection(400, 'train1')
     prev_pos = None
     check_dist = False
     while True:
+        cv2.waitKey(300)
         obs.clear()
         pos1, img = get_img(obs)
         pos2, segm = get_segment(obs)
@@ -208,7 +210,7 @@ def main():
         if check_dist:
             visible = mc.getFullStat('LineOfSight')
             if visible:
-    #            print(visible)
+                #print(visible)
                 dist = get_distance(mc)
                 if dist < 3:
                     continue
@@ -220,6 +222,5 @@ def main():
             dataset.put(img, segm)
             cv2.imshow('segm', segm)
             cv2.imshow('img', img)
-            cv2.waitKey(200)
             prev_pos = pos1
 main()

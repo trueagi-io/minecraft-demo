@@ -92,15 +92,17 @@ class Explore(Switcher):
             elif nov['source'] == 'getLineOfSights':
                 if nov['hitType'] == 'block':
                     self.pos2check += [nov]
+                    variant = nov['variant'] + ' ' if 'variant' in nov else ''
+                    self.rob.sendCommand(['chat', 'Seeing something new: ' + variant + nov['type']])
         self.agent.kb.novelty_list = []
 
         # a little bit hacky, but this agent doesn't explore crafting
         if self.delegate is None or not isinstance(self.delegate, Obtain):
             inv = self.rob.cached['getInventory'][0]
-            if self.agent.kb.is_known({'source': 'getInventory', 'type': 'cobblestone'}) and \
-               not minelogy.isInInventory(inv, {'type': 'stone_pickaxe'}):
-                self.delegate = Obtain(self.agent, [{'type': 'stone_pickaxe'}])
-            elif (self.agent.kb.is_known({'source': 'getInventory', 'type': 'log'}) or \
+            #if self.agent.kb.is_known({'source': 'getInventory', 'type': 'cobblestone'}) and \
+            #   not minelogy.isInInventory(inv, {'type': 'stone_pickaxe'}):
+            #    self.delegate = Obtain(self.agent, [{'type': 'stone_pickaxe'}])
+            if (self.agent.kb.is_known({'source': 'getInventory', 'type': 'log'}) or \
                   self.agent.kb.is_known({'source': 'getInventory', 'type': 'log2'})) and \
                  not minelogy.isInInventory(inv, {'type': 'wooden_pickaxe'}):
                 self.delegate = Obtain(self.agent, [{'type': 'wooden_pickaxe'}])
@@ -114,12 +116,11 @@ class Explore(Switcher):
                     self.item2pick = self.item2pick[:-1]
                 elif self.pos2check != []:
                     los = self.pos2check[-1]
-                    variant = los['variant'] + ' ' if 'variant' in los else ''
-                    self.rob.sendCommand(['chat', 'Seeing something new: ' + variant + los['type']])
                     pos = [los['x'], los['y'], los['z']]
                     self.delegate = FindAndMine(self.agent, [los['type']])
                     #self.delegate = SAnd([ApproachPos(self.agent, pos),
                     #                      LookAndAttackBlock(self.rob, pos)])
+                    print("Approaching " + los['type'])
                     self.pos2check = self.pos2check[:-1]
                 elif self.block2check != []:
                     while self.block2check != []:
@@ -127,7 +128,7 @@ class Explore(Switcher):
                         pos = self.agent.nearestBlock([block])
                         self.block2check = self.block2check[:-1]
                         if pos is not None:
-                            self.rob.sendCommand(['chat', 'Sensing something new: ' + block])
+                            print('Sensing something new: ' + block)
                             self.delegate = SAnd([ApproachPos(self.agent, pos),
                                                   LookAt(self.rob, pos)])
                             break
@@ -178,10 +179,12 @@ if __name__ == '__main__':
     miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Robo',
                 agenthandlers=agent_handlers,)])
 
-    world = mb.defaultworld(forceReset="true")
+    world = mb.defaultworld(forceReset="true", seed="151")
+    #113 122 127? 128 129+? 130+? 131+?
     miss.setWorld(world)
 
     agent = Explorer(miss, visualizer=visualizer)
+    sleep(4)
     agent.run()
 
     '''

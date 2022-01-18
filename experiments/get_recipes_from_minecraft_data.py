@@ -1,20 +1,3 @@
-import math
-import torch
-import random
-import threading
-import cv2
-import numpy
-import os
-import json
-from time import sleep, time
-import tagilmo.utils.mission_builder as mb
-
-from examples.agent import TAgent
-import logging
-from examples.vis import Visualizer
-
-from tagilmo.utils.mathutils import *
-
 import minecraft_data
 
 # Java edition minecraft-data
@@ -43,7 +26,9 @@ class MCDataWrapper:
             first_or_default = next((j for row in grid for j in row if self._processGridItems(j)==item), None)
             return False if first_or_default is None else True
         else:
-            return False
+            grid = recipe['ingredients']
+            first_or_default = next((j for j in grid if self._processGridItems(j) == item), None)
+            return False if first_or_default is None else True
 
     def getItemOrBlockRecipeInclusions(self, name):
         item = self._getBlockIdByName(name)

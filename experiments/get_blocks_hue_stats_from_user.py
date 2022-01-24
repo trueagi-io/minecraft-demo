@@ -16,6 +16,8 @@ from examples.vis import Visualizer
 from tagilmo.utils.mathutils import *
 
 
+SCALE = 4
+
 def process_pixel_data(pixels, resize, scale):
     img_data = numpy.frombuffer(pixels, dtype=numpy.uint8)
     img_data = img_data.reshape((240 * scale, 320 * scale, 3))
@@ -42,7 +44,7 @@ class BlockHueAnalyzer:
 
     def _getLocalHue(self):
         wnd_thr = 5
-        img = get_image(self.rob.getCachedObserve('getImageFrame'), 4, 4)
+        img = get_image(self.rob.getCachedObserve('getImageFrame'), SCALE, SCALE)
         bgr = img[:, :, 0:3]
         hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv)
@@ -53,13 +55,17 @@ class BlockHueAnalyzer:
         avg = numpy.mean(crop_img)
         return avg
 
-    def collectStat(self):
+    def collectStat(self, use_exp_avg=False, alpha=0.5):
+        # alpha (0, 1) only used when use_exp_avg is True
         los = self.rob.cached['getLineOfSights'][0]
         loc_hue = self._getLocalHue()
         if los is None and not(self.avg_block_hue_hist.get('sky') is None):
             curr_hue = self.avg_block_hue_hist['sky'][0]
             curr_num = self.avg_block_hue_hist['sky'][1] + 1
-            self.avg_block_hue_hist['sky'][0] = curr_hue + (loc_hue - curr_hue) / curr_num
+            if use_exp_avg:
+                self.avg_block_hue_hist['sky'][0] = curr_hue + (loc_hue - curr_hue)*alpha
+            else:
+                self.avg_block_hue_hist['sky'][0] = curr_hue + (loc_hue - curr_hue)/curr_num
             self.avg_block_hue_hist['sky'][1] = curr_num
             return False
         elif los is None:
@@ -68,7 +74,10 @@ class BlockHueAnalyzer:
         if not(self.avg_block_hue_hist.get(los['type']) is None):
             curr_hue = self.avg_block_hue_hist[los['type']][0]
             curr_num = self.avg_block_hue_hist[los['type']][1] + 1
-            self.avg_block_hue_hist[los['type']][0] = curr_hue + (loc_hue - curr_hue)/curr_num
+            if use_exp_avg:
+                self.avg_block_hue_hist[los['type']][0] = curr_hue + (loc_hue - curr_hue)*alpha
+            else:
+                self.avg_block_hue_hist[los['type']][0] = curr_hue + (loc_hue - curr_hue)/curr_num
             self.avg_block_hue_hist[los['type']][1] = curr_num
             return False
         else:
@@ -96,13 +105,14 @@ class MockAgent(TAgent):
             sleep(0.05)
             self.rob.updateAllObservations()
             self.visualize()
-            block_hue_analyzer.collectStat()
-            if (self.rob.cached['getLineOfSights'][0] is None):
+            block_hue_analyzer.collectStat(use_exp_avg=True, alpha=0.1)
+            if self.rob.cached['getLineOfSights'][0] is None:
                 print('Expected object: sky.  Seen by agent as {}'.format(block_hue_analyzer.searchNNBlock()))
             else:
                 print('Expected object: {}.  Seen by agent as {}'.format(self.rob.cached['getLineOfSights'][0]['type'],
                                                                          block_hue_analyzer.searchNNBlock()))
         return True
+
 
 def setup_logger():
     # create logger
@@ -117,7 +127,6 @@ def setup_logger():
     # add ch to logger
     logger.addHandler(ch)
 
-SCALE = 4
 
 if __name__ == '__main__':
     setup_logger()

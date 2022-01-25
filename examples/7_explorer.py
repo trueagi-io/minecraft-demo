@@ -1,5 +1,6 @@
 import torch
 import logging
+from experiments.log import setup_logger
 from time import sleep, time
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
@@ -171,7 +172,7 @@ class Explorer(TAgent):
 
 if __name__ == '__main__':
     SCALE = 3
-    #setup_logger()
+    setup_logger()
     visualizer = Visualizer()
     visualizer.start()
     video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)

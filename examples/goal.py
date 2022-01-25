@@ -1,9 +1,21 @@
+import logging
+
+
 class Goal:
 
     def __init__(self, delegate=None):
         # `delegate` is used to delegate all methods to one child
         # any of them can be redefined to alter behavior
-        self.delegate = delegate
+        self._delegate = delegate
+
+    @property
+    def delegate(self):
+        return self._delegate
+
+    @delegate.setter
+    def delegate(self, delegate):
+        logging.debug(str(self) + ' new delegate ' + str(delegate))
+        self._delegate = delegate
 
     def update(self):
         if self.delegate is None:
@@ -47,6 +59,14 @@ class GoalNode(Goal):
     def __init__(self, subgoals):
         super().__init__()
         self.subgoals = subgoals
+
+    def __str__(self):
+        class_name = str(self.__class__).split('\'')[1]
+        result = '(' + class_name
+        for g in self.subgoals:
+            result += str(g)
+        result += ')'
+        return result
 
 
 class CAnd(GoalNode):

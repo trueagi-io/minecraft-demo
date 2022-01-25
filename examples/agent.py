@@ -1,3 +1,4 @@
+import logging
 import numpy
 import math
 
@@ -77,6 +78,9 @@ class NoticeBlocks:
 
     def updateBlocks(self, rob):
         grid = rob.cached['getNearGrid'][0]
+        if grid is None:
+            logging.warning('grid is None')
+            return
         sight = rob.cached['getLineOfSights'][0]
         bc = rob.blockCenterFromRay()
         if bc is not None and \

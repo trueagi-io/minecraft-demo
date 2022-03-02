@@ -1,4 +1,5 @@
 import minecraft_data
+# pip install minecraft_data
 
 # Java edition minecraft-data
 mcd = minecraft_data("1.11.2")

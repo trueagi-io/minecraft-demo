@@ -1,4 +1,5 @@
 import minecraft_data
+# to install minecraft_data package:
 # pip install minecraft_data
 
 # Java edition minecraft-data

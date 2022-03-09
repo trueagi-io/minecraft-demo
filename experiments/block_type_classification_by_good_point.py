@@ -117,10 +117,10 @@ class BlockGPDescAnalyzer:
             fp.close()
 
     def searchNNBlock(self):
-        loc_hue = self._getLocalDscr()
+        loc_dscr = self._getLocalDscr()
         vals = list(self.avg_block_dscr_hist.values())
         arr = numpy.array([val[0] for val in vals])
-        idx = numpy.argmin(numpy.linalg.norm(arr - loc_hue))
+        idx = numpy.argmin(numpy.linalg.norm(arr - loc_dscr))
         return list(self.avg_block_dscr_hist.keys())[idx]
 
 

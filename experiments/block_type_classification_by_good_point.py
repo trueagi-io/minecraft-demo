@@ -59,6 +59,7 @@ class BlockGPDescAnalyzer:
         # print(torch.cuda.is_available())
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         # print('using device {0}'.format(device))
+        # here you need actual snapshot
         weights = 'mine8.pt'
         gp = GoodPoint(n_channels=3,
                        activation=torch.nn.LeakyReLU(),

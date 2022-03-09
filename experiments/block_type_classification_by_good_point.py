@@ -49,7 +49,7 @@ class BlockGPDescAnalyzer:
 
     def __init__(self, rob):
         # dict of pairs (current avg, num of observations)
-        self.avg_block_hue_hist = {}
+        self.avg_block_dscr_hist = {}
         self.rob = rob
 
     def _getLocalDscr(self):
@@ -83,44 +83,43 @@ class BlockGPDescAnalyzer:
     def collectStat(self, use_exp_avg=False, alpha=0.5):
         # alpha (0, 1) only used when use_exp_avg is True
         los = self.rob.cached['getLineOfSights'][0]
-        loc_hue = self._getLocalHue()
-        loc_dscr = self._getLocalHue()
-        if los is None and not(self.avg_block_hue_hist.get('sky') is None):
-            curr_hue = self.avg_block_hue_hist['sky'][0]
-            curr_num = self.avg_block_hue_hist['sky'][1] + 1
+        loc_dscr = self._getLocalDscr()
+        if los is None and not(self.avg_block_dscr_hist.get('sky') is None):
+            curr_hue = self.avg_block_dscr_hist['sky'][0]
+            curr_num = self.avg_block_dscr_hist['sky'][1] + 1
             if use_exp_avg:
-                self.avg_block_hue_hist['sky'][0] = curr_hue + (loc_dscr - curr_hue)*alpha
+                self.avg_block_dscr_hist['sky'][0] = curr_hue + (loc_dscr - curr_hue) * alpha
             else:
-                self.avg_block_hue_hist['sky'][0] = curr_hue + (loc_dscr - curr_hue)/curr_num
-            self.avg_block_hue_hist['sky'][1] = curr_num
+                self.avg_block_dscr_hist['sky'][0] = curr_hue + (loc_dscr - curr_hue) / curr_num
+            self.avg_block_dscr_hist['sky'][1] = curr_num
             return False
         elif los is None:
-            self.avg_block_hue_hist['sky'] = [loc_dscr, 1]
+            self.avg_block_dscr_hist['sky'] = [loc_dscr, 1]
             return True
-        if not(self.avg_block_hue_hist.get(los['type']) is None):
-            curr_hue = self.avg_block_hue_hist[los['type']][0]
-            curr_num = self.avg_block_hue_hist[los['type']][1] + 1
+        if not(self.avg_block_dscr_hist.get(los['type']) is None):
+            curr_hue = self.avg_block_dscr_hist[los['type']][0]
+            curr_num = self.avg_block_dscr_hist[los['type']][1] + 1
             if use_exp_avg:
-                self.avg_block_hue_hist[los['type']][0] = curr_hue + (loc_dscr - curr_hue)*alpha
+                self.avg_block_dscr_hist[los['type']][0] = curr_hue + (loc_dscr - curr_hue) * alpha
             else:
-                self.avg_block_hue_hist[los['type']][0] = curr_hue + (loc_dscr - curr_hue)/curr_num
-            self.avg_block_hue_hist[los['type']][1] = curr_num
+                self.avg_block_dscr_hist[los['type']][0] = curr_hue + (loc_dscr - curr_hue) / curr_num
+            self.avg_block_dscr_hist[los['type']][1] = curr_num
             return False
         else:
-            self.avg_block_hue_hist[los['type']] = [loc_dscr, 1]
+            self.avg_block_dscr_hist[los['type']] = [loc_dscr, 1]
             return True
 
     def saveStatJson(self, path_plus_name):
         with open(path_plus_name, "w") as fp:
-            json.dump(self.avg_block_hue_hist, fp)
+            json.dump(self.avg_block_dscr_hist, fp)
             fp.close()
 
     def searchNNBlock(self):
-        loc_hue = self._getLocalHue()
-        vals = list(self.avg_block_hue_hist.values())
+        loc_hue = self._getLocalDscr()
+        vals = list(self.avg_block_dscr_hist.values())
         arr = numpy.array([val[0] for val in vals])
         idx = numpy.argmin(numpy.linalg.norm(arr - loc_hue))
-        return list(self.avg_block_hue_hist.keys())[idx]
+        return list(self.avg_block_dscr_hist.keys())[idx]
 
 
 class MockAgent(TAgent):

@@ -19,6 +19,7 @@ import sys
 
 # git clone https://github.com/singnet/image-matching
 # path_to_image_matching is the path to directory with image-matching api
+# you also need actual snapshot, e. g. https://github.com/singnet/image-matching/blob/master/fem/snapshots/mine8.pt
 path_to_image_matching = "/home/oleg/Work/image-matching"
 sys.path.append(os.path.abspath(path_to_image_matching))
 

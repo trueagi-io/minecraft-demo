@@ -1,7 +1,4 @@
-import math
 import torch
-import random
-import threading
 import cv2
 import numpy
 import os
@@ -27,7 +24,7 @@ from fem.goodpoint import GoodPoint
 
 
 SCALE = 4
-
+NUM_OBS = 1
 
 def process_pixel_data(pixels, resize, scale):
     img_data = numpy.frombuffer(pixels, dtype=numpy.uint8)
@@ -52,16 +49,10 @@ class BlockGPDescAnalyzer:
         # dict of pairs (current avg, num of observations)
         self.avg_block_dscr_hist = {}
         self.rob = rob
-
-    def _getLocalDscr(self):
-        wnd_thr = 5
-        img = get_image(self.rob.getCachedObserve('getImageFrame'), SCALE, SCALE)
-        # print(torch.cuda.is_available())
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        # print('using device {0}'.format(device))
         # here you need actual snapshot
         weights = 'mine8.pt'
-        gp = GoodPoint(n_channels=3,
+        self.gp = GoodPoint(n_channels=3,
                        activation=torch.nn.LeakyReLU(),
                        grid_size=8,
                        batchnorm=False,
@@ -71,15 +62,19 @@ class BlockGPDescAnalyzer:
         if os.path.exists(weights):
             state_dict = torch.load(weights, map_location=device)
             # print("loading weights from {0}".format(weights))
-            gp.load_state_dict(state_dict['superpoint'])
+            self.gp.load_state_dict(state_dict['superpoint'])
 
+    def _getLocalDscr(self):
+        wnd_thr = 5
+        img = get_image(self.rob.getCachedObserve('getImageFrame'), SCALE, SCALE)
+        # print(torch.cuda.is_available())
         wnd_thr = 30
         height, width, channels = img.shape
         y = height // 2
         x = width // 2
         points = numpy.asarray([[y, x]])
         crop_img = img[y - wnd_thr:y + wnd_thr, x - wnd_thr:x + wnd_thr, 0:3]
-        descriptors = gp.get_descriptors(crop_img, points)
+        descriptors = self.gp.get_descriptors(crop_img, points)
         return descriptors.cpu().detach().numpy()
 
     def collectStat(self, use_exp_avg=False, alpha=0.5):
@@ -87,24 +82,24 @@ class BlockGPDescAnalyzer:
         los = self.rob.cached['getLineOfSights'][0]
         loc_dscr = self._getLocalDscr()
         if los is None and not(self.avg_block_dscr_hist.get('sky') is None):
-            curr_hue = self.avg_block_dscr_hist['sky'][0]
-            curr_num = self.avg_block_dscr_hist['sky'][1] + 1
+            curr_dscr = self.avg_block_dscr_hist['sky'][0]
+            curr_num = self.avg_block_dscr_hist['sky'][1] + NUM_OBS
             if use_exp_avg:
-                self.avg_block_dscr_hist['sky'][0] = curr_hue + (loc_dscr - curr_hue) * alpha
+                self.avg_block_dscr_hist['sky'][0] = curr_dscr + (loc_dscr - curr_dscr) * alpha
             else:
-                self.avg_block_dscr_hist['sky'][0] = curr_hue + (loc_dscr - curr_hue) / curr_num
+                self.avg_block_dscr_hist['sky'][0] = curr_dscr + (loc_dscr - curr_dscr) / curr_num
             self.avg_block_dscr_hist['sky'][1] = curr_num
             return False
         elif los is None:
             self.avg_block_dscr_hist['sky'] = [loc_dscr, 1]
             return True
         if not(self.avg_block_dscr_hist.get(los['type']) is None):
-            curr_hue = self.avg_block_dscr_hist[los['type']][0]
-            curr_num = self.avg_block_dscr_hist[los['type']][1] + 1
+            curr_dscr = self.avg_block_dscr_hist[los['type']][0]
+            curr_num = self.avg_block_dscr_hist[los['type']][1] + NUM_OBS
             if use_exp_avg:
-                self.avg_block_dscr_hist[los['type']][0] = curr_hue + (loc_dscr - curr_hue) * alpha
+                self.avg_block_dscr_hist[los['type']][0] = curr_dscr + (loc_dscr - curr_dscr) * alpha
             else:
-                self.avg_block_dscr_hist[los['type']][0] = curr_hue + (loc_dscr - curr_hue) / curr_num
+                self.avg_block_dscr_hist[los['type']][0] = curr_dscr + (loc_dscr - curr_dscr) / curr_num
             self.avg_block_dscr_hist[los['type']][1] = curr_num
             return False
         else:

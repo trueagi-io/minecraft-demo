@@ -83,24 +83,24 @@ class BlockGPDescAnalyzer:
         loc_dscr = self._getLocalDscr()
         if los is None and not(self.avg_block_dscr_hist.get('sky') is None):
             curr_dscr = self.avg_block_dscr_hist['sky'][0]
-            curr_num = self.avg_block_dscr_hist['sky'][1] + NUM_OBS
+            curr_num = self.avg_block_dscr_hist['sky'][NUM_OBS] + 1
             if use_exp_avg:
                 self.avg_block_dscr_hist['sky'][0] = curr_dscr + (loc_dscr - curr_dscr) * alpha
             else:
                 self.avg_block_dscr_hist['sky'][0] = curr_dscr + (loc_dscr - curr_dscr) / curr_num
-            self.avg_block_dscr_hist['sky'][1] = curr_num
+            self.avg_block_dscr_hist['sky'][NUM_OBS] = curr_num
             return False
         elif los is None:
             self.avg_block_dscr_hist['sky'] = [loc_dscr, 1]
             return True
         if not(self.avg_block_dscr_hist.get(los['type']) is None):
             curr_dscr = self.avg_block_dscr_hist[los['type']][0]
-            curr_num = self.avg_block_dscr_hist[los['type']][1] + NUM_OBS
+            curr_num = self.avg_block_dscr_hist[los['type']][NUM_OBS] + 1
             if use_exp_avg:
                 self.avg_block_dscr_hist[los['type']][0] = curr_dscr + (loc_dscr - curr_dscr) * alpha
             else:
                 self.avg_block_dscr_hist[los['type']][0] = curr_dscr + (loc_dscr - curr_dscr) / curr_num
-            self.avg_block_dscr_hist[los['type']][1] = curr_num
+            self.avg_block_dscr_hist[los['type']][NUM_OBS] = curr_num
             return False
         else:
             self.avg_block_dscr_hist[los['type']] = [loc_dscr, 1]

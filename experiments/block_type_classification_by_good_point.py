@@ -63,24 +63,31 @@ class BlockGPDescAnalyzer:
             state_dict = torch.load(weights, map_location=device)
             # print("loading weights from {0}".format(weights))
             self.gp.load_state_dict(state_dict['superpoint'])
+            self.gp.eval()
 
     def _getLocalDscr(self):
         wnd_thr = 5
         img = get_image(self.rob.getCachedObserve('getImageFrame'), SCALE, SCALE)
         # print(torch.cuda.is_available())
-        wnd_thr = 30
+        wnd_thr = 100
         height, width, channels = img.shape
         y = height // 2
         x = width // 2
         points = numpy.asarray([[y, x]])
+        y1 = wnd_thr
+        x1 = wnd_thr
+        points2 = numpy.asarray([[y1, x1]])
         crop_img = img[y - wnd_thr:y + wnd_thr, x - wnd_thr:x + wnd_thr, 0:3]
-        descriptors = self.gp.get_descriptors(crop_img, points)
+        descriptors = self.gp.get_descriptors(crop_img, points2)
         return descriptors.cpu().detach().numpy()
+
+    # TODO log some croped images + labels
 
     def collectStat(self, use_exp_avg=False, alpha=0.5):
         # alpha (0, 1) only used when use_exp_avg is True
         los = self.rob.cached['getLineOfSights'][0]
         loc_dscr = self._getLocalDscr()
+        # print(loc_dscr)
         if los is None and not(self.avg_block_dscr_hist.get('sky') is None):
             curr_dscr = self.avg_block_dscr_hist['sky'][0]
             curr_num = self.avg_block_dscr_hist['sky'][NUM_OBS] + 1
@@ -114,8 +121,10 @@ class BlockGPDescAnalyzer:
     def searchNNBlock(self):
         loc_dscr = self._getLocalDscr()
         vals = list(self.avg_block_dscr_hist.values())
-        arr = numpy.array([val[0] for val in vals])
-        idx = numpy.argmin(numpy.linalg.norm(arr - loc_dscr))
+        # arr = [numpy.squeeze(val[0]) for val in vals]
+        arr = numpy.stack([val[0] for val in vals])
+        arr = numpy.squeeze(arr)
+        idx = numpy.argmin(numpy.linalg.norm(arr - loc_dscr, axis=1))
         return list(self.avg_block_dscr_hist.keys())[idx]
 
 

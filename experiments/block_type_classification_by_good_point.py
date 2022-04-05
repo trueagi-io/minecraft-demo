@@ -63,24 +63,29 @@ class BlockGPDescAnalyzer:
             state_dict = torch.load(weights, map_location=device)
             # print("loading weights from {0}".format(weights))
             self.gp.load_state_dict(state_dict['superpoint'])
+            self.gp.eval()
 
     def _getLocalDscr(self):
         wnd_thr = 5
         img = get_image(self.rob.getCachedObserve('getImageFrame'), SCALE, SCALE)
         # print(torch.cuda.is_available())
-        wnd_thr = 30
+        wnd_thr = 100
         height, width, channels = img.shape
         y = height // 2
         x = width // 2
-        points = numpy.asarray([[y, x]])
+        y1 = wnd_thr
+        x1 = wnd_thr
+        points2 = numpy.asarray([[y1, x1]])
         crop_img = img[y - wnd_thr:y + wnd_thr, x - wnd_thr:x + wnd_thr, 0:3]
-        descriptors = self.gp.get_descriptors(crop_img, points)
-        return descriptors.cpu().detach().numpy()
+        descriptors = self.gp.get_descriptors(crop_img, points2)
+        return descriptors.cpu().detach().numpy(), crop_img
+
+    # TODO log some croped images + labels
 
     def collectStat(self, use_exp_avg=False, alpha=0.5):
         # alpha (0, 1) only used when use_exp_avg is True
         los = self.rob.cached['getLineOfSights'][0]
-        loc_dscr = self._getLocalDscr()
+        loc_dscr = self._getLocalDscr()[0]
         if los is None and not(self.avg_block_dscr_hist.get('sky') is None):
             curr_dscr = self.avg_block_dscr_hist['sky'][0]
             curr_num = self.avg_block_dscr_hist['sky'][NUM_OBS] + 1
@@ -93,17 +98,21 @@ class BlockGPDescAnalyzer:
         elif los is None:
             self.avg_block_dscr_hist['sky'] = [loc_dscr, 1]
             return True
-        if not(self.avg_block_dscr_hist.get(los['type']) is None):
-            curr_dscr = self.avg_block_dscr_hist[los['type']][0]
-            curr_num = self.avg_block_dscr_hist[los['type']][NUM_OBS] + 1
+        variant = ''
+        if not (los.get('variant') is None):
+            variant = '_' + los['variant']
+        block_type = los['type'] + variant
+        if not(self.avg_block_dscr_hist.get(block_type) is None):
+            curr_dscr = self.avg_block_dscr_hist[block_type][0]
+            curr_num = self.avg_block_dscr_hist[block_type][NUM_OBS] + 1
             if use_exp_avg:
-                self.avg_block_dscr_hist[los['type']][0] = curr_dscr + (loc_dscr - curr_dscr) * alpha
+                self.avg_block_dscr_hist[block_type][0] = curr_dscr + (loc_dscr - curr_dscr) * alpha
             else:
-                self.avg_block_dscr_hist[los['type']][0] = curr_dscr + (loc_dscr - curr_dscr) / curr_num
-            self.avg_block_dscr_hist[los['type']][NUM_OBS] = curr_num
+                self.avg_block_dscr_hist[block_type][0] = curr_dscr + (loc_dscr - curr_dscr) / curr_num
+            self.avg_block_dscr_hist[block_type][NUM_OBS] = curr_num
             return False
         else:
-            self.avg_block_dscr_hist[los['type']] = [loc_dscr, 1]
+            self.avg_block_dscr_hist[block_type] = [loc_dscr, 1]
             return True
 
     def saveStatJson(self, path_plus_name):
@@ -112,27 +121,35 @@ class BlockGPDescAnalyzer:
             fp.close()
 
     def searchNNBlock(self):
-        loc_dscr = self._getLocalDscr()
+        loc_dscr = self._getLocalDscr()[0]
         vals = list(self.avg_block_dscr_hist.values())
-        arr = numpy.array([val[0] for val in vals])
-        idx = numpy.argmin(numpy.linalg.norm(arr - loc_dscr))
+        # arr = [numpy.squeeze(val[0]) for val in vals]
+        arr = numpy.stack([val[0] for val in vals])
+        arr = numpy.squeeze(arr)
+        idx = numpy.argmin(numpy.linalg.norm(arr - loc_dscr, axis=1))
         return list(self.avg_block_dscr_hist.keys())[idx]
 
 
 class MockAgent(TAgent):
 
     def loop(self):
-        block_hue_analyzer = BlockGPDescAnalyzer(self.rob)
+        block_dscr_analyzer = BlockGPDescAnalyzer(self.rob)
         while True:
             sleep(0.05)
             self.rob.updateAllObservations()
             self.visualize()
-            block_hue_analyzer.collectStat(use_exp_avg=True, alpha=0.1)
-            if self.rob.cached['getLineOfSights'][0] is None:
-                print('Expected object: sky.  Seen by agent as {}'.format(block_hue_analyzer.searchNNBlock()))
+            block_dscr_analyzer.collectStat(use_exp_avg=True, alpha=0.1)
+            los = self.rob.cached['getLineOfSights'][0]
+            if los is None:
+                print('Expected object: sky.  Seen by agent as {}'.format(block_dscr_analyzer.searchNNBlock()))
             else:
-                print('Expected object: {}.  Seen by agent as {}'.format(self.rob.cached['getLineOfSights'][0]['type'],
-                                                                         block_hue_analyzer.searchNNBlock()))
+                block_type = los['type']
+                variant = ''
+                if not (los.get('variant') is None):
+                    variant = '_' + los['variant']
+                block_type = block_type + variant
+                print('Expected object: {}.  Seen by agent as {}'.format(block_type,
+                                                                         block_dscr_analyzer.searchNNBlock()))
         return True
 
 

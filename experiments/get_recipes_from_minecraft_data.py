@@ -70,8 +70,9 @@ class MCDataWrapper:
     def _applyFilter(self, item, metadata):
         output = False
         if isinstance(item, dict):
-            if item['variant'] == metadata:
-                output = True
+            if 'variant' in item:
+                if item['variant'] == metadata:
+                    output = True
         return output
 
     # TODO more efficient filtering
@@ -103,7 +104,7 @@ class MCDataWrapper:
         result = [recipe for recipe_list in self.mcd.recipes.values() for recipe in recipe_list if self._inclusionCheck(item,
                                                                                                      recipe)]
         if not(metadata_filter is None):
-            result = self._metadataListFiltering(metadata_filter, what_to_filter)
+            result = self._metadataListFiltering(result, metadata_filter, what_to_filter)
         if get_names_instead_of_ids:
             result = self._convertIdsToNamesForRecipeList(result)
         return result

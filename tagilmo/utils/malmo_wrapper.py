@@ -91,7 +91,7 @@ class MalmoConnector:
                         print('The mission already running')
                         return True
                     else:
-                        print("Other error:", e.message)
+                        print("Other error:", e)
                         return False
                 if used_attempts == max_attempts:
                     print("All attempts to start the mission are failed.")
@@ -99,7 +99,7 @@ class MalmoConnector:
         # waiting for the real start
         start_flags = [False for a in self.agent_hosts]
         start_time = time.time()
-        time_out = 120  # Allow a two minute timeout.
+        time_out = 620  # Allow a two minute timeout.
         while not all(start_flags) and time.time() - start_time < time_out:
             states = [a.peekWorldState() for a in self.agent_hosts]
             start_flags = [w.has_mission_begun for w in states]

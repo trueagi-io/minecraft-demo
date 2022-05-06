@@ -19,12 +19,12 @@
 
 from __future__ import print_function
 
-# Allow MalmoPython to be imported both from an installed 
+# Allow VereyaPython to be imported both from an installed 
 # malmo module and (as an override) separately as a native library.
 try:
-    import MalmoPython
+    import VereyaPython
 except ImportError:
-    import malmo.MalmoPython as MalmoPython
+    import malmo.VereyaPython as VereyaPython
 
 import os
 import sys
@@ -69,7 +69,7 @@ def get_default_recording_object(agent_host, filename):
     # Convenience method for setting up a recording object - assuming the recording_dir and record_video
     # flags were passed in as command line arguments (see parse_command_line above).
     # (If no recording destination was passed in, we assume no recording is required.)
-    my_mission_record = MalmoPython.MissionRecordSpec()
+    my_mission_record = VereyaPython.MissionRecordSpec()
     recordingsDirectory = get_recordings_directory(agent_host)
     if recordingsDirectory:
         my_mission_record.setDestination(recordingsDirectory + "//" + filename + ".tgz")

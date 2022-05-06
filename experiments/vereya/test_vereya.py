@@ -91,9 +91,9 @@ def extract(data):
 
 
 def main():
-    import MalmoPython
-    MalmoPython.setLoggingComponent(MalmoPython.LoggingComponent.LOG_TCP, True)
-    MalmoPython.setLogging('log.txt', MalmoPython.LoggingSeverityLevel.LOG_FINE)
+    import VereyaPython
+    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
+    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
 
     mc, obs = start_mission()
     mc.safeStart()

@@ -1,6 +1,6 @@
 import unittest
 import logging
-import MalmoPython
+import VereyaPython
 import json
 import time
 import tagilmo.utils.mission_builder as mb
@@ -146,8 +146,8 @@ class TestCraft(unittest.TestCase):
 
 def main():
     unittest.main()
-#    MalmoPython.setLoggingComponent(MalmoPython.LoggingComponent.LOG_TCP, True)
-#    MalmoPython.setLogging('log.txt', MalmoPython.LoggingSeverityLevel.LOG_FINE)
+#    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
+#    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
 
         
 if __name__ == '__main__':

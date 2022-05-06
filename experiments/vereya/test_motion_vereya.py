@@ -59,9 +59,9 @@ def test_basic_motion():
 
 
 def main():
-    import MalmoPython
-#    MalmoPython.setLoggingComponent(MalmoPython.LoggingComponent.LOG_TCP, True)
-#    MalmoPython.setLogging('log.txt', MalmoPython.LoggingSeverityLevel.LOG_FINE)
+    import VereyaPython
+#    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
+#    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
 
     start = 316.5, 5375.5
     start = (-108.0, -187.0)
@@ -83,6 +83,16 @@ def main():
     print('sending command move 0')
     mc.sendCommand('move 0')
     import pdb;pdb.set_trace()
+    print('sending command turn 0.1')
+    mc.sendCommand('turn 0.1')
+    mc.observeProc()
+    pos = mc.getAgentPos()
+    print('sending command turn 0')
+    time.sleep(1)
+    mc.sendCommand('turn 0')
+    time.sleep(1)
+    mc.observeProc()
+    pos1 = mc.getAgentPos()
     while True:
        mc.observeProc()
        time.sleep(2)

@@ -64,7 +64,7 @@ class ServerInitialConditions:
 def flatworld(generatorString, forceReset="false", seed=''):
     return '<FlatWorldGenerator generatorString="' + generatorString + '" forceReset="' + forceReset + '" seed="' + seed + '"/>'
 
-def defaultworld(seed=None, forceReset=False):
+def defaultworld(seed=None, forceReset=False, forceReuse=False):
     if isinstance(forceReset, bool):
         forceReset = 'true' if forceReset else 'false'
     world_str = '<DefaultWorldGenerator '
@@ -72,6 +72,8 @@ def defaultworld(seed=None, forceReset=False):
         world_str += 'seed="' + str(seed) + '" '
     if forceReset:
         world_str += 'forceReset="' + forceReset + '" '
+    if forceReuse:
+        world_str += 'forceReuse="' + forceReuse + '" '
     world_str += '/>'
     return world_str
 
@@ -322,7 +324,8 @@ class AgentSection:
 
 class MissionXML:
 
-    def __init__(self, about=About(), serverSection=ServerSection(), agentSections=[AgentSection()]):
+    def __init__(self, about=About(), serverSection=ServerSection(), agentSections=[AgentSection()], namespace=None):
+        self.namespace = namespace
         self.about = about
         self.serverSection = serverSection
         self.agentSections = agentSections
@@ -367,9 +370,12 @@ class MissionXML:
         return [ag.name for ag in self.agentSections]
 
     def xml(self):
+        namespace = self.namespace
+        if namespace is None:
+            namespace = 'ProjectMalmo.singularitynet.io'
         _xml = '''<?xml version="1.0" encoding="UTF-8" ?>
-<Mission xmlns="http://ProjectMalmo.microsoft.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-'''
+<Mission xmlns="http://{0}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+'''.format(namespace)
         _xml += self.about.xml()
         _xml += self.serverSection.xml()
         for agentSection in self.agentSections:

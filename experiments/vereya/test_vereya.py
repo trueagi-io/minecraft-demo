@@ -22,7 +22,7 @@ def start_mission():
     colourmap_producer = mb.ColourMapProducer(width=WIDTH, height=HEIGHT)
     video_producer = mb.VideoProducer(width=WIDTH, height=HEIGHT, want_depth=False)
 
-    obs = mb.Observations()
+    obs = mb.Observations(bNearby=True, bRecipes=True)
     agent_handlers = mb.AgentHandlers(observations=obs)
 
     agent_handlers = mb.AgentHandlers(observations=obs,
@@ -38,7 +38,8 @@ def start_mission():
     # good point seed='31'
     world = mb.defaultworld(
         seed='5',
-        forceReset="true")
+        forceReset="false",
+        forceReuse="true")
 
     world1 = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake",
             seed='43',
@@ -97,12 +98,16 @@ def main():
 
     mc, obs = start_mission()
     mc.safeStart()
+    mc.sendCommand('recipes')
     while True:
         cv2.waitKey(300)
         obs.clear()
         pos1, img = get_img(obs)
         if img is not None:
             img = extract(img.pixels)
-            print('new')
+            # print(mc.getNearEntities())
+            if mc.observe[0] is not None and 'recipes' in mc.observe[0]:
+                print(mc.observe[0]['recipes'])
+                mc.sendCommand('recipes off')
             cv2.imshow('img', img)
 main()

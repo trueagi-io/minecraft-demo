@@ -83,6 +83,7 @@ class TestCraft(unittest.TestCase):
         time.sleep(4)
 
     def test_swap_inventory(self):
+        mc = self.mc
         print('send ochat')
         mc.sendCommand("chat /give @p oak_planks 1")
         time.sleep(1)

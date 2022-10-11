@@ -4,7 +4,7 @@ import numpy
 import numpy as np
 from dataclasses import dataclass
 from enum import IntEnum
-from timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
+from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
 
 
 class Transform(IntEnum):
@@ -63,7 +63,7 @@ class TimestampedVideoFrame:
     modelViewMatrix: npt.NDArray[np.float32]
 
     # The pixels, stored as channels then columns then rows. Length should be width*height*channels.
-    pixels: npt.NDArray[np.uin8] = numpy.array(0, dtype=numpy.uint8)
+    pixels: npt.NDArray[np.uint8] = numpy.array(0, dtype=numpy.uint8)
     
     def __init__(self, width: np.uint16, height: np.uint16,
                 channels: np.uint8, message: TimestampedUnsignedCharVector, 

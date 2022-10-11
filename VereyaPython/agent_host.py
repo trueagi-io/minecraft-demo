@@ -1,18 +1,23 @@
 from typing import List
-
+from .mission_spec import MissionSpec
+from .client_info import ClientInfo
+from .mission_record_spec import MissionRecordSpec
+from .world_state import WorldState
 
 
 class AgentHost:
     def startMission(mission: MissionSpec, client_pool: List[ClientInfo], 
                      mission_record: MissionRecordSpec, role: int,
                      unique_experiment_id: str):
-         self.testSchemasCompatible()
-         if role < 0 or role >= mission.getNumberOfAgents():
+        self.testSchemasCompatible()
+        if role < 0 or role >= mission.getNumberOfAgents():
             if mission.getNumberOfAgents() == 1:
                 raise MissionException("Role " + str(role) + " is invalid for this single-agent mission - must be 0.",
                 MissionException.MISSION_BAD_ROLE_REQUEST)
             else:
-                raise MissionException("Role " + str(role) + " is invalid for this multi-agent mission - must be in
+                raise MissionException("Role " + str(role) +\
+                " is invalid for this \
+                multi-agent mission - must be in \
                 range 0-" + str(mission.getNumberOfAgents() - 1) + ".", MissionException.MISSION_BAD_ROLE_REQUEST)
         if mission.isVideoRequested(role):
             if mission.getVideoWidth( role ) % 4:
@@ -135,7 +140,7 @@ class AgentHost:
         logging.warning("Failed to find an available client for this mission - throwing MissionException.")
         self.close()
         raise MissionException("Failed to find an available client for this mission -\
-                                tried all the clients in the
+                                tried all the clients in the \
                                 supplied client pool.", MissionException.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE )
 
 
@@ -157,17 +162,29 @@ class AgentHost:
         return current_mission_record.getTemporaryDirectory() if self.current_mission_record and self.current_mission_record.isRecording() else ""
 
 
+    def initializeOurServers(self, mission: MissionSpec,
+                             mission_record: MissionRecordSpec, role: int,
+                             unique_experiment_id: str) -> None:
+        logging.debug("Initialising servers...")
+        self.current_mission_init = MissionInitSpec(mission, unique_experiment_id, role)
+        self.current_mission_record = MissionRecord(mission_record)
+        self.current_role = role
+        if mission.isVideoRequested(self.current_role):
+            self.video_server = listenForVideo(self.video_server,
+                self.current_mission_init.getAgentVideoPort(),
+                mission.getVideoWidth(self.current_role),
+                mission.getVideoHeight(self.current_role),
+                mission.getVideoChannels(self.current_role),
+                TimestampedVideoFrame.VIDEO)
+
 
     def close(self):
         pass
-
-
 
     def generateMissionInit() -> str:
         prettyPrint = False
         generated_xml = self.current_mission_init.getAsXML(prettyPrint)
         return generated_xml
 
-    
-
-
+    def listenForVideo(self):
+        raise NotImplementedError("unimplemented")

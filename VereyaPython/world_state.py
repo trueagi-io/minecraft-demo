@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from __future__ import annotations
 from typing import TYPE_CHECKING, List
 
 

@@ -1,0 +1,4 @@
+
+
+class RewardXML:
+    pass

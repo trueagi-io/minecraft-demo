@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from mission_spec import MissionSpec
+from .mission_spec import MissionSpec
 
 
 @dataclass(slots=True, frozen=True)

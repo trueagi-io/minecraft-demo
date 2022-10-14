@@ -45,3 +45,6 @@ class TCPServer:
         self.confirm_with_fixed_reply = True;
         self.fixed_reply = reply.encode()
 
+    def close(self):
+        self.closing = True
+        self.server.close()

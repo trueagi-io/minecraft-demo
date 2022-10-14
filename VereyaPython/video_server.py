@@ -6,10 +6,12 @@ from .timestamped_video_frame import Transform, FrameType, TimestampedVideoFrame
 
 
 class VideoServer:
-    def __init__(self, port: int,
+    def __init__(self, loop: object, 
+                 port: int,
                  width: int, height: int,
                  channels: int, frametype: FrameType,
                  handle_frame: Callable[[TimestampedVideoFrame], None]):
+        self.io_service = loop
         self.handle_frame = handle_frame
         self.width = width
         self.height = height
@@ -24,7 +26,7 @@ class VideoServer:
 
     def start(self) -> None:
         self.server = TCPServer(port=self.port, callback=self.__cb, log_name="video")
-        asyncio.run(self.server.startAccept())
+        asyncio.run_coroutine_threadsafe(self.server.startAccept(), self.io_service)
 
     def __cb(self, message: TimestampedUnsignedCharVector) -> None:
         if len(message.data) != (TimestampedVideoFrame.FRAME_HEADER_SIZE + self.width * self.height * self.channels):
@@ -39,3 +41,5 @@ class VideoServer:
         self.received_frames += 1
         self.handle_frame(frame)
 
+    def close(self):
+        self.server.close()

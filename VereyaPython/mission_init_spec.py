@@ -1,12 +1,34 @@
 from dataclasses import dataclass
 from .mission_spec import MissionSpec
+from .mission_init_xml import MissionInitXML
+from .client_info import default_client_mission_control_port
 
 
 @dataclass(slots=True, frozen=True)
 class MissionInitSpec:
-    mission_init: MissionSpec
-    unique_experiment_id: str
-    role: int
+    mission_init: MissionInitXML = MissionInitXML()
+
+    @staticmethod 
+    def from_param(mission_spec: MissionSpec, unique_experiment_id: str, role: int) -> 'MissionInitSpec':
+        self = MissionInitSpec()
+        # construct a default MissionInit using the provided MissionSpec
+        self.mission_init.client_agent_connection.client_ip_address = "127.0.0.1"
+        self.mission_init.client_agent_connection.client_mission_control_port = default_client_mission_control_port
+        self.mission_init.client_agent_connection.client_commands_port = 0
+        self.mission_init.client_agent_connection.agent_ip_address = "127.0.0.1"
+        self.mission_init.client_agent_connection.agent_mission_control_port = 0
+        self.mission_init.client_agent_connection.agent_video_port = 0
+        self.mission_init.client_agent_connection.agent_depth_port = 0
+        self.mission_init.client_agent_connection.agent_colour_map_port = 0
+        self.mission_init.client_agent_connection.agent_lumunance_port = 0
+        self.mission_init.client_agent_connection.agent_observations_port = 0
+        self.mission_init.client_agent_connection.agent_rewards_port = 0
+
+        self.mission_init.client_role = role
+        self.mission_init.experiment_uid = unique_experiment_id
+        self.mission_init.mission = mission_spec.mission
+        self.mission_init.platform_version = "0.0"
+        return self
 
     def getAsXML(self, prettyPrint: bool) -> str: 
         return self.mission_init.toXml()

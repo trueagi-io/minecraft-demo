@@ -2,6 +2,10 @@ import threading
 import logging
 import asyncio
 from typing import List
+import xml.etree.ElementTree as ET
+
+from .string_server import StringServer
+from .timestamped_string import TimestampedString
 from .timestamped_video_frame import FrameType
 from .video_server import VideoServer
 from .mission_spec import MissionSpec
@@ -25,6 +29,7 @@ class AgentHost(ArgumentParser):
         self.depth_server = None
         self.luminance_server = None
         self.world_state = WorldState()
+        self.mission_control_server = None
 
     def startMission(self, mission: MissionSpec, client_pool: List[ClientInfo], 
                      mission_record: MissionRecordSpec, role: int,
@@ -188,7 +193,8 @@ class AgentHost(ArgumentParser):
                              mission_record: MissionRecordSpec, role: int,
                              unique_experiment_id: str) -> None:
         logging.debug("Initialising servers...")
-        self.current_mission_init = MissionInitSpec(mission, unique_experiment_id, role)
+        # make a MissionInit structure with default settings
+        self.current_mission_init = MissionInitSpec.from_param(mission, unique_experiment_id, role)
         self.current_mission_record = MissionRecord(mission_record)
         self.current_role = role
         self.listenForMissionControlMessages(self.current_mission_init.getAgentMissionControlPort())
@@ -339,5 +345,24 @@ class AgentHost(ArgumentParser):
 
         self.commands_connection = ClientConnection(self.io_service, mod_address, mod_commands_port )
 
+    def listenForMissionControlMessages(self, port: int) -> int:
+        if self.mission_control_server and ( port==0 or self.mission_control_server.getPort()==port ):
+            return # can re-use existing server
+
+        if self.mission_control_server is not None:
+            self.mission_control_server.close()
+
+        self.mission_control_server = StringServer(self.io_service, port, self.onMissionControlMessage, "mcp")
+        self.mission_control_server.start()
+
+    def onMissionControlMessage(self, xml: TimestampedString) -> None:
+        with self.world_state_mutex:
+            try:
+                print(xml.text)
+                xml = ET.fromstring(xml.text)
+                import pdb;pdb.set_trace()
+            except RuntimeError as e:
+                print(e)
+            
     def __del__(self):
         self.io_service.stop()

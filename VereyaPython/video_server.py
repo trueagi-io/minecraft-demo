@@ -25,7 +25,7 @@ class VideoServer:
         self.server = None
 
     def start(self) -> None:
-        self.server = TCPServer(port=self.port, callback=self.__cb, log_name="video")
+        self.server = TCPServer(self.io_service, port=self.port, callback=self.__cb, log_name="video")
         asyncio.run_coroutine_threadsafe(self.server.startAccept(), self.io_service)
 
     def __cb(self, message: TimestampedUnsignedCharVector) -> None:

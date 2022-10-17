@@ -45,6 +45,7 @@ def init_mission(mc, start_x=None, start_y=None):
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
 
+    import pdb;pdb.set_trace()
     if mc is None:
         mc = MalmoConnector(miss)
         obs = RobustObserver(mc)

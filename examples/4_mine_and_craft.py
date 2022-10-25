@@ -201,7 +201,7 @@ def getSticks(rob):
             runStraight(rob, lookAt(rob, target), True)
         target = rob.nearestFromGrid('log')
 
-    while rob.filterInventoryItem('log') != []: # [] != None as well
+    while rob.softFilterInventoryItem('log') != []: # [] != None as well
         rob.craft('planks')
 
     rob.craft('stick')

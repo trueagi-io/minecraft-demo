@@ -9,7 +9,6 @@ import logging
 import collections
 import re
 
-import MalmoPython as MP
 import VereyaPython as VP
 
 import numpy
@@ -78,7 +77,7 @@ class MalmoConnector:
                     self.agent_hosts[role].startMission(self.mission, self.client_pool, self.mission_record, role, expId)
                     #self.agent_hosts[role].startMission(self.mission, self.mission_record)
                     break
-                except (MP.MissionException, VP.MissionException) as e:
+                except (VP.MissionException) as e:
                     errorCode = e.details.errorCode
                     if errorCode == VP.MissionErrorCode.MISSION_SERVER_WARMING_UP:
                         print("Server not quite ready yet - waiting...")
@@ -512,6 +511,10 @@ class RobustObserver:
     def filterInventoryItem(self, item, observeReq=True):
         inv = self.waitNotNoneObserve('getInventory', True, observeReq=observeReq)
         return list(filter(lambda entry: entry['type']==item, inv))
+
+    def softFilterInventoryItem(self, item, observeReq=True):
+        inv = self.waitNotNoneObserve('getInventory', True, observeReq=observeReq)
+        return list(filter(lambda entry: item in entry['type'], inv))
 
     def nearestFromGrid(self, objs, observeReq=True):
         if not isinstance(objs, list):

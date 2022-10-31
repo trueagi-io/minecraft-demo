@@ -1,4 +1,5 @@
 from enum import IntEnum, auto
+from dataclasses import dataclass
 
 
 class MissionErrorCode(IntEnum):
@@ -14,10 +15,15 @@ class MissionErrorCode(IntEnum):
     MISSION_CAN_NOT_KILL_BUSY_CLIENT = auto()
     MISSION_CAN_NOT_KILL_IRREPLACEABLE_CLIENT = auto()
     MISSION_VERSION_MISMATCH = auto()
-        
+
+@dataclass(slots=True, frozen=True)
+class Details:
+    errorCode: int
+    message: str
+
 
 class MissionException(RuntimeError):
     def __init__(self, message: str, code: MissionErrorCode):       
         super().__init__(message)
-        self.code = code
+        self.details = Details(errorCode=code, message=message)
 

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from .mission_spec import MissionSpec
 from .mission_init_xml import MissionInitXML
 from .client_info import default_client_mission_control_port
+from .version import *
 
 
 @dataclass(slots=True, frozen=True)
@@ -27,14 +28,20 @@ class MissionInitSpec:
         self.mission_init.client_role = role
         self.mission_init.experiment_uid = unique_experiment_id
         self.mission_init.mission = mission_spec.mission
-        self.mission_init.platform_version = "0.0"
+        self.mission_init.platform_version = MALMO_VERSION 
+        return self
+
+    @staticmethod
+    def fromstr(xml: str, validate: bool) -> 'MissionInitSpec':
+        self = MissionInitSpec()
+        self.mission_init.parse(xml);
         return self
 
     def getAsXML(self, prettyPrint: bool) -> str: 
         return self.mission_init.toXml()
     
     def getExperimentID(self) -> str:
-        return self.unique_experiment_id
+        return self.mission_init.experiment_uid
 
     def getClientAddress(self) -> str:
         return self.mission_init.client_agent_connection.client_ip_address

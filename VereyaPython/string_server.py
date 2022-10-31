@@ -1,11 +1,14 @@
 """
 thin wrapper around tcp server
 """
+import asyncio
+import logging
 from typing import Callable
 from .tcp_server import TCPServer
 from .timestamped_string import TimestampedString 
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
 
+logger = logging.getLogger()
 
 class StringServer:
     def __init__(self, 
@@ -21,7 +24,15 @@ class StringServer:
 
     def start(self) -> None:
         self.server = TCPServer(self.io_service, self.port, self.__cb, self.log_name)
-        self.server.start()
+        fut = asyncio.run_coroutine_threadsafe(self.server.startAccept(), self.io_service)
+        fut.add_done_callback(self.__log_server)
+        fut.result()
+
+    def __log_server(self, fut):
+        if self.server and self.server.isRunning():
+            logger.info('started string server %s on port %d', self.log_name, self.getPort())
+        else:
+            logger.warn('failed to start string server %s on port %d', self.log_name, self.getPort())
 
     def __cb(self, message: TimestampedUnsignedCharVector) -> None:
         string_message = TimestampedString.from_vector(message)

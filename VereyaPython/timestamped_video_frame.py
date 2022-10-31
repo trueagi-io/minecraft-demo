@@ -1,10 +1,13 @@
 import numpy.typing as npt
+from typing import ClassVar
 import struct
 import numpy
 import numpy as np
 from dataclasses import dataclass
 from enum import IntEnum
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
+import logging
+logger = logging.getLogger()
 
 
 class Transform(IntEnum):
@@ -23,10 +26,11 @@ class FrameType(IntEnum):
 
 
 
-@dataclass(slots=True, frozen=True, init=False)
+# should be frozen but init will be too ugly
+@dataclass(slots=True, frozen=False, init=False)
 class TimestampedVideoFrame:
     # check also Minecraft/src/main/java/com/microsoft/Malmo/Client/VideoHook.java
-    FRAME_HEADER_SIZE: int = 20 + (16 * 4 * 2)
+    FRAME_HEADER_SIZE: ClassVar[int] = 20 + (16 * 4 * 2)
 
     # The timestamp.
     timestamp: int
@@ -76,22 +80,24 @@ class TimestampedVideoFrame:
         self.frametype = frametype
 
         # First extract the positional information from the header:
-        self.xPos, self.yPos, self.zPos, self.yaw, self.pitch = struct.unpack('f' * 5, message.data)
+        print(message.data[0:150])
+        logger.debug('video  \n %s', message.data[0:150])
+        self.xPos, self.yPos, self.zPos, self.yaw, self.pitch = struct.unpack('f' * 5, message.data[0: 5 * 4])
         pos = 5
-        self.modelViewMatrix = numpy.frombuffer(message.data[pos: pos+16], 
-                                                dt=np.dtype(numpy.float32), count=16)
+        self.modelViewMatrix = numpy.frombuffer(message.data[pos * 4: (pos+16) * 4], 
+                                                dtype=np.dtype(numpy.float32), count=16)
         pos += 16
-        self.calibrationMatrix = numpy.frombuffer(message.data[pos: pos+16], 
-                                                  dt=np.dtype(numpy.float32), count=16)
+        self.calibrationMatrix = numpy.frombuffer(message.data[pos * 4: (pos+16) * 4], 
+                                                  dtype=np.dtype(numpy.float32), count=16)
         pos += 16
-        assert pos == self.FRAME_HEADER_SIZE
+        assert (pos * 4) == self.FRAME_HEADER_SIZE
         stride = width * channels
         if transform == Transform.IDENTITY:
             self.pixels = numpy.frombuffer(message.data[self.FRAME_HEADER_SIZE:],
-                                           dt=np.dtype(numpy.uint8), count=stride * height)
+                                           dtype=np.dtype(numpy.uint8), count=stride * height)
         elif transform == Transform.RAW_BMP:
             self.pixels = numpy.frombuffer(message.data[self.FRAME_HEADER_SIZE:],
-                                           dt=np.dtype(numpy.uint8), count=stride * height)
+                                           dtype=np.dtype(numpy.uint8), count=stride * height)
             # Swap BGR -> RGB:
             for i in range(len(self.pixels) - 2):
                 t = self.pixels[i]
@@ -104,7 +110,7 @@ class TimestampedVideoFrame:
             for i in range(height):
                 it = offset + self.FRAME_HEADER_SIZE
                 self.pixels[start: start + stride] = numpy.frombuffer(message.data[it: it + stride],
-                                                           dt=np.dtype(numpy.uint8), count=stride)
+                                                           dtype=np.dtype(numpy.uint8), count=stride)
                 offset -= stride
                 start += stride
         else:

@@ -5,7 +5,6 @@ from .timestamped_reward import TimestampedReward
 from .timestamped_string import TimestampedString
 
 
-# bug with slots=True https://github.com/python/cpython/issues/98247
 @dataclass(slots=True, init=True)
 class WorldState:
     has_mission_begun: bool = False 

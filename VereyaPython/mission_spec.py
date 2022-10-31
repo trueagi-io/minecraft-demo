@@ -17,7 +17,7 @@ class MissionSpec:
             if role == 0:
                 for vid in elem.findall('.//{*}' + videoType.split('.')[1]):
                     if what == 'x':
-                        return 1 
+                        return 1
                     elif what == 'w':
                         return int(vid.find('./{*}Width').text)
                     elif what == 'h':
@@ -28,6 +28,7 @@ class MissionSpec:
                         return 0
                     else:
                         raise RuntimeError("Invalid video attribute")
+                return None
             role -= 1
         raise RuntimeError("No such role in agent section")
 
@@ -56,3 +57,20 @@ class MissionSpec:
         if w:
             return w
         raise RuntimeError("MissionInitSpec::getVideoWidth : video has not been requested for this role")
+
+    def getVideoChannels(self, role: int) -> int:
+        c = self.getRoleValue(role, "AgentHandlers.VideoProducer", 'c')
+        if c is not None:
+            if c == 1:
+                return 4
+            return 3
+        raise RuntimeError("MissionInitSpec::getVideoChannels : video has not been requested for this role")
+
+    def isDepthRequested(self, role: int) -> bool:
+        return self.getRoleValue(role, "AgentHandlers.DepthProducer", 'x') is not None
+
+    def isLuminanceRequested(self, role: int) -> bool:
+        return self.getRoleValue(role, "AgentHandlers.LuminanceProducer", 'x') is not None
+
+    def isColourMapRequested(self, role: int) -> None:
+        return self.getRoleValue(role, "AgentHandlers.ColourMapProducer", 'x') is not None

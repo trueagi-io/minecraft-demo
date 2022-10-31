@@ -1,7 +1,12 @@
 import asyncio
+import logging
+import random
 import time
 from typing import Callable
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
+
+
+logger = logging.getLogger()
 
 
 class TCPServer:
@@ -22,22 +27,36 @@ class TCPServer:
 
         assert(not asyncio.iscoroutinefunction(callback))
 
+    def start(self):
+        asyncio.run_coroutine_threadsafe(self.startAccept(), self.io_service).result()
+
+    async def startAccept(self) -> None:
+        port = self.port
         if port == 0:
             # attempt to assign a port from a predefined range
             port_min = 10000;
             port_max = 11000; # TODO: could be configurable
-            self.bindToRandomPortInRange(io_service, port_min, port_max);
-
-    def start(self):
-        asyncio.run_coroutine_threadsafe(self.startAccept(), self.io_service).result()
-
-    async def startAccept(self):
-        self.server = await asyncio.start_server(self.__cb, None, self.port)
+            while True:
+                port = random.randint(port_min, port_max)
+                try:
+                    logger.info('starting sever with port %i' % port)
+                    self.server = await asyncio.start_server(self.__cb, None, port)
+                    logger.info('ok')
+                    self.port = port
+                    return
+                except OSError as e:
+                    logger.exception(e)
+                    continue
+        else:
+            self.server = await asyncio.start_server(self.__cb, None, self.port)
 
     async def __cb(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         while not self.closing:
-            # read untile eof
-            data = await reader.read()
+            # read header 
+            data = await reader.readexactly(4)
+            expected = int.from_bytes(data, byteorder='big', signed=False)
+            logger.debug('reading %d bytes', expected)
+            data = await reader.readexactly(expected)
             result = TimestampedUnsignedCharVector(data=data, timestamp=time.time())
 
             if self.confirm_with_fixed_reply:
@@ -53,22 +72,6 @@ class TCPServer:
     def confirmWithFixedReply(self, reply: str) -> None:
         assert(isinstance(reply, str))
         self.confirm_with_fixed_reply = True
-
-    def bindToPortInRange(self, port_min, port_max: int) -> None:
-        import socket, errno
-
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-try:
-    s.bind(("127.0.0.1", 5555))
-except socket.error as e:
-    if e.errno == errno.EADDRINUSE:
-        print("Port is already in use")
-    else:
-        # something else raised the socket.error exception
-        print(e)
-
-s.close()
         self.fixed_reply = reply.encode()
 
     def close(self):
@@ -77,3 +80,7 @@ s.close()
 
     def getPort(self) -> int:
         return self.port
+
+    def isRunning(self) -> bool:
+        return self.server is not None and self.server.is_serving()
+

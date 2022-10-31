@@ -1,8 +1,11 @@
 import asyncio
+import logging
 from typing import Callable
 from .tcp_server import TCPServer
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
 from .timestamped_video_frame import Transform, FrameType, TimestampedVideoFrame
+
+logger = logging.getLogger()
 
 
 class VideoServer:
@@ -23,10 +26,19 @@ class VideoServer:
         self.transform = Transform.REVERSE_SCANLINE
         self.port = port
         self.server = None
+        self.writers = list()
 
     def start(self) -> None:
         self.server = TCPServer(self.io_service, port=self.port, callback=self.__cb, log_name="video")
-        asyncio.run_coroutine_threadsafe(self.server.startAccept(), self.io_service)
+        fut = asyncio.run_coroutine_threadsafe(self.server.startAccept(), self.io_service)
+        fut.add_done_callback(self.__log_server)
+        fut.result()
+    
+    def __log_server(self, fut):
+        if self.server and self.server.isRunning():
+            logger.info('started video server on port %d', self.getPort())
+        else:
+            logger.warn('failed to start video server on port %d', self.getPort())
 
     def __cb(self, message: TimestampedUnsignedCharVector) -> None:
         if len(message.data) != (TimestampedVideoFrame.FRAME_HEADER_SIZE + self.width * self.height * self.channels):
@@ -43,3 +55,33 @@ class VideoServer:
 
     def close(self):
         self.server.close()
+
+    def startRecording(self) -> None:
+        self.written_frames = 0
+        self.queued_frames = 0
+        self.received_frames = 0
+        for writer in self.writers:
+            writer.open()
+
+    def getPort(self) -> int:
+        return self.server.getPort()
+
+    def getWidth(self) -> int:
+        return self.width
+
+    def getHeight(self) -> int:
+        return self.height
+
+    def getChannels(self) -> int:
+        return self.channels
+
+    def getFrameType(self) -> FrameType:
+        return self.frametype
+
+    def stopRecording(self) -> None:
+        for writer in self.writers:
+            if (writer.isOpen()):
+                writer.close()
+                self.written_frames += writer.getFrameWriteCount()
+        self.writers.clear()
+

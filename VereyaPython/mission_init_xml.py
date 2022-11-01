@@ -3,7 +3,7 @@ import copy
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
 from dataclasses import dataclass
-from .xml_util import get, get_optional
+from .xml_util import get, get_optional, str2xml
 
 
 logger = logging.getLogger()
@@ -50,14 +50,13 @@ class MissionInitXML:
         self.mission = None
         self.client_role = 0
         self.schema_version = ''
-        self.platform_version = '' 
+        self.platform_version = ''
         self.experiment_uid = ''
         if xml_text:
-            self.mission = self.parse(xml_text)
+            self.parse(xml_text)
 
     def parse(self, xml_text: str) -> None:
-        print(xml_text)
-        tree = ET.fromstring(xml_text)
+        el = str2xml(xml_text)
         self.mission = get(el, "MissionInit.Mission")
         el = copy.deepcopy(el)
         self.experiment_uid = get(el, "MissionInit.ExperimentUID", True, str)
@@ -67,10 +66,10 @@ class MissionInitXML:
         else:
             self.minecraft_server.connection_address = None
 
-        self.minecraft_server.connection_port = get_optional(int, el, "MissionInit.MinecraftServerConnection.<xmlattr>.port")
+        self.minecraft_server.connection_port = get_optional(int, el, "MissionInit.MinecraftServerConnection.<xmlattr>.port").get_value_or(None)
         self.client_role = get(el, "MissionInit.ClientRole", True, int)
         self.schema_version = get(el, "MissionInit.<xmlattr>.SchemaVersion", True, str)
-        self.plaftform_version = get(el, "MissionInit.<xmlattr>.PlatformVersion", True, str)
+        self.platform_version = get(el, "MissionInit.<xmlattr>.PlatformVersion", True, str)
 
         self.client_agent_connection.client_ip_address = get_optional(str, el, "MissionInit.ClientAgentConnection.ClientIPAddress").get_value_or("")
         self.client_agent_connection.client_mission_control_port = get_optional(int, el, "MissionInit.ClientAgentConnection.ClientMissionControlPort").get_value_or(0)
@@ -113,9 +112,7 @@ class MissionInitXML:
         # somehow there are two xmlns attributes
         result = ET.tostring(el, encoding='unicode', method='xml')
         logger.debug("mission xml is \n %s \n", result)
-        return result.replace('\n', '') 
-
+        return result.replace('\n', '')
 
 if __name__ == '__main__':
-    m = MissionInitXML(open('miss.xml', 'rt').read())
-
+    MissionInitXML(open('miss1.xml', 'rt').read()) 

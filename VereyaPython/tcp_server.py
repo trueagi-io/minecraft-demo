@@ -34,12 +34,12 @@ class TCPServer:
         port = self.port
         if port == 0:
             # attempt to assign a port from a predefined range
-            port_min = 10000;
-            port_max = 11000; # TODO: could be configurable
+            port_min = 10000
+            port_max = 11000 # TODO: could be configurable
             while True:
                 port = random.randint(port_min, port_max)
                 try:
-                    logger.info('starting sever with port %i' % port)
+                    logger.info('starting sever with port %i', port)
                     self.server = await asyncio.start_server(self.__cb, None, port)
                     logger.info('ok')
                     self.port = port
@@ -52,10 +52,9 @@ class TCPServer:
 
     async def __cb(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         while not self.closing:
-            # read header 
+            # read header
             data = await reader.readexactly(4)
             expected = int.from_bytes(data, byteorder='big', signed=False)
-            logger.debug('reading %d bytes', expected)
             data = await reader.readexactly(expected)
             result = TimestampedUnsignedCharVector(data=data, timestamp=time.time())
 
@@ -83,4 +82,3 @@ class TCPServer:
 
     def isRunning(self) -> bool:
         return self.server is not None and self.server.is_serving()
-

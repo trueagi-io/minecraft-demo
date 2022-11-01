@@ -1,7 +1,4 @@
-import numpy.typing as npt
-import struct
 from dataclasses import dataclass
-from enum import IntEnum
 from .reward_xml import RewardXML
 
 
@@ -16,5 +13,24 @@ class TimestampedReward:
         for (k, v) in self.reward.reward_values.items():
             if res:
                 res += ', '
-            res += '{0}: {1}'.format(k, v)
+            res += f'{k}: {v}'
         return res
+
+    def add(self, other: 'TimestampedReward') -> None:
+        for (k, v) in other.reward.reward_values.items():
+            dimension: int = k
+            value: float = v
+            if dimension in self.reward.reward_values:
+                self.reward.reward_values[dimension] += value
+            else:
+                self.reward.reward_values[dimension] = value
+
+    @staticmethod
+    def createFromSimpleString(timestamp: int, simple_string: str) -> 'TimestampedReward':
+        reward = RewardXML()
+        for item in simple_string.split(','):
+            k, v = item.split(':')
+            dimention = int(k)
+            value = float(v)
+            reward.reward_values[dimension] = value
+        return TimestampedReward(timestamp=timestamp, reward=reward)

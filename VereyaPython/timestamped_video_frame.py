@@ -1,12 +1,14 @@
-import numpy.typing as npt
 from typing import ClassVar
 import struct
+from enum import IntEnum
+from dataclasses import dataclass
+import logging
+
 import numpy
 import numpy as np
-from dataclasses import dataclass
-from enum import IntEnum
+import numpy.typing as npt
+
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
-import logging
 logger = logging.getLogger()
 
 
@@ -52,7 +54,7 @@ class TimestampedVideoFrame:
 
     # The yaw of the player at render time
     yaw: float = 0
-   
+
     # The x pos of the player at render time
     xPos: float = 0
 
@@ -68,10 +70,10 @@ class TimestampedVideoFrame:
 
     # The pixels, stored as channels then columns then rows. Length should be width*height*channels.
     pixels: npt.NDArray[np.uint8] = numpy.array(0, dtype=numpy.uint8)
-    
+
     def __init__(self, width: np.uint16, height: np.uint16,
-                channels: np.uint8, message: TimestampedUnsignedCharVector, 
-                transform: Transform = Transform.IDENTITY, 
+                channels: np.uint8, message: TimestampedUnsignedCharVector,
+                transform: Transform = Transform.IDENTITY,
                 frametype: FrameType=FrameType.VIDEO):
         self.timestamp = message.timestamp
         self.width = width
@@ -80,14 +82,12 @@ class TimestampedVideoFrame:
         self.frametype = frametype
 
         # First extract the positional information from the header:
-        print(message.data[0:150])
-        logger.debug('video  \n %s', message.data[0:150])
         self.xPos, self.yPos, self.zPos, self.yaw, self.pitch = struct.unpack('f' * 5, message.data[0: 5 * 4])
         pos = 5
-        self.modelViewMatrix = numpy.frombuffer(message.data[pos * 4: (pos+16) * 4], 
+        self.modelViewMatrix = numpy.frombuffer(message.data[pos * 4: (pos+16) * 4],
                                                 dtype=np.dtype(numpy.float32), count=16)
         pos += 16
-        self.calibrationMatrix = numpy.frombuffer(message.data[pos * 4: (pos+16) * 4], 
+        self.calibrationMatrix = numpy.frombuffer(message.data[pos * 4: (pos+16) * 4],
                                                   dtype=np.dtype(numpy.float32), count=16)
         pos += 16
         assert (pos * 4) == self.FRAME_HEADER_SIZE
@@ -115,10 +115,3 @@ class TimestampedVideoFrame:
                 start += stride
         else:
             raise NotImplementedError(str(transform) + " is not implemented")
-
-
-
-
-
-                
-

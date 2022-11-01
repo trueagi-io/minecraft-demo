@@ -5,15 +5,15 @@ import asyncio
 import logging
 from typing import Callable
 from .tcp_server import TCPServer
-from .timestamped_string import TimestampedString 
+from .timestamped_string import TimestampedString
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
 
 logger = logging.getLogger()
 
 class StringServer:
-    def __init__(self, 
-                 io_service: object, 
-                 port: int, 
+    def __init__(self,
+                 io_service: object,
+                 port: int,
                  handle_string: Callable[[TimestampedString], None],
                  log_name: str):
         self.io_service = io_service
@@ -32,7 +32,7 @@ class StringServer:
         if self.server and self.server.isRunning():
             logger.info('started string server %s on port %d', self.log_name, self.getPort())
         else:
-            logger.warn('failed to start string server %s on port %d', self.log_name, self.getPort())
+            logger.warning('failed to start string server %s on port %d', self.log_name, self.getPort())
 
     def __cb(self, message: TimestampedUnsignedCharVector) -> None:
         string_message = TimestampedString.from_vector(message)
@@ -41,6 +41,17 @@ class StringServer:
 
     def recordMessage(self, message: TimestampedString) -> None:
         pass
- 
+
     def getPort(self) -> int:
         return self.server.getPort()
+
+    def close(self) -> None:
+        self.server.close()
+
+    def record(self, path: str) -> 'StringServer':
+        raise NotImplementedError('recording in string server not implemented')
+       # if self.writer.is_open():
+       #     self.writer.close()
+
+       # self.writer.open(path, 'aw')
+       # return self

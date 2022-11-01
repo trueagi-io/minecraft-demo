@@ -22,7 +22,7 @@ def setupLogger():
     # add formatter to ch
     ch.setFormatter(formatter)
     # add ch to logger
-    logger.addHandler(ch)
+    #logger.addHandler(ch)
 
     f = logging.handlers.RotatingFileHandler('app.log')
     f.setFormatter(formatter)

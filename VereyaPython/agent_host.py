@@ -18,10 +18,13 @@ from .mission_record_spec import MissionRecordSpec
 from .world_state import WorldState
 from .argument_parser import ArgumentParser
 from .mission_exception import MissionException, MissionErrorCode
-from .world_state_policy import VideoPolicy, RewardsPolicy, ObservationsPolicy 
+from .world_state_policy import VideoPolicy, RewardsPolicy, ObservationsPolicy
+from .timestamped_reward import TimestampedReward
+from .mission_ended_xml import MissionEndedXML
+from .client_connection import ClientConnection
 from . import rpc
 from .version import *
-frim .consts import *
+from .consts import *
 
 
 
@@ -44,13 +47,16 @@ class AgentHost(ArgumentParser):
         self.world_state = WorldState()
         self.mission_control_server = None
         self.observations_server = None
-        self.colourmap_server = None 
+        self.colourmap_server = None
         self.commands_connection = None
         self.commands_stream = None
         self.rewards_server = None
-        self.current_role = -1 
+        self.current_role = -1
         self.video_policy = VideoPolicy.LATEST_FRAME_ONLY
         self.observations_policy = ObservationsPolicy.LATEST_OBSERVATION_ONLY
+        self.current_mission_init = None
+        self.current_mission_record = None
+        self.rewards_policy = RewardsPolicy.SUM_REWARDS
 
     def startMission(self, mission: MissionSpec, client_pool: List[ClientInfo],
                      mission_record: MissionRecordSpec, role: int,
@@ -144,7 +150,8 @@ class AgentHost(ArgumentParser):
                 logger.info("Cancelling reservation request with " + item.ip_address + ":" +\
                               str(item.control_port))
                 try:
-                    fut = rpc.sendStringAndGetShortReply(self.io_service, item.ip_address, item.control_port, "MALMO_CANCEL_REQUEST\n", false)
+                    fut = rpc.sendStringAndGetShortReply(self.io_service, item.ip_address, item.control_port,
+                                                         "MALMO_CANCEL_REQUEST\n", False)
                     reply = await asyncio.wait_for(fut, timeout=3)
                     logger.info("Cancelling reservation, received reply from " + str(item.ip_address) + ": " + reply)
                 except RuntimeError as e:
@@ -284,26 +291,25 @@ class AgentHost(ArgumentParser):
         self.closeRecording()
 
         # Ensure all TCP server ports are closed.
-
         if self.video_server:
             self.video_server.close()
-            self.video_server = None 
+            self.video_server = None
 
         if self.depth_server:
             self.depth_server.close()
-            self.depth_server = None 
+            self.depth_server = None
 
         if self.luminance_server:
             self.luminance_server.close()
-            self.luminance_server = None 
+            self.luminance_server = None
 
         if self.colourmap_server:
-            self.colourmap_server->close ()
-            self.colourmap_server = None 
+            self.colourmap_server.close ()
+            self.colourmap_server = None
 
         if self.observations_server:
             self.observations_server.close()
-            self.observations_server = None 
+            self.observations_server = None
 
         if self.rewards_server:
             self.rewards_server.close()
@@ -312,38 +318,35 @@ class AgentHost(ArgumentParser):
         if self.mission_control_server:
             self.mission_control_server.close()
             self.mission_control_server = None
- 
+
     def closeServers(self) -> None:
         if self.video_server:
             self.video_server.stopRecording()
 
         if self.depth_server:
             self.depth_server.stopRecording()
-        
 
         if self.luminance_server:
             self.luminance_server.stopRecording()
 
         if self.colourmap_server:
             self.colourmap_server.stopRecording()
-        
+
 
         if self.observations_server:
             self.observations_server.stopRecording()
-        
+
 
         if self.rewards_server:
             self.rewards_server.stopRecording()
-        
 
-        if self.commands_stream.is_open():
+
+        if self.commands_stream and self.commands_stream.is_open():
             self.commands_stream.close()
-        
+
         if self.commands_connection:
             self.commands_connection = None
-        
 
-    
     def generateMissionInit(self) -> str:
         prettyPrint = False
         generated_xml = self.current_mission_init.getAsXML(prettyPrint)
@@ -404,16 +407,18 @@ class AgentHost(ArgumentParser):
 
     def sendCommand(self, command: str, key: str='') -> None:
         with self.world_state_mutex:
-            if not self.commands_connection:
+            if self.commands_connection is None:
+                logger.error('commands connection is not open.')
                 error_message = TimestampedString(time.time(),
                                                   "AgentHost::sendCommand :\
                                                   commands connection is not open. Is the mission running?")
-            self.world_state.errors.append(error_message)
-            return
+                self.world_state.errors.append(error_message)
+                return
         full_command = command if not key else key + " " + command
         try:
             self.commands_connection.send(full_command)
         except RuntimeError as e:
+            logger.exception('cant send command', exc_info=e)
             error_message = TimestampedString(time.time(),
                 "AgentHost::sendCommand : failed to send command: " + str(e.args))
             self.world_state.errors.push_back(error_message)
@@ -445,6 +450,7 @@ class AgentHost(ArgumentParser):
         self.mission_control_server.start()
 
     def onMissionControlMessage(self, xml: TimestampedString) -> None:
+        elem = None
         try:
             logger.info('control %s', xml.text)
             elem = ET.fromstring(xml.text)
@@ -455,15 +461,17 @@ class AgentHost(ArgumentParser):
             with self.world_state_mutex:
                 self.world_state.errors.append(error_message)
             return
-        if not elem:
+        if elem is None:
             text = "Empty XML string in mission control message"
             error_message = TimestampedString(timestamp=xml.timestamp, text=text)
             with self.world_state_mutex:
                 self.world_state.errors.append(error_message)
             return
         root_node_name = elem.tag
+        if '}' in root_node_name:
+            root_node_name = root_node_name.split('}', 1)[1]
         with self.world_state_mutex:
-            if( not world_state.is_mission_running and root_node_name == "MissionInit" ):
+            if( not self.world_state.is_mission_running and root_node_name == "MissionInit" ):
                 validate = True
                 self.current_mission_init = MissionInitSpec.fromstr(xml.text, validate)
                 self.world_state.is_mission_running = True
@@ -473,7 +481,7 @@ class AgentHost(ArgumentParser):
                 try:
                     mission_ended = MissionEndedXML(xml.text)
                     status = mission_ended.getStatus()
-                    if status != MissionEndedXML.ENDED and status != MissionEndedXML.PLAYER_DIED:
+                    if status not in (MissionEndedXML.ENDED, MissionEndedXML.PLAYER_DIED):
                         text = "Mission ended abnormally: " + mission_ended.getHumanReadableStatus()
                         error_message = TimestampedString(timestamp=xml.timestamp, text=text)
                         self.world_state.errors.append(error_message)
@@ -495,20 +503,40 @@ class AgentHost(ArgumentParser):
                                 vs = self.video_server
                             elif (vd.frame_type == "DEPTH_MAP"):
                                 vs = self.depth_server;
-                            elif (vd.frame_type == "LUMINANCE")
+                            elif (vd.frame_type == "LUMINANCE"):
                                 vs = self.luminance_server;
-                            elif (vd.frame_type == "COLOUR_MAP")
+                            elif (vd.frame_type == "COLOUR_MAP"):
                                 vs = self.colourmap_server;
-                            if vs: 
+                            if vs:
                                 vd.frames_received =  vs.receivedFrames()
                                 vd.frames_written = vs.writtenFrames()
                     xml.text = mission_ended.toXml()
                 except RuntimeError as e:
-                    
+                    text = "Error processing MissionEnded message XML: " + repr(e) + " : " + xml.text[:200] + "..."
+                    error_message = TimestampedString(timestamp=xml.timestamp, text=text)
+                    self.world_state.errors.append(error_message)
+                    return
+                if self.current_mission_record.isRecording():
+                    missionEndedXML = open(self.current_mission_record.getMissionEndedPath(), 'aw')
+                    missionEndedXML.write(xml.text)
+                    missionEndedXML.close()
+                self.close()
+            elif root_node_name == "ping":
+                # The mod is pinging us to check we are still around - do nothing.
+                pass
+            else:
+                text = "Unknown mission control message root node or at wrong time: " + root_node_name + " :" + xml.text[:200] 
+                logger.error(text)
+                error_message = TimestampedString(timestamp=xml.timestamp, text=text)
+                self.world_state.errors.append(error_message)
+                return
+        self.world_state.mission_control_messages.append(xml)
+
+
     def onVideo(self, message: TimestampedVideoFrame) -> None:
         with self.world_state_mutex:
             if self.video_policy == VideoPolicy.LATEST_FRAME_ONLY:
-                if (message.frametype == FrameType.COLOUR_MAP): 
+                if (message.frametype == FrameType.COLOUR_MAP):
                     self.world_state.video_frames_colourmap.clear()
                 else:
                     self.world_state.video_frames.clear()
@@ -523,7 +551,7 @@ class AgentHost(ArgumentParser):
     def listenForRewards(self, port: int) -> None:
         if not self.rewards_server or ( port != 0 and self.rewards_server.getPort() != port ):
             if (self.rewards_server is not None):
-                rewards_server.close()
+                self.rewards_server.close()
 
             self.rewards_server = StringServer(self.io_service, port, self.onReward, "rew")
             self.rewards_server.start()
@@ -534,10 +562,9 @@ class AgentHost(ArgumentParser):
     def onReward(self, message: TimestampedString) -> None:
         with self.world_state_mutex:
             try:
-                reward = TimestampedReward() 
-                reward.createFromSimpleString(message.timestamp, message.text)
+                reward = TimestampedReward.createFromSimpleString(message.timestamp, message.text)
                 self.processReceivedReward(reward)
-            except RuntimeError as e: 
+            except RuntimeError as e:
                 text = "Error parsing Reward message: " + message.text
                 logger.error(text)
                 logger.exception(e)
@@ -548,10 +575,10 @@ class AgentHost(ArgumentParser):
         if not self.observations_server or ( port != 0 and self.observations_server.getPort() != port ):
             if (self.observations_server is not None):
                 self.observations_server.close()
-            
+
             self.observations_server = StringServer(self.io_service, port, self.onObservation, "obs")
             self.observations_server.start()
-        
+
         if self.current_mission_record.isRecordingObservations():
             self.observations_server.record(self.current_mission_record.getObservationsPath())
 
@@ -564,7 +591,7 @@ class AgentHost(ArgumentParser):
                 print('append')
                 self.world_state.observations.append(message)
             else:
-                raise RuntimeError('unexpected observation policy ' + str(self.self.observations_policy))
+                raise RuntimeError('unexpected observation policy ' + str(self.observations_policy))
 
             self.world_state.number_of_observations_since_last_state += 1
 
@@ -572,4 +599,19 @@ class AgentHost(ArgumentParser):
         pass
 
     def __del__(self):
+        self.close()
         self.io_service.stop()
+
+    def processReceivedReward(self, reward: TimestampedReward) -> None:
+        if self.rewards_policy ==  RewardsPolicy.LATEST_REWARD_ONLY:
+            self.world_state.rewards.clear()
+            self.world_state.rewards.append( reward )
+        elif self.rewards_policy == RewardsPolicy.SUM_REWARDS:
+            if self.world_state.rewards:
+                reward.add(self.world_state.rewards[0])
+                self.world_state.rewards.clear()
+            self.world_state.rewards.append(reward)
+            # (timestamp is that of latest reward, even if zero)
+        elif self.rewards_policy == RewardsPolicy.KEEP_ALL_REWARDS:
+            self.world_state.rewards.append(reward)
+        self.world_state.number_of_rewards_since_last_state += 1

@@ -1,4 +1,8 @@
 import asyncio
+import logging
+
+
+logger = logging.getLogger()
 
 
 class ClientConnection:
@@ -9,6 +13,7 @@ class ClientConnection:
         self.port = port
         self.timeout = 60
         fut = asyncio.run_coroutine_threadsafe(asyncio.open_connection(self.address, self.port), self.loop)
+        logger.info(f'open command connection {self.address}:{self.port}')
         self.reader, self.writer = fut.result(self.timeout) 
 
     def getTimeout(self) -> int:
@@ -27,11 +32,19 @@ class ClientConnection:
     def send(self, message: str) -> None:
         """Sends a string over the open connection.
         param message The string to send. Will have newline appended if needed."""
-        asyncio.run_coroutine_threadsafe(self.__send(message), self.loop)
+        asyncio.run_coroutine_threadsafe(self.__send(message + '\n'), self.loop).add_done_callback(self.__on_done)
+
+    def __on_done(self, fut) -> None:
+        res = fut.result()
+        e = fut.exception()
+        if e is not None:
+            logger.exception('error writing command', exec_info=e)
 
     async def __send(self, message: str) -> None:
-        writer.write(message.encode())
-        await asyncio.wait_for(writer.drain(), self.timeout)
+        logger.info(f'writing command {message}')
+        self.writer.write(message.encode())
+        await asyncio.wait_for(self.writer.drain(), self.timeout)
+        logger.info(f'done writing command {message}')
 
     def close(self) -> None:
         self.writer.close()

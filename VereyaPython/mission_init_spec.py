@@ -9,7 +9,7 @@ from .version import *
 class MissionInitSpec:
     mission_init: MissionInitXML = MissionInitXML()
 
-    @staticmethod 
+    @staticmethod
     def from_param(mission_spec: MissionSpec, unique_experiment_id: str, role: int) -> 'MissionInitSpec':
         self = MissionInitSpec()
         # construct a default MissionInit using the provided MissionSpec
@@ -28,7 +28,7 @@ class MissionInitSpec:
         self.mission_init.client_role = role
         self.mission_init.experiment_uid = unique_experiment_id
         self.mission_init.mission = mission_spec.mission
-        self.mission_init.platform_version = MALMO_VERSION 
+        self.mission_init.platform_version = MALMO_VERSION
         return self
 
     @staticmethod
@@ -37,9 +37,9 @@ class MissionInitSpec:
         self.mission_init.parse(xml);
         return self
 
-    def getAsXML(self, prettyPrint: bool) -> str: 
+    def getAsXML(self, prettyPrint: bool) -> str:
         return self.mission_init.toXml()
-    
+
     def getExperimentID(self) -> str:
         return self.mission_init.experiment_uid
 
@@ -49,21 +49,21 @@ class MissionInitSpec:
     def setClientAddress(self, address: str) -> None:
         self.mission_init.client_agent_connection.client_ip_address = address.strip()
 
-    def getClientMissionControlPort(self, ) -> None: 
+    def getClientMissionControlPort(self, ) -> None:
         return self.mission_init.client_agent_connection.client_mission_control_port
 
     def setClientMissionControlPort(self, port: int):
         self.mission_init.client_agent_connection.client_mission_control_port = port
-    
+
     def getClientCommandsPort(self) -> int:
         return self.mission_init.client_agent_connection.client_commands_port
 
     def setClientCommandsPort(self, port: int) -> None:
         self.mission_init.client_agent_connection.client_commands_port = port
-    
-    def getAgentAddress(self) -> str: 
+
+    def getAgentAddress(self) -> str:
         return self.mission_init.client_agent_connection.agent_ip_address
-    
+
     def setAgentAddress(self, address: str) -> None:
         self.mission_init.client_agent_connection.agent_ip_address = address
 
@@ -73,37 +73,37 @@ class MissionInitSpec:
     def setAgentMissionControlPort(self, port: int) -> None:
         self.mission_init.client_agent_connection.agent_mission_control_port = port
 
-    def getAgentVideoPort(self) -> int: 
+    def getAgentVideoPort(self) -> int:
         return self.mission_init.client_agent_connection.agent_video_port
-    
-    def getAgentDepthPort(self) -> int: 
+
+    def getAgentDepthPort(self) -> int:
         return self.mission_init.client_agent_connection.agent_depth_port
 
-    def getAgentLuminancePort(self) -> int: 
+    def getAgentLuminancePort(self) -> int:
         return self.mission_init.client_agent_connection.agent_lumunance_port
 
-    def getAgentColourMapPort(self) -> int: 
+    def getAgentColourMapPort(self) -> int:
         return self.mission_init.client_agent_connection.agent_colour_map_port
 
     def setAgentVideoPort(self, port: int) -> None:
         self.mission_init.client_agent_connection.agent_video_port = port
-    
+
     def setAgentDepthPort(self, port: int) -> None:
         self.mission_init.client_agent_connection.agent_depth_port = port
 
     def setAgentLuminancePort(self, port: int) -> None:
         self.mission_init.client_agent_connection.agent_lumunance_port = port
-    
+
     def setAgentColourMapPort(self, port: int) -> int:
         self.mission_init.client_agent_connection.agent_colour_map_port = port
 
-    def getAgentObservationsPort(self, ) -> int: 
+    def getAgentObservationsPort(self, ) -> int:
         return self.mission_init.client_agent_connection.agent_observations_port
-    
+
     def setAgentObservationsPort(self, port: int) -> None:
         self.mission_init.client_agent_connection.agent_observations_port = port
-    
-    def getAgentRewardsPort(self, ) -> int: 
+
+    def getAgentRewardsPort(self, ) -> int:
         return self.mission_init.client_agent_connection.agent_rewards_port
 
     def setAgentRewardsPort(self, port: int) -> None:
@@ -115,4 +115,3 @@ class MissionInitSpec:
     def setMinecraftServerInformation(self, address: str, port: int) -> None:
         self.mission_init.minecraft_server.connection_address = address.strip()
         self.mission_init.minecraft_server.connection_port = port
-

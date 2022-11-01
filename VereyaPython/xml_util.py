@@ -1,8 +1,8 @@
 import copy
+from io import StringIO
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
 from dataclasses import dataclass
-
 
 
 def get(el, path, must_be=False, _type=None):
@@ -15,14 +15,14 @@ def get(el, path, must_be=False, _type=None):
             xmlattr = True
             continue
         if xmlattr:
-            result = elem.attrib.get(item, None)
+            result = result.attrib.get(item, None)
             break
         elem = result.find(item)
-        if elem:
+        if elem is not None:
             result = elem
         else:
             if must_be:
-                raise RuntimeError('element {0} not found'.format(path))
+                return None
             result = ET.SubElement(result, item)
     if _type:
         if xmlattr:
@@ -38,7 +38,7 @@ class Result:
         self._type = _type
 
     def get_value_or(self, default):
-        if self.value:
+        if self.value is not None:
             return self._type(self.value)
         return default
 
@@ -54,7 +54,7 @@ def get_optional(_type, el, path):
     elem = get(el, path, must_be=False)
     if '<xmlattr>' in path:
         return Result(elem, _type)
-    return Result(elem.text if elem else None, _type)
+    return Result(elem.text if elem is not None else None, _type)
 
 
 def get_child_optional(el, path):
@@ -66,3 +66,11 @@ def get_child_optional(el, path):
         if elem is None:
             return elem
     return elem
+
+
+def str2xml(xml: str) -> Element:
+    it = ET.iterparse(StringIO(xml))
+    for _, el in it:
+        _, _, el.tag = el.tag.rpartition('}') # strip ns
+    root = it.root
+    return root

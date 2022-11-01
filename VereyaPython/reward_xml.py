@@ -1,14 +1,18 @@
+import logging
 from dataclasses import dataclass
-from typing import ClassVar, List, Dict
+from typing import Dict
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
+
+
+logger = logging.getLogger()
 
 
 @dataclass(slots=True, init=False)
 class RewardXML:
     reward_values: Dict[int, float]
 
-    def __init__(self, xml_text: str='')
+    def __init__(self, xml_text: str=''):
         self.reward_values = dict()
         if xml_text:
             self.parse_rewards(xml_text)
@@ -22,7 +26,7 @@ class RewardXML:
                 value = float(child.attrib.get("value"))
                 self.reward_values[dimension] = value
 
-    def add_rewards(reward_element: Element) -> None:
+    def add_rewards(self, reward_element: Element) -> None:
         if reward_element.tag == 'Rewards':
             sub1 = reward_element
         else:
@@ -35,9 +39,8 @@ class RewardXML:
     def toXml(self) -> str:
         xml = Element('Rewards')
         self.add_rewards(xml)
-        result = ET.dump(xml)
+        result = ET.tostring(xml, encoding='unicode', method='xml')
         return result.strip()
 
-    def size() -> int:
+    def size(self) -> int:
         return len(self.reward_values)
-

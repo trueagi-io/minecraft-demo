@@ -6,6 +6,9 @@ import tagilmo.utils.mission_builder as mb
 
 from tagilmo.utils.mathutils import normAngle, degree2rad
 
+import numpy as np
+import minecraft_data
+
 
 # This script shows a relatively complex behavior of gathering resources
 # for an iron pickaxe. It includes searchng for logs, mining stones, etc.
@@ -20,6 +23,16 @@ from tagilmo.utils.mathutils import normAngle, degree2rad
 # The longer the plan, the more things can go wrong.
 # It is instructive to examine failure cases.
 
+# apparantely logs naming is different in different versions of Minecraft,
+# so we need to get right names for our current version
+
+log_names = []
+versions = minecraft_data.common().protocolVersions
+mcd = minecraft_data('1.18.1')  # here we must put current minecraft version
+for item in mcd.items_list:
+    iname = item['name']
+    if 'log' in iname:
+        log_names.append(iname)
 
 # ============== some hand-coded skills ==============
 
@@ -48,9 +61,9 @@ def runStraight(rob, dist, keepHeight=False):
             bJump = False
         los = rob.getCachedObserve('getLineOfSights')
         if los is not None and los['distance'] < 0.5 and \
-                not los['distance'] in RobustObserver.passableBlocks and \
-                not los['type'] in RobustObserver.passableBlocks and \
-                not bJump:
+               not los['distance'] in RobustObserver.passableBlocks and \
+               not los['type'] in RobustObserver.passableBlocks and\
+               not bJump:
             break
     rob.sendCommand("move 0")
 
@@ -106,14 +119,21 @@ def search4blocks(rob, blocks):
     for t in range(3000):
         sleep(0.02)  # for action execution - not observations
         grid = rob.waitNotNoneObserve('getNearGrid')
-        for i in range(len(grid)):
-            if grid[i] in blocks:
-                rob.stopMove()
-                return [grid[i]] + rob.gridIndexToAbsPos(i)
-        los = rob.getCachedObserve('getLineOfSights')
-        if los is not None and los['type'] in blocks:
+        output = [[grid[i],i] for i in range(len(grid)) for j in blocks if j in grid[i]]
+        if len(output) > 0:
             rob.stopMove()
-            return [los['type'], los['x'], los['y'], los['z']]
+            poses = []
+            for out in output:
+                poses.append(rob.mc.gridIndexToPos(out[1]))
+            poses = np.asarray(poses)
+            sum = np.sum(poses, axis=1)
+            ind = np.argmin(np.abs(sum))
+            return [output[ind][0]] + rob.gridIndexToAbsPos(output[ind][1])
+        los = rob.getCachedObserve('getLineOfSights')
+        if (los["hitType"] != "MISS"):
+            if los is not None and los['type'] in blocks:
+                rob.stopMove()
+                return [los['type'], los['x'], los['y'], los['z']]
         path = rob.analyzeGridInYaw()
         turnVel = 0.25 * math.sin(t * 0.05)
         if not (path['passWay'] and path['solid']):
@@ -140,8 +160,10 @@ def mineAtSight(rob):
     rob.sendCommand('attack 1')
     for t in range(100):
         los = rob.getCachedObserve('getLineOfSights')
+        if los['hitType'] == 'MISS':
+            continue
         if los is None or los['type'] is None or \
-                abs(dist - los['distance']) > 0.01 or obj != los['type']:
+           abs(dist - los['distance']) > 0.01 or obj != los['type']:
             rob.sendCommand('attack 0')
             return True
         sleep(0.1)
@@ -168,15 +190,14 @@ def chooseTool(rob):
     elif los['type'] in ['iron_ore']:
         rob.sendCommand('hotbar.2 1')
         rob.sendCommand('hotbar.2 0')
-    else:  # 'stone', etc.
+    else: # 'stone', etc.
         if wooden_pickaxe:
             rob.sendCommand('hotbar.1 1')
             rob.sendCommand('hotbar.1 0')
         else:
             rob.sendCommand('hotbar.2 1')
             rob.sendCommand('hotbar.2 0')
-
-
+    
 # Mine not just one block, but everything in range
 def mineWhileInRange(rob):
     logging.info("\tinside mineWhileInRange")
@@ -185,32 +206,38 @@ def mineWhileInRange(rob):
     while rob.getCachedObserve('getLineOfSights') is None or rob.getCachedObserve('getLineOfSights', 'inRange'):
         sleep(0.02)
         rob.observeProcCached()
-        chooseTool(rob)
+        # chooseTool(rob)
     rob.sendCommand('attack 0')
-
 
 # A higher-level skill for getting sticks
 def getSticks(rob):
     logging.info("\tinside getSticks")
     # repeat 3 times, because the initial target can be wrong due to tallgrass
     # or imprecise direction to a distant tree
+    target_name = log_names
     for i in range(3):
-        target = search4blocks(rob, ['log', 'leaves'])
+        target = search4blocks(rob, target_name)
         dist = lookAt(rob, target[1:4])
         runStraight(rob, dist, True)
+        target_name = [target[0]]
 
-    target = rob.nearestFromGrid('log')
+    target = rob.nearestFromGrid(target_name)
     while target is not None:
         lookAt(rob, target)
         if not mineAtSight(rob):
             break
-        target = rob.nearestFromEntities('log')
+        target = rob.nearestFromEntities(target_name)
         if target is not None:
             runStraight(rob, lookAt(rob, target), True)
-        target = rob.nearestFromGrid('log')
+        target = rob.nearestFromGrid(target_name)
 
-    while rob.softFilterInventoryItem('log') != []:  # [] != None as well
-        rob.craft('planks')
+    while True: # [] != None as well
+        filtered_inv = rob.softFilterInventoryItem('log')
+        if filtered_inv == []:
+            break
+        for f_inv in filtered_inv:
+            name_prefix = f_inv['type'].split("_")[0]
+            rob.craft(name_prefix+'_planks')
 
     rob.craft('stick')
 
@@ -230,7 +257,7 @@ def leaveShaft(rob, angle):
 # Making a shaft in a certain direction
 def mineStone(rob):
     logging.info("\tinside mineStone")
-    lookDir(rob, math.pi / 4, 0.0)
+    lookDir(rob, math.pi/4, 0.0)
     strafeCenterX(rob)
     while True:
         mineWhileInRange(rob)
@@ -252,16 +279,16 @@ def mineIron(rob):
     while True:
         sleep(0.1)
         rob.observeProcCached()
-        chooseTool(rob)
+        # chooseTool(rob) #currently not working as intended
         iron_ore = rob.filterInventoryItem('iron_ore')
         coal = rob.filterInventoryItem('coal')
         if iron_ore != None and iron_ore != [] and iron_ore[0]['quantity'] >= 3 and \
-                coal != None and coal != [] and coal[0]['quantity'] >= 3:
-            rob.craft('iron_ingot')
-            rob.craft('iron_ingot')
-            rob.craft('iron_ingot')
-            rob.craft('iron_pickaxe')
-            break
+           coal != None and coal != [] and coal[0]['quantity'] >= 3:
+               rob.craft('iron_ingot')
+               rob.craft('iron_ingot')
+               rob.craft('iron_ingot')
+               rob.craft('iron_pickaxe')
+               break
         pickaxe = rob.filterInventoryItem('stone_pickaxe')
         if pickaxe == []:
             break
@@ -271,13 +298,18 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO)
     logging.info("Starting the mission")
-    miss = mb.MissionXML()
-    miss.setWorld(
-        mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake",
-                     forceReset="true"))
+    miss = mb.MissionXML(
+        agentSections=[mb.AgentSection(name='Agent',
+                                       agentstart=mb.AgentStart([1, 67, 1, 1]))])
+    world = mb.defaultworld(
+        seed='5',
+        forceReset="false",
+        forceReuse="true")
+    miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     mc = MalmoConnector(miss)
     mc.safeStart()
+
     rob = RobustObserver(mc)
     # fixing bug with falling through while reconnecting
     logging.info("Initializing the starting position")
@@ -290,8 +322,12 @@ if __name__ == '__main__':
     logging.info("The first search for sticks")
     getSticks(rob)
 
+    logging.info("Trying to craft a crafting table")
+    rob.craft('crafting_table')
+
     logging.info("Trying to craft a wooden pickaxe")
     rob.craft('wooden_pickaxe')
+    sleep(0.1)
     pickaxe = rob.filterInventoryItem('wooden_pickaxe')
     if pickaxe == []:
         print("Failed")
@@ -305,11 +341,11 @@ if __name__ == '__main__':
 
     logging.info("Crafting stone_pickaxe")
     rob.craft('stone_pickaxe')
-    pickaxe = rob.filterInventoryItem('stone_pickaxe')
+    stone_pickaxe = rob.filterInventoryItem('stone_pickaxe')
     # put pickaxe into inventory_1 == hotbar.2 slot
-    rob.sendCommand('swapInventoryItems 1 ' + str(pickaxe[0]['index']))
+    rob.sendCommand('swapInventoryItems 0 ' + str(stone_pickaxe[0]['index']))
 
-    # climbing up
+    #climbing up
     logging.info("Leaving the shaft")
     leaveShaft(rob, math.pi)
     rob.sendCommand('move 1')
@@ -321,14 +357,15 @@ if __name__ == '__main__':
     getSticks(rob)
 
     logging.info("Mining for iron")
-    lookDir(rob, math.pi / 4, 0.0)
+    lookDir(rob, math.pi/4, 0.0)
     mineIron(rob)
     logging.info("Leaving the shaft")
     leaveShaft(rob, math.pi)
 
     if not rob.filterInventoryItem('iron_pickaxe'):
-        logging.info("One more attemp of iron mining")
+        logging.info("One more attempt of iron mining")
         rob.craft('stone_pickaxe')
-        lookDir(rob, math.pi / 4, math.pi)
+        lookDir(rob, math.pi/4, math.pi)
         mineIron(rob)
         leaveShaft(rob, 0.0)
+

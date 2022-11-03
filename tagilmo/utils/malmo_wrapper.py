@@ -9,7 +9,7 @@ import logging
 import collections
 import re
 
-import VereyaPython as VP
+from tagilmo import VereyaPython as VP
 
 import numpy
 import tagilmo.utils.malmoutils as malmoutils

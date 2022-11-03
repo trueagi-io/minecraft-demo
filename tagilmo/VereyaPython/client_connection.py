@@ -1,4 +1,5 @@
 import asyncio
+from asyncio import AbstractEventLoop
 import logging
 
 
@@ -6,7 +7,7 @@ logger = logging.getLogger()
 
 
 class ClientConnection:
-    def __init__(self, io_service: object, 
+    def __init__(self, io_service: AbstractEventLoop,
                  address: str, port: int):
         self.loop = io_service
         self.address = address
@@ -14,7 +15,7 @@ class ClientConnection:
         self.timeout = 60
         fut = asyncio.run_coroutine_threadsafe(asyncio.open_connection(self.address, self.port), self.loop)
         logger.info(f'open command connection {self.address}:{self.port}')
-        self.reader, self.writer = fut.result(self.timeout) 
+        self.reader, self.writer = fut.result(self.timeout)
 
     def getTimeout(self) -> int:
         """Get the request/reply timeout.
@@ -22,7 +23,7 @@ class ClientConnection:
         """
         return self.timeout
 
-    def setTimeout(seconds: int) -> int:
+    def setTimeout(self, seconds: int) -> int:
         """Set the request/reply timeout.
         param seconds The timeout delay in seconds."""
         result = self.timeout
@@ -38,7 +39,7 @@ class ClientConnection:
         res = fut.result()
         e = fut.exception()
         if e is not None:
-            logger.exception('error writing command', exec_info=e)
+            logger.exception('error writing command', exc_info=e)
 
     async def __send(self, message: str) -> None:
         logger.info(f'writing command {message}')

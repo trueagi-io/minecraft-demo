@@ -1,8 +1,9 @@
 import asyncio
+from asyncio import AbstractEventLoop, Server, Future
 import logging
 import random
 import time
-from typing import Callable
+from typing import Callable, Optional
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
 
 
@@ -11,7 +12,7 @@ logger = logging.getLogger()
 
 class TCPServer:
     def __init__(self,
-                 io_service: object,
+                 io_service: AbstractEventLoop,
                  port: int,
                  callback: Callable[[TimestampedUnsignedCharVector], None],
                  log_name: str):
@@ -23,7 +24,7 @@ class TCPServer:
         self.expect_size_header = True
         self.log_name = log_name
         self.closing = False
-        self.server = None
+        self.server: Optional[Server] = None
 
         assert(not asyncio.iscoroutinefunction(callback))
 
@@ -63,7 +64,13 @@ class TCPServer:
                 await writer.drain()
 
             # run in threadpool, who knows how fast is our callback
-            await self.io_service.run_in_executor(None, lambda: self.onMessageReceived(result))
+            fut = self.io_service.run_in_executor(None, lambda: self.onMessageReceived(result))
+            fut.add_done_callback(self.__done)
+
+    def __done(self, fut: Future) -> None:
+        e = fut.exception()
+        if e is not None:
+            logger.exception(f"Error running callback in {self.log_name}", exc_info=e)
 
     def expectSizeHeader(self, expect_size_header: bool):
         pass
@@ -75,6 +82,7 @@ class TCPServer:
 
     def close(self):
         self.closing = True
+        assert self.server is not None
         self.server.close()
 
     def getPort(self) -> int:

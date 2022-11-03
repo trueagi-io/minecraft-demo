@@ -33,8 +33,8 @@ class RewardXML:
             sub1 = ET.SubElement(reward_element, "Rewards")
         for (rk, rv) in self.reward_values.items():
             reward_value = ET.SubElement(sub1, "Value")
-            reward_value.attrib["dimension"] = rk
-            reward_value.attrib["value"] = rv
+            reward_value.attrib["dimension"] = str(rk)
+            reward_value.attrib["value"] = str(rv)
 
     def toXml(self) -> str:
         xml = Element('Rewards')

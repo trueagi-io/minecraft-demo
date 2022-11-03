@@ -31,20 +31,24 @@ class FrameType(IntEnum):
 # should be frozen but init will be too ugly
 @dataclass(slots=True, frozen=False, init=False)
 class TimestampedVideoFrame:
+    # camera to pixel opengl projection matrix
+    calibrationMatrix: npt.NDArray[np.float32]
+    modelViewMatrix: npt.NDArray[np.float32]
+
     # check also Minecraft/src/main/java/com/microsoft/Malmo/Client/VideoHook.java
     FRAME_HEADER_SIZE: ClassVar[int] = 20 + (16 * 4 * 2)
 
     # The timestamp.
-    timestamp: int
+    timestamp: float
 
     # The width of the image in pixels.
-    width: int
+    width: np.uint16
 
     #  The height of the image in pixels.
-    height: int
+    height: np.uint16
 
     # The number of channels. e.g. 3 for RGB data, 4 for RGBD
-    channels: int
+    channels: np.uint8
 
     # The type of video data - eg 24bpp RGB, or 32bpp float depth
     frametype: FrameType
@@ -63,10 +67,6 @@ class TimestampedVideoFrame:
 
     # The z pos of the player at render time
     zPos: float = 0
-
-    # camera to pixel opengl projection matrix
-    calibrationMatrix: npt.NDArray[np.float32]
-    modelViewMatrix: npt.NDArray[np.float32]
 
     # The pixels, stored as channels then columns then rows. Length should be width*height*channels.
     pixels: npt.NDArray[np.uint8] = numpy.array(0, dtype=numpy.uint8)
@@ -104,13 +104,14 @@ class TimestampedVideoFrame:
                 self.pixels[i] = self.pixels[i + 2]
                 self.pixels[i + 2] = t
         elif transform == Transform.REVERSE_SCANLINE:
-            self.pixels = numpy.zeros(stride * height, dtype=numpy.uint8)
-            offset = (height - 1)*stride
+            self.pixels = numpy.zeros(int(stride) * int(height), dtype=numpy.uint8)
+            offset = (height - 1) * stride
             start = 0
             for i in range(height):
                 it = offset + self.FRAME_HEADER_SIZE
                 self.pixels[start: start + stride] = numpy.frombuffer(message.data[it: it + stride],
                                                            dtype=np.dtype(numpy.uint8), count=stride)
+
                 offset -= stride
                 start += stride
         else:

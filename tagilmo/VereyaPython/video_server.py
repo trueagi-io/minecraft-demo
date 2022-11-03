@@ -1,6 +1,8 @@
 import asyncio
+from asyncio import AbstractEventLoop
 import logging
 from typing import Callable
+import numpy
 from .tcp_server import TCPServer
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
 from .timestamped_video_frame import Transform, FrameType, TimestampedVideoFrame
@@ -9,7 +11,7 @@ logger = logging.getLogger()
 
 
 class VideoServer:
-    def __init__(self, loop: object, 
+    def __init__(self, loop: AbstractEventLoop,
                  port: int,
                  width: int, height: int,
                  channels: int, frametype: FrameType,
@@ -25,15 +27,14 @@ class VideoServer:
         self.queued_frames = 0
         self.transform = Transform.REVERSE_SCANLINE
         self.port = port
-        self.server = None
         self.writers = list()
+        self.server = TCPServer(self.io_service, port=self.port, callback=self.__cb, log_name="video")
 
     def start(self) -> None:
-        self.server = TCPServer(self.io_service, port=self.port, callback=self.__cb, log_name="video")
         fut = asyncio.run_coroutine_threadsafe(self.server.startAccept(), self.io_service)
         fut.add_done_callback(self.__log_server)
         fut.result()
-    
+
     def __log_server(self, fut):
         if self.server and self.server.isRunning():
             logger.info('started video server on port %d', self.getPort())
@@ -48,7 +49,9 @@ class VideoServer:
             raise RuntimeError("message size {0}, but expected {1}".format(len(message.data),
                         TimestampedVideoFrame.FRAME_HEADER_SIZE + self.width * self.height * self.channels))
 
-        frame = TimestampedVideoFrame(self.width, self.height, self.channels, 
+        frame = TimestampedVideoFrame(numpy.uint16(self.width),
+                                      numpy.uint16(self.height),
+                                      numpy.uint8(self.channels),
                                       message, self.transform, self.frametype)
         self.received_frames += 1
         self.handle_frame(frame)
@@ -85,3 +88,14 @@ class VideoServer:
                 self.written_frames += writer.getFrameWriteCount()
         self.writers.clear()
 
+    def receivedFrames(self) -> int:
+        return self.received_frames
+
+    def writtenFrames(self) -> int:
+        return self.written_frames
+
+    def recordMP4(self, path: str, frames_per_second: int, bit_rate: int, drop_input_frames: bool) -> None:
+        raise NotImplementedError("mp4 recording is not implemented")
+
+    def recordBmps(self, path: str) -> None:
+        raise NotImplementedError("Bmp recording is not implemented")

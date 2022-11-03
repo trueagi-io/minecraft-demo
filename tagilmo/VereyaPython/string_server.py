@@ -2,8 +2,9 @@
 thin wrapper around tcp server
 """
 import asyncio
+from asyncio import AbstractEventLoop
 import logging
-from typing import Callable
+from typing import Callable, Optional
 from .tcp_server import TCPServer
 from .timestamped_string import TimestampedString
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
@@ -12,7 +13,7 @@ logger = logging.getLogger()
 
 class StringServer:
     def __init__(self,
-                 io_service: object,
+                 io_service: AbstractEventLoop,
                  port: int,
                  handle_string: Callable[[TimestampedString], None],
                  log_name: str):
@@ -20,10 +21,9 @@ class StringServer:
         self.port = port
         self.handle_string = handle_string
         self.log_name = log_name
-        self.server = None
+        self.server = TCPServer(self.io_service, self.port, self.__cb, self.log_name)
 
     def start(self) -> None:
-        self.server = TCPServer(self.io_service, self.port, self.__cb, self.log_name)
         fut = asyncio.run_coroutine_threadsafe(self.server.startAccept(), self.io_service)
         fut.add_done_callback(self.__log_server)
         fut.result()
@@ -55,3 +55,6 @@ class StringServer:
 
        # self.writer.open(path, 'aw')
        # return self
+
+    def stopRecording(self) -> None:
+        pass

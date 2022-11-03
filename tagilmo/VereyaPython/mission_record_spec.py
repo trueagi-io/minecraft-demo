@@ -26,7 +26,7 @@ class MissionRecordSpec:
     is_recording_commands: bool = False
     destination: str = ''
 
-    def __init__(self, destination: str=None):
+    def __init__(self, destination: str=''):
         self.setDestination(destination)
         self.video_recordings = dict()
         self.is_recording_observations = False
@@ -42,8 +42,8 @@ class MissionRecordSpec:
         raise NotImplementedError("recording is not implemented")
 
     def isRecording(self) -> bool:
-        return self.destination and (self.is_recording_commands
-                or self.video_recordings.size()
+        return bool(self.destination and (self.is_recording_commands
+                or self.video_recordings
                 or self.is_recording_rewards
-                or self.is_recording_observations)
+                or self.is_recording_observations))
 

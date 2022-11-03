@@ -1,3 +1,4 @@
+from typing import Optional
 import xml.etree.ElementTree as ET
 
 
@@ -12,16 +13,20 @@ class MissionSpec:
     def isVideoRequested(self, role: int) -> bool:
         return self.getRoleValue(role, "AgentHandlers.VideoProducer", 'x') is not None
 
-    def getRoleValue(self, role: int, videoType: str, what: int) -> int:
+    def getRoleValue(self, role: int, videoType: str, what: str) -> Optional[int]:
         for elem in self.mission.findall('./{*}AgentSection'):
             if role == 0:
                 for vid in elem.findall('.//{*}' + videoType.split('.')[1]):
                     if what == 'x':
                         return 1
                     elif what == 'w':
-                        return int(vid.find('./{*}Width').text)
+                        tmp = vid.find('./{*}Width')
+                        assert tmp is not None
+                        return int(tmp.text)
                     elif what == 'h':
-                        return int(vid.find('./{*}Height').text)
+                        tmp = vid.find('./{*}Height')
+                        assert tmp is not None
+                        return int(tmp.text)
                     elif what == 'c':
                         if vid.attrib.get('want_depth', 'false') in ('true', '1'):
                             return 1
@@ -72,5 +77,5 @@ class MissionSpec:
     def isLuminanceRequested(self, role: int) -> bool:
         return self.getRoleValue(role, "AgentHandlers.LuminanceProducer", 'x') is not None
 
-    def isColourMapRequested(self, role: int) -> None:
+    def isColourMapRequested(self, role: int) -> bool:
         return self.getRoleValue(role, "AgentHandlers.ColourMapProducer", 'x') is not None

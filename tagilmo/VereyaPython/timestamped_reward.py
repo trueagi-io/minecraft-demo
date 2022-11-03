@@ -5,7 +5,7 @@ from .reward_xml import RewardXML
 @dataclass(slots=True, init=True, frozen=True)
 class TimestampedReward:
     reward: RewardXML
-    timestamp: int
+    timestamp: float
 
 
     def getAsSimpleString(self) -> str:
@@ -26,11 +26,11 @@ class TimestampedReward:
                 self.reward.reward_values[dimension] = value
 
     @staticmethod
-    def createFromSimpleString(timestamp: int, simple_string: str) -> 'TimestampedReward':
+    def createFromSimpleString(timestamp: float, simple_string: str) -> 'TimestampedReward':
         reward = RewardXML()
         for item in simple_string.split(','):
             k, v = item.split(':')
-            dimention = int(k)
+            dimension = int(k)
             value = float(v)
             reward.reward_values[dimension] = value
         return TimestampedReward(timestamp=timestamp, reward=reward)

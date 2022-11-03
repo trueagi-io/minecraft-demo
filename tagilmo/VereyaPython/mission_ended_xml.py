@@ -54,16 +54,18 @@ class MissionEndedXML:
             if self.reward.size() == 0:
                 raise RuntimeError("Reward must have at least one value")
 
-        for v in root.find("MissionDiagnostics"):
-            if v.tag == "VideoData":
-                attributes = VideoDataAttributes()
+        diag = root.find("MissionDiagnostics")
+        if diag is not None:
+            for v in diag:
+                if v.tag == "VideoData":
+                    attributes = VideoDataAttributes()
 
-                attributes.frame_type = v.attrib["frameType"]
-                attributes.frames_sent = int(v.attrib["framesSent"])
-                attributes.frames_received = int(v.attrib.get("framesReceived", 0))
-                attributes.frames_written = int(v.attrib.get("framesWritten", 0))
+                    attributes.frame_type = v.attrib["frameType"]
+                    attributes.frames_sent = int(v.attrib["framesSent"])
+                    attributes.frames_received = int(v.attrib.get("framesReceived", 0))
+                    attributes.frames_written = int(v.attrib.get("framesWritten", 0))
 
-                self.video_data_attributes.append(attributes)
+                    self.video_data_attributes.append(attributes)
 
 
     def getStatus(self) -> str:
@@ -94,7 +96,7 @@ class MissionEndedXML:
         for d in self.video_data_attributes:
             videoData = ET.SubElement(el, 'MissionDiagnostics')
             videoData.attrib["frameType"] = d.frame_type
-            videoData.attrib["framesSent"] = d.frames_sent
+            videoData.attrib["framesSent"] = str(d.frames_sent)
 
 
         xml_str = ET.tostring(el, encoding='unicode', method='xml')

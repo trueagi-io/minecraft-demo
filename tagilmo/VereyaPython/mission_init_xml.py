@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 import copy
 import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
@@ -13,8 +14,8 @@ XMLNS_XSI = "http://www.w3.org/2001/XMLSchema-instance"
 
 @dataclass(init=True, slots=True)
 class MinecraftServer:
-    connection_address: str = None
-    connection_port: int = None
+    connection_address: Optional[str] = None
+    connection_port: Optional[int] = None
 
 
 @dataclass(init=True, slots=True)

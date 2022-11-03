@@ -1,8 +1,8 @@
 import unittest
 import logging
-import VereyaPython
 import json
 import time
+from tagilmo import VereyaPython
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 from experiments import common
@@ -45,7 +45,6 @@ def init_mission(mc, start_x=None, start_y=None):
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
 
-    import pdb;pdb.set_trace()
     if mc is None:
         mc = MalmoConnector(miss)
         obs = RobustObserver(mc)
@@ -194,6 +193,7 @@ class TestCraft(unittest.TestCase):
 
 
 def main():
+    VereyaPython.setupLogger()
     unittest.main()
 #    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
 #    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)

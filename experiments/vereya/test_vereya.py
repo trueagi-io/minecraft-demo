@@ -92,13 +92,13 @@ def extract(data):
 
 
 def main():
-    import VereyaPython
-    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
-    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
+    from tagilmo import VereyaPython
+    #VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
+    #VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
 
     mc, obs = start_mission()
     mc.safeStart()
-    mc.sendCommand('recipes')
+    #mc.sendCommand('recipes')
     while True:
         cv2.waitKey(300)
         obs.clear()

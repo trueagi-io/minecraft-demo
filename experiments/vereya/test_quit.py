@@ -1,6 +1,6 @@
 import unittest
 import logging
-import VereyaPython
+from tagilmo import VereyaPython
 import json
 import time
 import tagilmo.utils.mission_builder as mb
@@ -71,7 +71,7 @@ class TestQuit(unittest.TestCase):
         start = (-108.0, -187.0)
         mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
         cls.mc = mc
-        mc.safeStart()
+        assert mc.safeStart()
         time.sleep(3)
 
     def setUp(self):
@@ -84,11 +84,10 @@ class TestQuit(unittest.TestCase):
         self.mc.sendCommand("quit")
         time.sleep(4)
         self.assertFalse(self.mc.is_mission_running())
-        
-       
 
 
 def main():
+    VereyaPython.setupLogger()
     unittest.main()
         
 if __name__ == '__main__':

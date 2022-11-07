@@ -66,7 +66,7 @@ class TCPServer:
                 data = await reader.readexactly(expected)
                 result = TimestampedUnsignedCharVector(data=data, timestamp=time.time())
             except exceptions.IncompleteReadError as e:
-                logger.exception("expection reading from stream in " + self.log_name, e)
+                logger.exception("exception reading from stream in " + self.log_name, e)
                 await asyncio.sleep(1) 
                 continue
 

@@ -1,4 +1,5 @@
 import asyncio
+from asyncio import exceptions
 from asyncio import AbstractEventLoop, Server, Future
 import logging
 import random
@@ -54,10 +55,20 @@ class TCPServer:
     async def __cb(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         while not self.closing:
             # read header
-            data = await reader.readexactly(4)
-            expected = int.from_bytes(data, byteorder='big', signed=False)
-            data = await reader.readexactly(expected)
-            result = TimestampedUnsignedCharVector(data=data, timestamp=time.time())
+            try:
+                data = await reader.readexactly(4)
+                expected = int.from_bytes(data, byteorder='big', signed=False)
+            except exceptions.IncompleteReadError as e:
+                # there is nothing to read apparently
+                await asyncio.sleep(2) 
+                continue
+            try:
+                data = await reader.readexactly(expected)
+                result = TimestampedUnsignedCharVector(data=data, timestamp=time.time())
+            except exceptions.IncompleteReadError as e:
+                logger.exception("expection reading from stream in " + self.log_name, e)
+                await asyncio.sleep(1) 
+                continue
 
             if self.confirm_with_fixed_reply:
                 writer.write(self.fixed_reply)

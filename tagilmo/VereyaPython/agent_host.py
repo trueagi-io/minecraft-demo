@@ -64,6 +64,7 @@ class AgentHost(ArgumentParser):
     def startMission(self, mission: MissionSpec, client_pool: List[ClientInfo],
                      mission_record: MissionRecordSpec, role: int,
                      unique_experiment_id: str):
+        self.world_state.clear()
         self.testSchemasCompatible()
         if role < 0 or role >= mission.getNumberOfAgents():
             if mission.getNumberOfAgents() == 1:
@@ -113,7 +114,6 @@ class AgentHost(ArgumentParser):
         if (self.current_mission_record.isRecording()):
             raise NotImplementedError('mission recoding is not implemented')
 
-
     def testSchemasCompatible(self):
         pass
 
@@ -130,8 +130,11 @@ class AgentHost(ArgumentParser):
             try:
                 fut = rpc.sendStringAndGetShortReply(item.ip_address, item.control_port, request)
                 reply = await asyncio.wait_for(fut, timeout=3)
+            except asyncio.exceptions.TimeoutError as e:
+                logger.exception("timeout on reservation request", exc_info=e)
+                continue
             except RuntimeError as e:
-                logging.exception(e)
+                logging.exception("error on reservation request", exc_info=e)
                 continue
             logger.info("Reserving client, received reply from " + str(item.ip_address) + ": " + reply)
             malmo_reservation_prefix = "MALMOOK"
@@ -486,6 +489,7 @@ class AgentHost(ArgumentParser):
         root_node_name = elem.tag
         with self.world_state_mutex:
             if (not self.world_state.is_mission_running) and (root_node_name == "MissionInit" ):
+                logger.debug("got message, has_mission_begun=True, is_mission_running=True")
                 validate = True
                 self.current_mission_init = MissionInitSpec.fromstr(xml.text, validate)
                 self.world_state.is_mission_running = True

@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from xml.etree.ElementTree import Element
 from dataclasses import dataclass
 from .reward_xml import RewardXML
-from .xml_util import get, get_optional, get_child_optional
+from .xml_util import get, get_optional, get_child_optional, str2xml
 from .consts import *
 
 
@@ -42,7 +42,7 @@ class MissionEndedXML:
         self.have_rewards = False
         self.reward = RewardXML()
         self.video_data_attributes = list()
-        root = ET.fromstring(xml_text)
+        root = str2xml(xml_text)
         self.schema_version = get_optional(str, root, "MissionEnded.<xmlattr>.SchemaVersion")
         self.status = get(root, "MissionEnded.Status", True, str)
         self.human_readable_status = get(root, "MissionEnded.HumanReadableStatus", True, str)

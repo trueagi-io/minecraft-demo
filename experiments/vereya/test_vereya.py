@@ -93,12 +93,10 @@ def extract(data):
 
 def main():
     from tagilmo import VereyaPython
-    #VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
-    #VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
 
     mc, obs = start_mission()
     mc.safeStart()
-    #mc.sendCommand('recipes')
+    mc.sendCommand('recipes')
     while True:
         cv2.waitKey(300)
         obs.clear()
@@ -107,7 +105,7 @@ def main():
             img = extract(img.pixels)
             # print(mc.getNearEntities())
             if mc.observe[0] is not None and 'recipes' in mc.observe[0]:
-                print(mc.observe[0]['recipes'])
+                print("got recipes")
                 mc.sendCommand('recipes off')
             cv2.imshow('img', img)
 main()

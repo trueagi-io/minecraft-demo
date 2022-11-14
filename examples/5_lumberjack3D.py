@@ -624,7 +624,6 @@ class LJAgent(TAgent):
             howto = self.howtoGet(target)
             if howto == []:
                 target = None
-                continue
             elif howto[-1][0] == 'UNKNOWN':
                 print("Panic. Don't know how to get " + str(target))
                 print(str(howto))
@@ -637,7 +636,7 @@ class LJAgent(TAgent):
                     target = None
                     break
             if target is None or howto == []:
-                target = None
+                target = 'terminate'
                 continue
             if howto[-1][0] == 'search':
                 self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
@@ -700,3 +699,4 @@ if __name__ == '__main__':
     agent.loop(target = {'type': 'wooden_pickaxe'})
 
     visualizer.stop()
+

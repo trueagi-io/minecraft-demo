@@ -630,8 +630,7 @@ class LJAgent(TAgent):
 
             howto = self.howtoGet(target)
             if howto == []:
-                target = 'terminate'
-                continue
+                target = None
             elif howto[-1][0] == 'UNKNOWN':
                 print("Panic. Don't know how to get " + str(target))
                 print(str(howto))
@@ -641,14 +640,13 @@ class LJAgent(TAgent):
                     self.rob.mc.sendCommand('swapInventoryItems 0 ' + str(howto[-1][1]['index']))
                 howto = howto[:-1]
                 if howto == []:
-                    target = 'terminate'
+                    target = None
                     break
             if target is None or howto == []:
                 target = 'terminate'
                 continue
             if howto[-1][0] == 'search':
                 self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
-                howto = howto[:-1]
                 continue
             if howto[-1][0] == 'craft':
                 t = minelogy.get_otype(howto[-1][1])
@@ -658,25 +656,16 @@ class LJAgent(TAgent):
                     if new_t is not None:
                         t = minelogy.get_otype(new_t)
                         break
-                # if t == 'planks': # hotfix
-                #     invent = self.rob.cached['getInventory'][0]
-                #     for item in invent:
-                #         if item['type'] == 'log' or item['type'] == 'log2':
-                #             t = item['variant'] + ' ' + t
-                #             break
                 self.rob.craft(t)
                 sleep(0.2)
-                howto = howto[:-1]
                 continue
             if howto[-1][0] == 'approach':
                 self.skill = ApproachXZPos(self.rob,
                                 [howto[-1][1]['x'], howto[-1][1]['y'], howto[-1][1]['z']])
-                howto = howto[:-1]
                 continue
             if howto[-1][0] == 'mine':
                 #self.skill = MineAround(self.rob, minelogy.get_otlist(howto[-1][1]))
                 self.skill = MineAtSight(self.rob)
-                howto = howto[:-1]
                 continue
             if self.skill is None:
                 print("Panic. No skill available for " + str(target))
@@ -711,12 +700,13 @@ if __name__ == '__main__':
     # world = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", seed='43', forceReset="false")
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
-    world1 = mb.defaultworld(forceReset="false", forceReuse='true')
+    world1 = mb.defaultworld(forceReset="true")
     miss.setWorld(world1)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     agent = LJAgent(miss, visualizer=visualizer)
     agent.rob.sendCommand("chat /difficulty peaceful")
     # agent.loop()
-    agent.loop(target = {'type': 'wooden_axe'})
+    agent.loop(target = {'type': 'wooden_pickaxe'})
 
     visualizer.stop()
+

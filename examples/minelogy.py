@@ -51,188 +51,11 @@ def make_door_plank_quadriple(door_names, plank_names):
                 res.append((door_name, door_variant+"trapdoor", plank_name, door_variant[:-1]))
     return res
 
-# log_plank_triple_list = make_log_plank_triple(log_names, planks_names)
-# door_plank_quadriple_list = make_door_plank_quadriple(door_names, planks_names)
-# def make_mines_list(log_names):
-#     mines = []
-#     new_version = False
-#     for log_name in log_names:
-#         variant = None
-#         if "_" in log_name:
-#             variant = log_name.split("_")[0]
-#             new_version = True
-#         if variant is not None:
-#             mines.append(({'blocks': [{'type': log_name, 'variant': variant}],
-#                            'tools': ['stone_axe', 'wooden_axe', None]},
-#                           {'type': log_name, 'variant': variant}
-#                           ))
-#         mines.append(({'blocks': [{'type': log_name}],
-#                        'tools': ['stone_axe', 'wooden_axe', None]},
-#                       {'type': log_name}
-#                       ))
-#     if new_version == False:
-#         mines.extend([
-#             ({'blocks': [{'type': 'log', 'variant': 'oak'}],
-#               'tools': ['stone_axe', 'wooden_axe', None]},
-#              {'type': 'log', 'variant': 'oak'}
-#              ),
-#             ({'blocks': [{'type': 'log', 'variant': 'birch'}],
-#               'tools': ['stone_axe', 'wooden_axe', None]},
-#              {'type': 'log', 'variant': 'birch'}
-#              ),
-#             ({'blocks': [{'type': 'log', 'variant': 'spruce'}],
-#               'tools': ['stone_axe', 'wooden_axe', None]},
-#              {'type': 'log', 'variant': 'spruce'}
-#              )])
-#     mines.extend([
-#         ({'blocks': [{'type': 'grass'}, {'type': 'dirt'}],
-#           'tools': ['stone_shovel', 'wooden_shovel', None]},
-#          {'type': 'dirt'}
-#          ),
-#         ({'blocks': [{'type': 'sand'}],
-#           'tools': ['stone_shovel', 'wooden_shovel', None]},
-#          {'type': 'sand'}
-#          ),
-#         ({'blocks': [{'type': 'sand'}],
-#           'tools': ['stone_shovel', 'wooden_shovel', None]},
-#          {'type': 'sand'}
-#          ),
-#         ({'blocks': [{'type': 'clay'}],
-#           'tools': ['stone_shovel', 'wooden_shovel', None]},
-#          {'type': 'clay_ball'}
-#          ),
-#         ({'blocks': [{'type': 'gravel'}],
-#           'tools': [None]},
-#          {'type': 'gravel'}
-#          ),
-#         ({'blocks': [{'type': 'sandstone'}],
-#           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
-#          {'type': 'sandstone'}
-#          ),
-#         ({'blocks': [{'type': 'stone'}],
-#           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
-#          {'type': 'stone'}
-#          ),
-#         ({'blocks': [{'type': 'stone', 'variant': 'stone'}],
-#           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
-#          {'type': 'cobblestone'}
-#          ),
-#         ({'blocks': [{'type': 'coal_ore'}],
-#           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
-#          {'type': 'coal'}
-#          ),
-#         ({'blocks': [{'type': 'iron_ore'}],
-#           'tools': ['stone_pickaxe']},
-#          {'type': 'iron_ore'}
-#          ),
-#         ({'blocks': [{'type': 'pumpkin'}],
-#           'tools': [None]},
-#          {'type': 'pumpkin'}
-#          ),
-#         ({'blocks': [{'type': 'leaves', 'variant': 'oak'}],
-#           'tools': [None]},
-#          {'type': 'apple'}
-#          ),
-#         ({'blocks': [{'type': 'leaves'}],
-#           'tools': [None]},
-#          {'type': 'sapling'}
-#          ),
-#         ({'blocks': [{'type': 'tallgrass'}],
-#           'tools': [None]},
-#          {'type': 'wheat_seeds'}
-#          )])
-#     return mines
-#
-# def make_crafts_list(log_plank_triple_list, door_plank_quadriple_list):
-#     crafts = []
-#     for lp_triple in log_plank_triple_list:
-#         log_n = lp_triple[0]
-#         plank_n = lp_triple[1]
-#         variant_n = lp_triple[2]
-#         crafts.extend([([{'type': log_n, 'quantity': 1}],
-#                         {'type': plank_n, 'quantity': 4}),
-#                        ([{'type': log_n, 'variant': variant_n, 'quantity': 1}],
-#                         {'type': plank_n, 'variant': variant_n, 'quantity': 4}),
-#                        ([{'type': plank_n, 'quantity': 2}],
-#                         {'type': 'stick', 'quantity': 4}),
-#                        ([{'type': 'stick', 'quantity': 2}, {'type': plank_n, 'quantity': 3}],
-#                         {'type': 'wooden_axe'}),
-#                        ([{'type': 'stick', 'quantity': 2}, {'type': plank_n, 'quantity': 3}],
-#                         {'type': 'wooden_pickaxe'}),
-#                        ([{'type': 'stick', 'quantity': 2}, {'type': plank_n, 'quantity': 1}],
-#                         {'type': 'wooden_shovel'}),
-#                        ([{'type': plank_n, 'quantity': 2}],
-#                         {'type': 'wooden_pressure_plate'}),
-#                        ([{'type': plank_n, 'quantity': 3}],
-#                         {'type': 'wooden_slab', 'quantity': 6}),
-#                        ([{'type': plank_n, 'quantity': 1}],
-#                         {'type': 'wooden_button'})
-#                        ])
-#     for dp_quadriple in door_plank_quadriple_list:
-#         door_n = dp_quadriple[0]
-#         trapdoor_n = dp_quadriple[1]
-#         plank_n = dp_quadriple[2]
-#         variant_n = dp_quadriple[3]
-#         crafts.extend([
-#             ([{'type': plank_n, 'variant': variant_n, 'quantity': 6}],
-#              {'type': door_n, 'quantity': 3}),
-#             ([{'type': plank_n, 'variant': variant_n, 'quantity': 6}],
-#              {'type': trapdoor_n, 'quantity': 2})
-#         ])
-#     crafts.extend([
-#         ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 3}],
-#          {'type': 'stone_axe'}),
-#         ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 3}],
-#          {'type': 'stone_pickaxe'}),
-#         ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 1}],
-#          {'type': 'stone_shovel'}),
-#         # we don't actually need coal with simplified furnance
-#         ([{'type': 'iron_ore', 'quantity': 1}], #{'type': 'coal', 'quantity': 1}],
-#          {'type': 'iron_ingot'}),
-#         ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
-#          {'type': 'iron_axe'}),
-#         ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
-#          {'type': 'iron_pickaxe'}),
-#         ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 1}],
-#          {'type': 'iron_shovel'}),
-#         ([{'type': 'stick', 'quantity': 1}, {'type': 'coal', 'quantity': 1}],
-#          {'type': 'torch', 'quantity': 4}),
-#         ([{'type': 'cobblestone', 'quantity': 3}],
-#          {'type': 'stone_slab', 'quantity': 6}),
-#         ([{'type': 'cobblestone', 'quantity': 3}],
-#          {'type': 'cobblestone_wall', 'quantity': 6}),
-#         ([{'type': 'stick', 'quantity': 1}, {'type': 'cobblestone', 'quantity': 1}],
-#          {'type': 'lever'}),
-#         ([{'type': 'pumpkin', 'quantity': 1}],
-#          {'type': 'pumpkin_seeds'}),
-#         ([{'type': 'sand', 'quantity': 1}],
-#          {'type': 'glass'})
-#     ])
-#     return crafts
-#
-# crafts = make_crafts_list(log_plank_triple_list, door_plank_quadriple_list)
-# mines = make_mines_list(log_names)
 
 mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
           {'type': 'log'}
          ),
-         # ({'blocks': [{'type': 'log', 'variant': 'oak'}],
-         #   'tools': ['stone_axe', 'wooden_axe', None]},
-         #  {'type': 'log', 'variant': 'oak'}
-         # ),
-         # ({'blocks': [{'type': 'log', 'variant': 'birch'}],
-         #   'tools': ['stone_axe', 'wooden_axe', None]},
-         #  {'type': 'log', 'variant': 'birch'}
-         # ),
-         # ({'blocks': [{'type': 'log', 'variant': 'spruce'}],
-         #   'tools': ['stone_axe', 'wooden_axe', None]},
-         #  {'type': 'log', 'variant': 'spruce'}
-         # ),
-         # ({'blocks': [{'type': 'log2'}],
-         #   'tools': ['stone_axe', 'wooden_axe', None]},
-         #  {'type': 'log2'}
-         # ),
          ({'blocks': [{'type': 'grass'}, {'type': 'dirt'}],
            'tools': ['stone_shovel', 'wooden_shovel', None]},
           {'type': 'dirt'}
@@ -265,10 +88,10 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'cobblestone'}
          ),
-         #({'blocks': [{'type': 'cobblestone'}],
-         #  'tools': ['stone_pickaxe', 'wooden_pickaxe']},
-         # {'type': 'cobblestone'}
-         #),
+         ({'blocks': [{'type': 'cobblestone'}],
+          'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+         {'type': 'cobblestone'}
+         ),
          ({'blocks': [{'type': 'coal_ore'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'coal'}
@@ -292,23 +115,15 @@ mines = [({'blocks': [{'type': 'log'}],
          ({'blocks': [{'type': 'tallgrass'}],
            'tools': [None]},
           {'type': 'wheat_seeds'}
+         ),
+         ({'blocks': [{'type': 'deadbush'}],
+          'tools': [None]},
+         {'type': 'stick'}
          )
-         #({'blocks': [{'type': 'deadbush'}],
-         #  'tools': [None]},
-         # {'type': 'stick'}
-         #)
         ]
 
 crafts = [([{'type': 'log', 'quantity': 1}],
            {'type': 'planks', 'quantity': 4}),
-          # ([{'type': 'log', 'variant': 'oak', 'quantity': 1}],
-          #  {'type': 'planks', 'variant': 'oak', 'quantity': 4}),
-          # ([{'type': 'log', 'variant': 'spruce', 'quantity': 1}],
-          #  {'type': 'planks', 'variant': 'spruce', 'quantity': 4}),
-          # ([{'type': 'log', 'variant': 'birch', 'quantity': 1}],
-          #  {'type': 'planks', 'variant': 'birch', 'quantity': 4}),
-          # ([{'type': 'log2', 'quantity': 1}],
-          #  {'type': 'planks', 'quantity': 4}),
           ([{'type': 'planks', 'quantity': 2}],
             {'type': 'stick', 'quantity': 4}),
           ([{'type': 'stick', 'quantity': 2}, {'type': 'planks', 'quantity': 3}],

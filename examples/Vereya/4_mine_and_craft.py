@@ -61,7 +61,6 @@ def runStraight(rob, dist, keepHeight=False):
             bJump = False
         los = rob.getCachedObserve('getLineOfSights')
         if los is not None and los['distance'] < 0.5 and \
-               not los['distance'] in RobustObserver.passableBlocks and \
                not los['type'] in RobustObserver.passableBlocks and\
                not bJump:
             break

@@ -9,5 +9,5 @@ setup(name='tagilmo',
       packages=['tagilmo',
                 'tagilmo.VereyaPython',
                 'tagilmo.utils'],
-      install_requires=[]
+      install_requires=['numpy']
 )

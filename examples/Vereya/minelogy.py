@@ -9,7 +9,7 @@ log_names_t = []
 planks_names_t = []
 drs = []
 # versions = minecraft_data.common().protocolVersions
-mcd = minecraft_data('1.11.2')  # here we must put current minecraft version
+mcd = minecraft_data('1.18.1')  # here we must put current minecraft version
 count = 0
 for item in mcd.items_list:
     iname = item['name']

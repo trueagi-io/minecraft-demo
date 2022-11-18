@@ -1,8 +1,8 @@
 import unittest
 import logging
-import VereyaPython
 import json
 import time
+from tagilmo import VereyaPython
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 from experiments import common
@@ -193,6 +193,7 @@ class TestCraft(unittest.TestCase):
 
 
 def main():
+    VereyaPython.setupLogger()
     unittest.main()
 #    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
 #    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)

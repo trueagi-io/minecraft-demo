@@ -59,7 +59,7 @@ def test_basic_motion():
 
 
 def main():
-    import VereyaPython
+    from tagilmo import VereyaPython
 #    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
 #    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
 

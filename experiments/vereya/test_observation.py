@@ -1,6 +1,6 @@
 import unittest
 import logging
-import VereyaPython
+from tagilmo import VereyaPython
 import json
 import time
 import tagilmo.utils.mission_builder as mb

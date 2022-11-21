@@ -367,7 +367,7 @@ class AgentHost(ArgumentParser):
         generated_xml = self.current_mission_init.getAsXML(prettyPrint)
         return generated_xml
 
-    def listenForVideo(self, video_server: VideoServer,
+    def listenForVideo(self, video_server: Optional[VideoServer],
                        port: int, width: int, height: int,
                        channels: int, frametype: FrameType):
         assert self.current_mission_record is not None
@@ -545,7 +545,7 @@ class AgentHost(ArgumentParser):
                 # The mod is pinging us to check we are still around - do nothing.
                 pass
             else:
-                text = "Unknown mission control message root node or at wrong time: " + root_node_name + " :" + xml.text[:200]
+                text = f"mission is running {self.world_state.is_mission_running} Unknown mission control message root node or at wrong time: " + root_node_name + " :" + xml.text[:200]
                 logger.error(text)
                 error_message = TimestampedString(timestamp=xml.timestamp, text=text)
                 self.world_state.errors.append(error_message)
@@ -621,8 +621,10 @@ class AgentHost(ArgumentParser):
         pass
 
     def __del__(self):
+        logger.debug('stopping')
         self.close()
         self.io_service.stop()
+        logger.debug('stopped')
 
     def processReceivedReward(self, reward: TimestampedReward) -> None:
         if self.rewards_policy ==  RewardsPolicy.LATEST_REWARD_ONLY:

@@ -60,14 +60,14 @@ class TCPServer:
                 expected = int.from_bytes(data, byteorder='big', signed=False)
             except exceptions.IncompleteReadError as e:
                 # there is nothing to read apparently
-                await asyncio.sleep(2) 
+                await asyncio.sleep(2)
                 continue
             try:
                 data = await reader.readexactly(expected)
                 result = TimestampedUnsignedCharVector(data=data, timestamp=time.time())
             except exceptions.IncompleteReadError as e:
                 logger.exception("exception reading from stream in " + self.log_name, e)
-                await asyncio.sleep(1) 
+                await asyncio.sleep(1)
                 continue
 
             if self.confirm_with_fixed_reply:
@@ -75,7 +75,14 @@ class TCPServer:
                 await writer.drain()
 
             # run in threadpool, who knows how fast is our callback
-            fut = self.io_service.run_in_executor(None, lambda: self.onMessageReceived(result))
+            try:
+                fut = self.io_service.run_in_executor(None, lambda: self.onMessageReceived(result))
+            except RuntimeError as e:
+                if not self.io_service.is_running or self.io_service.is_closed():
+                    logger.debug('error scheduling future, perhaps the event loop was stopped',
+                                 exc_info=e)
+                    return
+                raise e
             fut.add_done_callback(self.__done)
 
     def __done(self, fut: Future) -> None:

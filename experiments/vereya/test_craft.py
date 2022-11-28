@@ -1,8 +1,8 @@
 import unittest
 import logging
-import VereyaPython
 import json
 import time
+from tagilmo import VereyaPython
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 from experiments import common
@@ -112,6 +112,53 @@ class TestCraft(unittest.TestCase):
         self.assertEqual(count_items(inv1, "birch_planks"), 0)
         print('sending command')
 
+    def test_craft_pickaxe(self):
+        mc = self.mc
+        mc.sendCommand("chat /give @p oak_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p birch_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p acacia_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p stick 2")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p crafting_table 1")
+        time.sleep(1)
+        mc.observeProc()
+        time.sleep(1)
+        print('making pickaxe')
+        inv = mc.getInventory()
+        mc.sendCommand("craft wooden_pickaxe")
+        time.sleep(2)
+        mc.observeProc()
+        inv1 = mc.getInventory()
+        self.assertEqual(count_items(inv, "wooden_pickaxe") + 1, count_items(inv1, "wooden_pickaxe"))
+        self.assertEqual(count_items(inv, "acacia_planks") - 1, count_items(inv1, "acacia_planks"))
+
+    def test_failed(self):
+        mc = self.mc
+        time.sleep(1)
+        mc.sendCommand("chat /give @p oak_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p birch_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p acacia_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p stick 1")
+        time.sleep(1)
+        mc.observeProc()
+        time.sleep(1)
+        print('making pickaxe')
+        inv = mc.getInventory()
+        mc.sendCommand("craft wooden_pickaxe")
+        time.sleep(2)
+        mc.observeProc()
+        time.sleep(1)
+        inv1 = mc.getInventory()
+        self.assertEqual(count_items(inv, "wooden_pickaxe"), count_items(inv1, "wooden_pickaxe"))
+        self.assertEqual(count_items(inv, "acacia_planks"), count_items(inv1, "acacia_planks"))
+        self.assertEqual(count_items(inv, "stick"), count_items(inv1, "stick"))
+
     def test_smelt_iron(self):
         mc = self.mc
         mc.observeProc()
@@ -146,6 +193,7 @@ class TestCraft(unittest.TestCase):
 
 
 def main():
+    VereyaPython.setupLogger()
     unittest.main()
 #    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
 #    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)

@@ -1,6 +1,6 @@
 import unittest
 import logging
-import VereyaPython
+from tagilmo import VereyaPython
 import json
 import time
 import tagilmo.utils.mission_builder as mb
@@ -73,6 +73,12 @@ class TestData(unittest.TestCase):
         dist = self.getDist()
         self.assertGreater(dist, 0)
 
+    def test_observation_from_chat(self):
+        self.mc.sendCommand("chat get wooden_axe")
+        self.rob.observeProcCached()
+        command = self.rob.waitNotNoneObserve('getChat')
+        self.assertEqual(command[0], "get wooden_axe")
+
     def getDist(self):
         mc = self.mc
         c = 0
@@ -98,3 +104,4 @@ def main():
         
 if __name__ == '__main__':
    main()
+

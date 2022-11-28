@@ -21,10 +21,7 @@ from __future__ import print_function
 
 # Allow VereyaPython to be imported both from an installed 
 # malmo module and (as an override) separately as a native library.
-try:
-    import VereyaPython
-except ImportError:
-    import malmo.VereyaPython as VereyaPython
+from tagilmo import VereyaPython
 
 import os
 import sys

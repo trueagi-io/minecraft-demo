@@ -177,6 +177,8 @@ crafts = [([{'type': 'log', 'quantity': 1}],
 
 def get_otype(obj):
     t = None
+    if 'minecraft:' in obj['type']:
+        obj['type'] = obj['type'].split('minecraft:')[1]
     if 'type' in obj:
         t = obj['type']
     elif 'name' in obj:
@@ -317,8 +319,7 @@ def lackCraftItems(invent, craft_entry):
     return missing
 
 def assoc_blocks(blocks):
-    assoc = {'log': log_names.extend(leaves_names),
-             # 'log2': ['log', 'leaves2', 'leaves'],
+    assoc = {'log': log_names+leaves_names,
              'coal_ore': ['stone'],
              'iron_ore': ['stone']}
     blocks2 = []
@@ -328,12 +329,24 @@ def assoc_blocks(blocks):
     return blocks2
 
 def checkCraftType(to_craft, to_mine):
+    craft_is_str = False
+    if isinstance(to_craft, str):
+        craft_is_str = True
+        to_craft = {"type" : to_craft}
+
+    if isinstance(to_mine, str):
+        to_mine = {"type" : to_mine}
+
     to_mine_type = get_otype(to_mine)
     to_craft_type = get_otype(to_craft)
+
     if (to_mine_type in leaves_names) or (to_mine_type in log_names):
         if matchEntity(to_craft, planks_names_t[0]):
             to_craft_type = get_new_type(to_mine) + "_" + to_craft_type
             if ('stripped' in to_mine_type):
                 to_craft_type = to_craft_type.split("stripped_")[1]
-            return {"type" : to_craft_type, "quantity": to_craft['quantity']}
+            if craft_is_str:
+                return to_craft_type
+            else:
+                return {"type" : to_craft_type, "quantity": to_craft['quantity']}
     return None

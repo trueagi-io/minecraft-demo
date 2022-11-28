@@ -300,7 +300,7 @@ class RobustObserver:
         self.mc = mc
         self.nAgent = nAgent
         self.tick = 0.02
-        self.max_dt = 1.0
+        self.max_dt = 0.1
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat']
         self.canBeNone = ['getLineOfSights', 'getChat']

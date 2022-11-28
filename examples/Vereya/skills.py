@@ -1,15 +1,16 @@
 import torch
 import logging
 from time import sleep, time
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
-import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.mathutils import *
-from vis import Visualizer
 import math
 from random import random
 
-from examples import minelogy
-from examples.goal import *
+from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
+import tagilmo.utils.mission_builder as mb
+from tagilmo.utils.mathutils import *
+
+from examples.vis import Visualizer
+from examples.Vereya import minelogy
+from examples.Vereya.goal import *
 
 class LookPitch(RobGoal):
 
@@ -713,7 +714,8 @@ class GridAnalyzer:
         return res
 
     def analyzePath(self, pos):
-        print(f"target {self.target},\tpa {self.pa}\tdist {self.dist}\tdp {self.dp}\n")
+        # logging.debug(f"target {self.target},\tpa {self.pa}\tdist {self.dist}\tdp {self.dp}\n")
+        # print(f"target {self.target},\tpa {self.pa}\tdist {self.dist}\tdp {self.dp}\n")
         DIST_CL = 9
         self.last_r2 = 0
         dy = self.target[1] - self.pa[1]
@@ -801,11 +803,10 @@ class ListenAndDo(Switcher):
                 self.terminate = True
             if len(words) > 1:
                 if words[-2] == 'get':
-                    self.agent.set_goal(Obtain(self.agent, [{'type': words[-1]}]))
-                    # self.next_goal = Obtain(self.agent, [{'type': words[-1]}])
-            # if self.next_goal is not None:
-            #     print("Received command: ", command)
-            #     if self.delegate is not None:
+                    self.next_goal = Obtain(self.agent, [{'type': words[-1]}])
+            if self.next_goal is not None:
+                print("Received command: ", command)
+                if self.delegate is not None:
                     self.stopDelegate = True
         super().update()
 

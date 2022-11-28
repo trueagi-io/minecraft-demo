@@ -8,7 +8,7 @@ from vis import Visualizer
 import math
 from random import random
 
-from examples import minelogy
+from examples.Vereya import minelogy
 from examples.goal import *
 
 class LookPitch(RobGoal):

@@ -564,13 +564,6 @@ class Obtain(Switcher):
         self.agent = agent
         self.items = items
 
-    # def chooseTool(self, invent, tool):
-    #     if tool is None:
-    #         return
-    #     index = minelogy.findInInventory(invent, {'type': tool})['index']
-    #     self.rob.mc.sendCommand('swapInventoryItems 0 ' + str(index))
-    #     sleep(0.5)
-
     def update(self):
         invent = self.rob.waitNotNoneObserve('getInventory', False)
         new_items = list(filter(lambda item: not minelogy.isInInventory(invent, item), self.items))

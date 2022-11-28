@@ -286,12 +286,9 @@ def find_crafts_by_result(entity):
 def select_minetool(invent, mine_entry):
     if mine_entry is None:
         return None
-    inv = [{'type': 'air', 'index': n, 'quantity': 64} for n in range(36)]
-    for item in invent:
-        inv[item['index']] = item
     result = None
-    for tool in mine_entry[0]['tools']:
-        for item in inv:
+    for tool in reversed(mine_entry[0]['tools']):
+        for item in invent:
             if tool is None and (result is None or result['quantity'] < item['quantity']):
                 result = item
             elif tool == item['type']:

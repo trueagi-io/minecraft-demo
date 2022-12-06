@@ -189,7 +189,23 @@ class TestCraft(unittest.TestCase):
         self.assertEqual(count_items(inv1, "birch_planks"), 0)
         print('sending command')
 
-       
+    def test_stonecutter(self):
+        mc = self.mc
+        time.sleep(1)
+        mc.sendCommand("chat /give @p stonecutter 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p cobbled_deepslate 1")
+        time.sleep(1)
+        mc.observeProc()
+        time.sleep(1)
+        print('making deepslate_brick_wall')
+        inv = mc.getInventory()
+        mc.sendCommand("craft deepslate_brick_wall")
+        time.sleep(2)
+        mc.observeProc()
+        time.sleep(1)
+        inv1 = mc.getInventory()
+        self.assertEqual(count_items(inv, "deepslate_brick_wall") + 1, count_items(inv1, "deepslate_brick_wall"))
 
 
 def main():

@@ -597,10 +597,10 @@ class Obtain(Switcher):
             if best_lack is not None:
                 if len(best_lack) == 0:
                     t = minelogy.get_otype(best_craft[1])
-                    if t == 'planks':
-                        i = minelogy.findInInventory(invent, best_craft[0][0])
-                        t = minelogy.checkCraftType(t,i)
-                        # t = i['variant'] + ' ' + t
+                    i = minelogy.findInInventory(invent, best_craft[0][0])
+                    t = minelogy.checkCraftType(t,i)
+                    # t = i['variant'] + ' ' + t
+                    t = minelogy.addFuel(t, invent)
                     self.delegate = ActT(['craft', t], [], 0.5, True)
                 else:
                     self.delegate = Obtain(self.agent, best_lack)

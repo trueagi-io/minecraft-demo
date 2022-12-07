@@ -74,9 +74,14 @@ class TCPServer:
                 writer.write(self.fixed_reply)
                 await writer.drain()
 
-            # run in threadpool, who knows how fast is our callback
-            fut = self.io_service.run_in_executor(None, lambda: self.onMessageReceived(result))
-            fut.add_done_callback(self.__done)
+            try:
+                # run in threadpool, who knows how fast is our callback
+                fut = self.io_service.run_in_executor(None, lambda: self.onMessageReceived(result))
+                fut.add_done_callback(self.__done)
+            except RuntimeError as e:
+                # work around https://github.com/python/cpython/issues/99704
+                logger.debug('error scheduling callback, closing the server', exc_info=e)
+                self.close()
 
     def __done(self, fut: Future) -> None:
         e = fut.exception()

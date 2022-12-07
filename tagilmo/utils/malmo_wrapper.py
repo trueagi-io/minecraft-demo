@@ -300,7 +300,7 @@ class RobustObserver:
         self.mc = mc
         self.nAgent = nAgent
         self.tick = 0.02
-        self.max_dt = 1.0
+        self.max_dt = 0.1
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat']
         self.canBeNone = ['getLineOfSights', 'getChat']
@@ -309,6 +309,8 @@ class RobustObserver:
             self.canBeNone.append('getImageFrame')
         if not self.mc.supportsSegmentation():
             self.canBeNone.append('getSegmentationFrame')
+        self.max_dt = {method: 1.0 for method in self.methods}
+        self.max_dt['getChat'] = 0.1
         self.cached = {method : (None, 0) for method in self.methods}
         self.cbuff_history_len = 10
         self.cached_buffer = {method: (None, 0) for method in self.methods}
@@ -333,7 +335,7 @@ class RobustObserver:
         for method in self.methods:
             v_new = getattr(self.mc, method)(self.nAgent)
             v, t = self.cached[method]
-            outdated = t_new - t > self.max_dt
+            outdated = t_new - t > self.max_dt[method]
             if v_new is not None or outdated: # or v is None
                 self.cached_buffer[method] = self.cached[method]
                 self.cached[method] = (v_new, t_new)
@@ -360,7 +362,7 @@ class RobustObserver:
               (self.cached[method][1] == tm and updateReq):
             time.sleep(self.tick)
             self.observeProcCached()
-            if self.cached[method][1] - tm > self.max_dt:
+            if self.cached[method][1] - tm > self.max_dt[method]:
                 # It's better to return None rather than hanging too long
                 break
         return self.getCachedObserve(method)

@@ -1,15 +1,16 @@
 import torch
 import logging
 from time import sleep, time
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
-import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.mathutils import *
-from vis import Visualizer
 import math
 from random import random
 
+from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
+import tagilmo.utils.mission_builder as mb
+from tagilmo.utils.mathutils import *
+
+from examples.vis import Visualizer
 from examples.Vereya import minelogy
-from examples.goal import *
+from examples.Vereya.goal import *
 
 class LookPitch(RobGoal):
 
@@ -110,7 +111,7 @@ class LookAt(RobGoal):
 
 class AttackInRange(RobGoal):
 
-    def __init__(self, rob, hitType=['block']):
+    def __init__(self, rob, hitType=['BLOCK']):
         super().__init__(rob)
         self.target = None
         self.hitType = hitType
@@ -140,7 +141,7 @@ class AttackBlockSight(RobGoal):
 
     def __init__(self, rob):
         super().__init__(rob,
-            AttackInRange(rob, ['block']))
+            AttackInRange(rob))
         self.target = None
 
     def __get_target(self):
@@ -596,9 +597,10 @@ class Obtain(Switcher):
             if best_lack is not None:
                 if len(best_lack) == 0:
                     t = minelogy.get_otype(best_craft[1])
-                    if t == 'planks':
-                        i = minelogy.findInInventory(invent, best_craft[0][0])
-                        t = i['variant'] + ' ' + t
+                    i = minelogy.findInInventory(invent, best_craft[0][0])
+                    t = minelogy.checkCraftType(t,i)
+                    # t = i['variant'] + ' ' + t
+                    t = minelogy.addFuel(t, invent)
                     self.delegate = ActT(['craft', t], [], 0.5, True)
                 else:
                     self.delegate = Obtain(self.agent, best_lack)
@@ -608,8 +610,15 @@ class Obtain(Switcher):
             for item in new_items:
                 for mine_entry in minelogy.find_mines_by_result(item):
                     tool = mine_entry[0]['tools'][-1]
-                    blocks = list(map(lambda b: b['type'], mine_entry[0]['blocks']))
+                    # blocks = list(map(lambda b: minelogy.get_target_variants(b), mine_entry[0]['blocks']))
+                    # blocks = list(map(lambda b: b['type'], blocks))
+                    blocks = [minelogy.get_target_variants(b) for b in mine_entry[0]['blocks']]
+                    if isinstance(blocks[0], list):
+                        blocks = [b['type'] for b in blocks[0]]
+                    else:
+                        blocks = [b['type'] for b in blocks]
                     if tool is None or minelogy.isInInventory(invent, {'type': tool}):
+                        # self.chooseTool(invent, tool)
                         if self.agent.nearestBlock(blocks) is not None:
                             diff = 0
                             goal = FindAndMine(self.agent, blocks)
@@ -698,6 +707,8 @@ class GridAnalyzer:
         return res
 
     def analyzePath(self, pos):
+        # logging.debug(f"target {self.target},\tpa {self.pa}\tdist {self.dist}\tdp {self.dp}\n")
+        # print(f"target {self.target},\tpa {self.pa}\tdist {self.dist}\tdp {self.dp}\n")
         DIST_CL = 9
         self.last_r2 = 0
         dy = self.target[1] - self.pa[1]
@@ -775,17 +786,17 @@ class ListenAndDo(Switcher):
         self.terminate = False
 
     def update(self):
-        command = self.rob.cached['getChat'][0]
+        command = self.rob.waitNotNoneObserve('getChat')
         if self.next_goal is not None:
             self.delegate = self.next_goal
             self.next_goal = None
         elif command is not None:
             words = command[0].split(' ')
-            self.rob.cached['getChat'] = (None, self.rob.cached['getChat'][1])
             if words[-1] == 'terminate':
                 self.terminate = True
-            if words[-2] == 'get':
-                self.next_goal = Obtain(self.agent, [{'type': words[-1]}])
+            if len(words) > 1:
+                if words[-2] == 'get':
+                    self.next_goal = Obtain(self.agent, [{'type': words[-1]}])
             if self.next_goal is not None:
                 print("Received command: ", command)
                 if self.delegate is not None:

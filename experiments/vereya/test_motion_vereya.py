@@ -82,7 +82,6 @@ def main():
     time.sleep(1)
     print('sending command move 0')
     mc.sendCommand('move 0')
-    import pdb;pdb.set_trace()
     print('sending command turn 0.1')
     mc.sendCommand('turn 0.1')
     mc.observeProc()

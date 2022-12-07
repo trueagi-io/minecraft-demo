@@ -75,7 +75,7 @@ class TestCraft(unittest.TestCase):
         start = (-108.0, -187.0)
         mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
         cls.mc = mc
-        mc.safeStart()
+        assert mc.safeStart()
         time.sleep(4)
 
     def setUp(self):

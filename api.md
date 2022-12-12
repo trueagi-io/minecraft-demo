@@ -43,13 +43,14 @@ mc.safeStart()
 ```
 
 Default observations include 
+```
 <ObservationFromRay/> - object visible at the center of the screen
 <ObservationFromFullStats/> - health, position, world time  
 <ObservationFromFullInventory/> - all items in inventory  
 <ObservationFromRecipes/> - all the recipies, turned off after the game start  
 <ObservationFromNearbyEntities/> - position of nearby mobes and floating objects  
 <ObservationFromGrid/> - grid of 5x4x5 blocks around the player  
-
+```
 
 
 

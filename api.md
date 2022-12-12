@@ -39,6 +39,7 @@ miss.serverSection.initial_conditions.time_start = "1000"
 mc = MalmoConnector(miss)
 rob = RobustObserver(mc)
 
+# creates the world
 mc.safeStart()
 ```
 

@@ -786,7 +786,7 @@ class ListenAndDo(Switcher):
         self.terminate = False
 
     def update(self):
-        command = self.rob.waitNotNoneObserve('getChat')
+        command = self.rob.getCachedObserve('getChat')
         if self.next_goal is not None:
             self.delegate = self.next_goal
             self.next_goal = None

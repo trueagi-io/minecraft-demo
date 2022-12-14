@@ -25,7 +25,6 @@ class Achiever(TAgent):
         self.goal = ListenAndDo(self) if goal is None else goal
 
     def run(self):
-        # self.rob.sendCommand("chat get iron_axe")
         running = True
         while running:
             acts, running = self.goal.cycle()

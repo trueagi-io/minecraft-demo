@@ -1,8 +1,11 @@
 import unittest
 import logging
-import MalmoPython
 import json
 import time
+import json
+import time
+from tagilmo import VereyaPython
+
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 from experiments import common
@@ -75,7 +78,7 @@ class TestCraft(unittest.TestCase):
         start = (-108.0, -187.0)
         mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
         cls.mc = mc
-        mc.safeStart()
+        assert mc.safeStart()
         time.sleep(4)
 
     def setUp(self):
@@ -83,6 +86,7 @@ class TestCraft(unittest.TestCase):
         time.sleep(4)
 
     def test_swap_inventory(self):
+        mc = self.mc
         print('send ochat')
         mc.sendCommand("chat /give @p oak_planks 1")
         time.sleep(1)
@@ -110,6 +114,53 @@ class TestCraft(unittest.TestCase):
         self.assertEqual(count_items(inv, "stick") + 4, count_items(inv1, "stick"))
         self.assertEqual(count_items(inv1, "birch_planks"), 0)
         print('sending command')
+
+    def test_craft_pickaxe(self):
+        mc = self.mc
+        mc.sendCommand("chat /give @p oak_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p birch_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p acacia_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p stick 2")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p crafting_table 1")
+        time.sleep(1)
+        mc.observeProc()
+        time.sleep(1)
+        print('making pickaxe')
+        inv = mc.getInventory()
+        mc.sendCommand("craft wooden_pickaxe")
+        time.sleep(2)
+        mc.observeProc()
+        inv1 = mc.getInventory()
+        self.assertEqual(count_items(inv, "wooden_pickaxe") + 1, count_items(inv1, "wooden_pickaxe"))
+        self.assertEqual(count_items(inv, "acacia_planks") - 1, count_items(inv1, "acacia_planks"))
+
+    def test_failed(self):
+        mc = self.mc
+        time.sleep(1)
+        mc.sendCommand("chat /give @p oak_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p birch_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p acacia_planks 1")
+        time.sleep(1)
+        mc.sendCommand("chat /give @p stick 1")
+        time.sleep(1)
+        mc.observeProc()
+        time.sleep(1)
+        print('making pickaxe')
+        inv = mc.getInventory()
+        mc.sendCommand("craft wooden_pickaxe")
+        time.sleep(2)
+        mc.observeProc()
+        time.sleep(1)
+        inv1 = mc.getInventory()
+        self.assertEqual(count_items(inv, "wooden_pickaxe"), count_items(inv1, "wooden_pickaxe"))
+        self.assertEqual(count_items(inv, "acacia_planks"), count_items(inv1, "acacia_planks"))
+        self.assertEqual(count_items(inv, "stick"), count_items(inv1, "stick"))
 
     def test_smelt_iron(self):
         mc = self.mc
@@ -145,9 +196,9 @@ class TestCraft(unittest.TestCase):
 
 
 def main():
+    VereyaPython.setupLogger()
     unittest.main()
-#    MalmoPython.setLoggingComponent(MalmoPython.LoggingComponent.LOG_TCP, True)
-#    MalmoPython.setLogging('log.txt', MalmoPython.LoggingSeverityLevel.LOG_FINE)
+
 
         
 if __name__ == '__main__':

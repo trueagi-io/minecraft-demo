@@ -7,8 +7,9 @@ import concurrent.futures
 import threading
 import logging
 import collections
+import re
 
-import MalmoPython
+from tagilmo import VereyaPython as VP
 
 import numpy
 import tagilmo.utils.malmoutils as malmoutils
@@ -18,25 +19,31 @@ from tagilmo.utils.mathutils import *
 logger = logging.getLogger('malmo')
 
 
+module = VP
+
 class MalmoConnector:
 
     @staticmethod
     def yawDelta(yawRad):
         return [-math.sin(yawRad), 0, math.cos(yawRad)]
 
-    def setMissionXML(self, missionXML):
+    def setMissionXML(self, missionXML, module=VP):
         self.missionDesc = missionXML
-        self.mission = MalmoPython.MissionSpec(missionXML.xml(), True)
-        self.mission_record = MalmoPython.MissionRecordSpec()
+        self.mission = module.MissionSpec(missionXML.xml(), True)
+        self.mission_record = module.MissionRecordSpec()
 
     def __init__(self, missionXML, serverIp='127.0.0.1'):
         self.missionDesc = None
         self.mission = None
         self.mission_record = None
-        self.setMissionXML(missionXML)
+        self.setUp(VP, missionXML, serverIp=serverIp)
+
+    def setUp(self, module, missionXML, serverIp='127.0.0.1'):
+        self.serverIp = serverIp
+        self.setMissionXML(missionXML, module)
         nAgents = len(missionXML.agentSections)
         self.agent_hosts = []
-        self.agent_hosts += [MalmoPython.AgentHost() for n in range(nAgents)]
+        self.agent_hosts += [module.AgentHost() for n in range(nAgents)]
         self.agent_hosts[0].parse( sys.argv )
         if self.receivedArgument('recording_dir'):
             recordingsDirectory = malmoutils.get_recordings_directory(self.agent_hosts[0])
@@ -46,11 +53,11 @@ class MalmoConnector:
             self.mission_record.setDestination(recordingsDirectory + "//" + "lastRecording.tgz")
             if self.agent_hosts[0].receivedArgument("record_video"):
                 self.mission_record.recordMP4(24, 2000000)
-        self.client_pool = MalmoPython.ClientPool()
+        self.client_pool = module.ClientPool()
         for x in range(10000, 10000 + nAgents):
-            self.client_pool.add( MalmoPython.ClientInfo(serverIp, x) )
-        self.worldStates = [None]*nAgents
-        self.observe = [None]*nAgents
+            self.client_pool.add( module.ClientInfo(serverIp, x) )
+        self.worldStates = [None] * nAgents
+        self.observe = [None] * nAgents
         self.isAlive = [True] * nAgents
         self.frames = [None] * nAgents
         self.segmentation_frames = [None] * nAgents
@@ -70,29 +77,49 @@ class MalmoConnector:
                     self.agent_hosts[role].startMission(self.mission, self.client_pool, self.mission_record, role, expId)
                     #self.agent_hosts[role].startMission(self.mission, self.mission_record)
                     break
-                except MalmoPython.MissionException as e:
+                except (VP.MissionException) as e:
                     errorCode = e.details.errorCode
-                    if errorCode == MalmoPython.MissionErrorCode.MISSION_SERVER_WARMING_UP:
+                    if errorCode == VP.MissionErrorCode.MISSION_SERVER_WARMING_UP:
                         print("Server not quite ready yet - waiting...")
                         time.sleep(2)
-                    elif errorCode == MalmoPython.MissionErrorCode.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE:
+                    elif errorCode == VP.MissionErrorCode.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE:
                         print("Not enough available Minecraft instances running.")
                         used_attempts += 1
                         if used_attempts < max_attempts:
                             print("Will wait in case they are starting up.", max_attempts - used_attempts, "attempts left.")
                             time.sleep(2)
-                    elif errorCode == MalmoPython.MissionErrorCode.MISSION_SERVER_NOT_FOUND:
+                    elif errorCode == VP.MissionErrorCode.MISSION_SERVER_NOT_FOUND:
                         print("Server not found - has the mission with role 0 been started yet?")
                         used_attempts += 1
                         if used_attempts < max_attempts:
                             print("Will wait and retry.", max_attempts - used_attempts, "attempts left.")
                             time.sleep(2)
-                    elif errorCode == MalmoPython.MissionErrorCode.MISSION_ALREADY_RUNNING:
+                    elif errorCode == VP.MissionErrorCode.MISSION_ALREADY_RUNNING:
                         print('The mission already running')
                         return True
+                    elif errorCode == VP.MissionErrorCode.MISSION_VERSION_MISMATCH:
+                        print("wrong Malmo version")
+                        global module
+                        desc = self.missionDesc
+                        # clean worldgen
+                        worldgen = self.missionDesc.serverSection.handlers.worldgenerator
+                        match = re.match('.*(forceReuse="\w+").*', worldgen)
+                        if match:
+                            desc.serverSection.handlers.worldgenerator = worldgen.replace(match.group(1), "")
+                        if module is VP:
+                            module = MP
+                            desc.namespace = "ProjectMalmo.microsoft.com"
+                        else:
+                            module = VP
+                            desc.namespace = "ProjectMalmo.singularitynet.io"
+                        self.setUp(module, desc, self.serverIp)
+                        continue
                     else:
                         print("Other error:", e)
                         return False
+                except Exception as e:
+                    print(e)
+                    return False
                 if used_attempts == max_attempts:
                     print("All attempts to start the mission are failed.")
                     return False
@@ -273,7 +300,6 @@ class RobustObserver:
         self.mc = mc
         self.nAgent = nAgent
         self.tick = 0.02
-        self.max_dt = 1.0
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat']
         self.canBeNone = ['getLineOfSights', 'getChat']
@@ -282,6 +308,7 @@ class RobustObserver:
             self.canBeNone.append('getImageFrame')
         if not self.mc.supportsSegmentation():
             self.canBeNone.append('getSegmentationFrame')
+        self.max_dt = 1.0
         self.cached = {method : (None, 0) for method in self.methods}
         self.cbuff_history_len = 10
         self.cached_buffer = {method: (None, 0) for method in self.methods}
@@ -484,6 +511,10 @@ class RobustObserver:
     def filterInventoryItem(self, item, observeReq=True):
         inv = self.waitNotNoneObserve('getInventory', True, observeReq=observeReq)
         return list(filter(lambda entry: entry['type']==item, inv))
+
+    def softFilterInventoryItem(self, item, observeReq=True):
+        inv = self.waitNotNoneObserve('getInventory', True, observeReq=observeReq)
+        return list(filter(lambda entry: item in entry['type'], inv))
 
     def nearestFromGrid(self, objs, observeReq=True):
         if not isinstance(objs, list):

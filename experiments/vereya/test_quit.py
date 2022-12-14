@@ -1,4 +1,6 @@
+import unittest
 import logging
+from tagilmo import VereyaPython
 import json
 import time
 import tagilmo.utils.mission_builder as mb
@@ -10,6 +12,14 @@ from experiments.common import stop_motion, grid_to_vec_walking, direction_to_ta
 
 def init_mission(mc, start_x=None, start_y=None):
     want_depth = False
+    # quit by reaching target or when zero health
+    mission_ending = """
+        <MissionQuitCommands quitDescription="give_up"/>
+        <RewardForMissionEnd>
+          <Reward description="give_up" reward="243"/>
+        </RewardForMissionEnd>
+        """
+
     video_producer = mb.VideoProducer(width=320 * 4,
                                       height=240 * 4, want_depth=want_depth)
 
@@ -17,7 +27,8 @@ def init_mission(mc, start_x=None, start_y=None):
     obs.gridNear = [[-1, 1], [-2, 1], [-1, 1]]
 
 
-    agent_handlers = mb.AgentHandlers(observations=obs, video_producer=video_producer)
+    agent_handlers = mb.AgentHandlers(observations=obs,
+            all_str=mission_ending, video_producer=video_producer)
 
     print('starting at ({0}, {1})'.format(start_x, start_y))
 
@@ -35,11 +46,8 @@ def init_mission(mc, start_x=None, start_y=None):
     flat_json = json.dumps(flat_json).replace('"', "%ESC")
     world = mb.defaultworld(
         seed='5',
-        forceReuse="true",
-        forceReset="false")
-    flat_world = mb.flatworld(flat_json,
-                    seed='43',
-                    )
+        forceReset="false",
+        forceReuse="true")
     miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     # uncomment to disable passage of time:
@@ -54,56 +62,33 @@ def init_mission(mc, start_x=None, start_y=None):
     return mc, obs
 
 
-def test_basic_motion():
-    pass 
+class TestQuit(unittest.TestCase):
+    mc = None
+
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        start = 316.5, 5375.5
+        start = (-108.0, -187.0)
+        mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
+        cls.mc = mc
+        assert mc.safeStart()
+        time.sleep(3)
+
+    def setUp(self):
+        self.mc.sendCommand("chat /clear")
+        time.sleep(3)
+
+    def test_quit(self):
+        self.assertTrue(self.mc.is_mission_running())
+        print('send ochat')
+        self.mc.sendCommand("quit")
+        time.sleep(4)
+        self.assertFalse(self.mc.is_mission_running())
 
 
 def main():
-    from tagilmo import VereyaPython
-
-
-    start = 316.5, 5375.5
-    start = (-108.0, -187.0)
-    mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
-
-    mc.safeStart()
-    time.sleep(4)
-    print('sending command')
-    mc.sendCommand('move 1')
-        
-    #print('send chat')
-    #obs.sendCommand("chat /difficulty peaceful")
-    time.sleep(1)
-    print('sending command')
-    mc.sendCommand('move 1')
-        
-
-    time.sleep(1)
-    print('sending command move 0')
-    mc.sendCommand('move 0')
-
-    print('sending command turn 0.1')
-    mc.sendCommand('turn 0.1')
-    mc.observeProc()
-    pos = mc.getAgentPos()
-    print('sending command turn 0')
-    time.sleep(1)
-    mc.sendCommand('turn 0')
-    time.sleep(1)
-    mc.observeProc()
-    pos1 = mc.getAgentPos()
-
-    while True:
-       mc.observeProc()
-       time.sleep(2)
-       print('waiting')
-       img_frame = mc.frames[0] 
-       if img_frame is None:
-           print(img_frame)
-       ray = mc.getLineOfSights()
-       print(ray)
-
-
+    VereyaPython.setupLogger()
+    unittest.main()
         
 if __name__ == '__main__':
    main()

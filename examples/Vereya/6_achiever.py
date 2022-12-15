@@ -31,7 +31,6 @@ class Achiever(TAgent):
             for act in acts:
                 self.rob.sendCommand(act)
             sleep(0.05)
-            self.rob.observeProcCached()
             self.blockMem.updateBlocks(self.rob)
             self.visualize()
         acts = self.goal.stop()
@@ -72,6 +71,7 @@ if __name__ == '__main__':
     #those commands needed if we are reusing same world
     sleep(2)
     agent.rob.sendCommand("jump 1")
+    agent.rob.update_in_background()
     sleep(0.1)
     agent.rob.sendCommand("jump 0")
     agent.run()

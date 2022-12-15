@@ -1,4 +1,3 @@
-import torch
 import logging
 from experiments.log import setup_logger
 from time import sleep, time

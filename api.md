@@ -54,4 +54,12 @@ Default observations include
 ```
 
 
+MalmoConnector object holds observations from the mod sends commands.  
+RobustObserver implements caching for observations.
+
+you can make your agent moving with 
+
+rob.sendCommand('move 1')
+
+
 

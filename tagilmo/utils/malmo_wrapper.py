@@ -157,7 +157,7 @@ class MalmoConnector:
             self.worldStates[n] = self.agent_hosts[n].getWorldState()
             self.isAlive[n] = self.worldStates[n].is_mission_running
             obs = self.worldStates[n].observations
-            self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
+            self.observe[n] = json.loads(obs[-1].text.replace("minecraft:", "")) if len(obs) > 0 else None
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
             segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None

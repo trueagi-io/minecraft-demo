@@ -1,5 +1,4 @@
 import cv2
-import torch
 import os
 import math
 import numpy

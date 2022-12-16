@@ -96,6 +96,10 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'coal'}
          ),
+        ({'blocks': [{'type': 'diamond_ore'}],
+           'tools': ['iron_pickaxe']},
+          {'type': 'diamond'}
+         ),
         ({'blocks': [{'type': 'copper_ore'}],
            'tools': ['stone_pickaxe']},
           {'type': 'raw_copper'}
@@ -217,6 +221,14 @@ def get_ovariant(obj):
         v = obj['variation']
     return v
 
+def mimic_target(target, variants):
+    res = []
+    for var in variants:
+        var_target = target.copy()
+        var_target['type'] = var['type']
+        res.append(var_target)
+    return res
+
 def get_target_variants(target):
     if target['type'] == "planks":
         res = []
@@ -228,7 +240,7 @@ def get_target_variants(target):
     elif target['type'] == "trapdoor":
         return trapdoor_names_t
     elif target['type'] == "log":
-        return log_names_t
+        return mimic_target(target, log_names_t)
     return target
 
 def get_new_type(obj):
@@ -332,7 +344,8 @@ def lackCraftItems(invent, craft_entry):
 def assoc_blocks(blocks):
     assoc = {'log': log_names+leaves_names,
              'coal_ore': ['stone'],
-             'iron_ore': ['stone']}
+             'iron_ore': ['stone'],
+             'diamond_ore': ['stone', 'iron_ore', 'coal_ore', 'copper_ore']}
     blocks2 = []
     for b in blocks:
         if b in assoc:

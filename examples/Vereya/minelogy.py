@@ -204,7 +204,8 @@ def get_otype(obj):
     return t
 
 def get_oatargets(obj):
-    t = get_otype(obj)
+    # t = get_otype(obj)
+    t = obj
     if t == 'log':
         return log_names_t + leaves_names_t
     if t == 'stone':

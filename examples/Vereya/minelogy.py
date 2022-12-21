@@ -9,7 +9,7 @@ log_names_t = []
 planks_names_t = []
 drs = []
 # versions = minecraft_data.common().protocolVersions
-mcd = minecraft_data('1.19')  # here we must put current minecraft version
+mcd = minecraft_data('1.18.1')  # here we must put current minecraft version
 
 for item in mcd.items_list:
     iname = item['name']
@@ -73,7 +73,7 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'coal'}
          ),
-        ({'blocks': [{'type': 'diamond_ore', 'depthmin': 14, 'depthmax':-64}],
+        ({'blocks': [{'type': 'diamond_ore'}],
            'tools': ['iron_pickaxe']},
           {'type': 'diamond'}
          ),
@@ -81,7 +81,7 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe']},
           {'type': 'raw_copper'}
          ),
-         ({'blocks': [{'type': 'iron_ore', 'depthmin': 15}],
+         ({'blocks': [{'type': 'iron_ore'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe']},
           {'type': 'raw_iron'}
          ),
@@ -361,7 +361,6 @@ def checkCraftType(to_craft, to_mine):
 
 def addFuel(to_craft, invent):
     if (to_craft == 'iron_ingot' or to_craft == 'glass'):
-        # log_name = findInInventory(invent, {'type':'log'})
         fuels = find_fuel(invent)
         return f'{to_craft} {fuels[0]["type"]}'
     return to_craft

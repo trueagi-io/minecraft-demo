@@ -471,7 +471,6 @@ class AgentHost(ArgumentParser):
     def onMissionControlMessage(self, xml: TimestampedString) -> None:
         elem = None
         try:
-            logger.info('control %s', xml.text)
             elem = str2xml(xml.text)
         except RuntimeError as e:
             print(e)

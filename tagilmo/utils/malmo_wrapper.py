@@ -315,12 +315,27 @@ class RobustObserver:
         self.cached_buffer_list = [self.cached_buffer]
         self.commandBuffer = []
         self.expectedCommandsBuffer = []
+        self.thread = None
+        self.lock = threading.RLock()
+        self._time_sleep = 0.05
+
+    def update_in_background(self, time_sleep=0.05):
+        self._time_sleep = time_sleep
+        self.thread = threading.Thread(target=self.__update_in_background, daemon=True)
+        self.thread.start()
+
+    def __update_in_background(self):
+        while True:
+            self.observeProcCached()
+            time.sleep(self._time_sleep)
 
     def clear(self):
-        self.cached = {k: (None, 0) for k in self.cached}
+        with self.lock:
+            self.cached = {k: (None, 0) for k in self.cached}
     
     def getCachedObserve(self, method, key = None):
-        val = self.cached[method][0]
+        with self.lock:
+            val = self.cached[method][0]
         if key is None:
             return val
         else:
@@ -332,16 +347,19 @@ class RobustObserver:
         updated = False
         for method in self.methods:
             v_new = getattr(self.mc, method)(self.nAgent)
-            v, t = self.cached[method]
+            with self.lock:
+                v, t = self.cached[method]
             outdated = t_new - t > self.max_dt
             if v_new is not None or outdated: # or v is None
-                self.cached_buffer[method] = self.cached[method]
-                self.cached[method] = (v_new, t_new)
+                with self.lock:
+                    self.cached_buffer[method] = self.cached[method]
+                    self.cached[method] = (v_new, t_new)
                 self.changed(method)
                 updated = True
         if updated:
-            self.cached_buffer_list.append(self.cached_buffer.copy())
-            self.cached_buffer_list = self.cached_buffer_list[-self.cbuff_history_len:]
+            with self.lock:
+                self.cached_buffer_list.append(self.cached_buffer.copy())
+                self.cached_buffer_list = self.cached_buffer_list[-self.cbuff_history_len:]
 
     def changed(self, name):
         pass
@@ -559,7 +577,6 @@ class RobustObserverWithCallbacks(RobustObserver):
         self._futures = dict()
         self._in_process = set()
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
-        self.lock = threading.RLock()
 
     def changed(self, name):
         for (cb_name, on_change, cb) in self.callbacks:

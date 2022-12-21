@@ -9,8 +9,8 @@ log_names_t = []
 planks_names_t = []
 drs = []
 # versions = minecraft_data.common().protocolVersions
-mcd = minecraft_data('1.18.1')  # here we must put current minecraft version
-count = 0
+mcd = minecraft_data('1.19')  # here we must put current minecraft version
+
 for item in mcd.items_list:
     iname = item['name']
     if 'log' in iname:
@@ -27,30 +27,7 @@ for item in mcd.items_list:
     if 'trapdoor' in iname:
         trapdoor_names_t.append({'type': iname})
 
-def make_log_plank_triple(log_names, plank_names):
-    res = []
-    for log_name in log_names:
-        log_variant = log_name.split("log")[0]
-        if log_variant == '':
-            return None
-        for plank_name in plank_names:
-            plank_variant = plank_name.split("plank")[0]
-            if plank_variant == log_variant:
-                res.append((log_name, plank_name, log_variant[:-1]))
-    return res
-
-def make_door_plank_quadriple(door_names, plank_names):
-    res = []
-    for door_name in door_names:
-        door_variant = door_name.split("door")[0]
-        if door_variant == '':
-            return None
-        for plank_name in plank_names:
-            plank_variant = plank_name.split("plank")[0]
-            if plank_variant == door_variant:
-                res.append((door_name, door_variant+"trapdoor", plank_name, door_variant[:-1]))
-    return res
-
+fuel_list = log_names + planks_names + ['sapling', 'stick', 'coal']
 
 mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
@@ -77,35 +54,35 @@ mines = [({'blocks': [{'type': 'log'}],
           {'type': 'gravel'}
          ),
          ({'blocks': [{'type': 'sandstone'}],
-           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'sandstone'}
          ),
          ({'blocks': [{'type': 'stone'}],
-           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'stone'}
          ),
          ({'blocks': [{'type': 'stone', 'variant': 'stone'}],
-           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'cobblestone'}
          ),
          ({'blocks': [{'type': 'cobblestone'}],
-          'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+          'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
          {'type': 'cobblestone'}
          ),
          ({'blocks': [{'type': 'coal_ore'}],
-           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'coal'}
          ),
-        ({'blocks': [{'type': 'diamond_ore'}],
+        ({'blocks': [{'type': 'diamond_ore', 'depthmin': 14, 'depthmax':-64}],
            'tools': ['iron_pickaxe']},
           {'type': 'diamond'}
          ),
         ({'blocks': [{'type': 'copper_ore'}],
-           'tools': ['stone_pickaxe']},
+           'tools': ['iron_pickaxe', 'stone_pickaxe']},
           {'type': 'raw_copper'}
          ),
-         ({'blocks': [{'type': 'iron_ore'}],
-           'tools': ['stone_pickaxe']},
+         ({'blocks': [{'type': 'iron_ore', 'depthmin': 15}],
+           'tools': ['iron_pickaxe', 'stone_pickaxe']},
           {'type': 'raw_iron'}
          ),
          ({'blocks': [{'type': 'pumpkin'}],
@@ -149,7 +126,7 @@ crafts = [([{'type': 'log', 'quantity': 1}],
            {'type': 'stone_pickaxe'}),
           ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 1}],
            {'type': 'stone_shovel'}),
-          ([{'type': 'raw_iron', 'quantity': 1}, {'type': 'furnace', 'quantity': 1}, {'type': 'log', 'quantity': 1}],
+          ([{'type': 'raw_iron', 'quantity': 1}, {'type': 'furnace', 'quantity': 1}, {'type': 'fuel', 'quantity': 1}],
            {'type': 'iron_ingot'}),
           ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
            {'type': 'iron_axe'}),
@@ -183,7 +160,7 @@ crafts = [([{'type': 'log', 'quantity': 1}],
            {'type': 'lever'}),
           ([{'type': 'pumpkin', 'quantity': 1}],
             {'type': 'pumpkin_seeds'}),
-          ([{'type': 'sand', 'quantity': 1}, {'type': 'furnace', 'quantity': 1}, {'type': 'log', 'quantity': 1}],
+          ([{'type': 'sand', 'quantity': 1}, {'type': 'furnace', 'quantity': 1}, {'type': 'fuel', 'quantity': 1}],
             {'type': 'glass'}),
           ([{"type": "stick", "quantity": 4}, {"type": "planks", "quantity": 2}],
             {"type": "fence_gate", "quantity": 1}),
@@ -195,8 +172,6 @@ crafts = [([{'type': 'log', 'quantity': 1}],
 
 def get_otype(obj):
     t = None
-    if 'minecraft:' in obj['type']:
-        obj['type'] = obj['type'].split('minecraft:')[1]
     if 'type' in obj:
         t = obj['type']
     elif 'name' in obj:
@@ -286,9 +261,10 @@ def get_otlist(objs):
 def matchEntity(source, target):
     if source is None:
         return False
-    # if target is None: return True
-    source_type = get_otype(source)
-    target_type = get_otype(target)
+    source_type = get_otype(source) if isinstance(source, dict) else source
+    target_type = get_otype(target) if isinstance(target, dict) else target
+    if target_type == 'fuel' and source_type in fuel_list:
+        return True
     if (source_type != target_type) and (source_type != target_type.split("_")[-1]) and (target_type != source_type.split("_")[-1]):
         return False
     target_v = get_ovariant(target)
@@ -309,6 +285,9 @@ def find_mines_by_result(entity):
 
 def find_crafts_by_result(entity):
     return list(filter(lambda craft: matchEntity(craft[1], entity), crafts))
+
+def find_fuel(invent):
+    return list(filter(lambda item: item is not None, list(findInInventory(invent, fl) for fl in fuel_list)))
 
 def select_minetool(invent, mine_entry):
     if mine_entry is None:
@@ -382,6 +361,7 @@ def checkCraftType(to_craft, to_mine):
 
 def addFuel(to_craft, invent):
     if (to_craft == 'iron_ingot' or to_craft == 'glass'):
-        log_name = findInInventory(invent, {'type':'log'})
-        return f'{to_craft} {log_name["type"]}'
+        # log_name = findInInventory(invent, {'type':'log'})
+        fuels = find_fuel(invent)
+        return f'{to_craft} {fuels[0]["type"]}'
     return to_craft

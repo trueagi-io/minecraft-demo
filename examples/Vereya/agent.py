@@ -36,8 +36,6 @@ class TAgent:
         bc = self.rob.blockCenterFromRay()
         los = self.rob.cached['getLineOfSights'][0]
         if (los['hitType'] != 'MISS'):
-            # if 'minecraft:' in los['type']:
-            #     los['type'] = los['type'].split("minecraft:")[1]
             if bc is not None and los['inRange'] and los['type'] in blocks:
                 return int_coords(bc)
         res = self.rob.nearestFromGrid(blocks, False)

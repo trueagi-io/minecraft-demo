@@ -375,3 +375,4 @@ def addFuel(to_craft, invent):
                 least_priority = cur_priority
                 least_prior_fuel = fuel['type']
         return f'{to_craft} {least_prior_fuel}'
+    return to_craft

@@ -10,24 +10,29 @@ planks_names_t = []
 drs = []
 # versions = minecraft_data.common().protocolVersions
 mcd = minecraft_data('1.18.1')  # here we must put current minecraft version
-
+fuel_priority = {}
 for item in mcd.items_list:
     iname = item['name']
     if 'log' in iname:
         log_names.append(iname)
         log_names_t.append({'type': iname})
-    if 'planks' in iname:
+        fuel_priority[iname] = 2
+    elif 'planks' in iname:
         planks_names.append(iname)
         planks_names_t.append({'type': iname})
-    if 'leaves' in iname:
+        fuel_priority[iname] = 1
+    elif 'leaves' in iname:
         leaves_names.append(iname)
         leaves_names_t.append({'type': iname})
-    if '_door' in iname:
+    elif '_door' in iname:
         door_names_t.append({'type': iname})
-    if 'trapdoor' in iname:
+    elif 'trapdoor' in iname:
         trapdoor_names_t.append({'type': iname})
+    elif 'sapling' in iname:
+        fuel_priority[iname] = 0
 
-fuel_list = log_names + planks_names + ['sapling', 'stick', 'coal']
+fuel_priority['stick'] = 3
+fuel_priority['coal'] = 4
 
 mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
@@ -263,7 +268,7 @@ def matchEntity(source, target):
         return False
     source_type = get_otype(source) if isinstance(source, dict) else source
     target_type = get_otype(target) if isinstance(target, dict) else target
-    if target_type == 'fuel' and source_type in fuel_list:
+    if target_type == 'fuel' and source_type in fuel_priority:
         return True
     if (source_type != target_type) and (source_type != target_type.split("_")[-1]) and (target_type != source_type.split("_")[-1]):
         return False
@@ -287,7 +292,7 @@ def find_crafts_by_result(entity):
     return list(filter(lambda craft: matchEntity(craft[1], entity), crafts))
 
 def find_fuel(invent):
-    return list(filter(lambda item: item is not None, list(findInInventory(invent, fl) for fl in fuel_list)))
+    return list(filter(lambda item: item is not None, list(findInInventory(invent, fl) for fl in fuel_priority)))
 
 def select_minetool(invent, mine_entry):
     if mine_entry is None:
@@ -362,5 +367,12 @@ def checkCraftType(to_craft, to_mine):
 def addFuel(to_craft, invent):
     if (to_craft == 'iron_ingot' or to_craft == 'glass'):
         fuels = find_fuel(invent)
-        return f'{to_craft} {fuels[0]["type"]}'
+        least_priority = 999
+        least_prior_fuel = ''
+        for fuel in fuels:
+            cur_priority = fuel_priority[fuel['type']]
+            if cur_priority < least_priority:
+                least_priority = cur_priority
+                least_prior_fuel = fuel['type']
+        return f'{to_craft} {least_prior_fuel}'
     return to_craft

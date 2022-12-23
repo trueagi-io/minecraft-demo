@@ -137,6 +137,9 @@ class AgentHost(ArgumentParser):
             except RuntimeError as e:
                 logging.exception("error on reservation request", exc_info=e)
                 continue
+            except ConnectionRefusedError as e:
+                logging.exception(f"error connecting to {item.ip_address}:{item.control_port}", exc_info=e)
+                continue
             logger.info("Reserving client, received reply from " + str(item.ip_address) + ": " + reply)
             malmo_reservation_prefix = "MALMOOK"
             malmo_mismatch = "MALMOERRORVERSIONMISMATCH"

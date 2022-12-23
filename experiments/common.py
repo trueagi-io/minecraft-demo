@@ -1,6 +1,10 @@
 import logging
 from math import cos, sin
-import torch
+# make torch optional
+try:
+    import torch
+except ImportError:
+    pass
 import math
 import numpy
 import numpy.linalg

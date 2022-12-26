@@ -17,7 +17,7 @@ def run_tests(test_files):
 
 
 def main():
-    test_files = ['test_craft', 'test_inventory']
+    test_files = ['test_craft', 'test_inventory', 'test_quit']
     res = run_tests(test_files)
     if not res.wasSuccessful():
         sys.exit(1)

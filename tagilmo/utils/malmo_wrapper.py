@@ -288,6 +288,10 @@ class MalmoConnector:
     def supportsSegmentation(self):
         return self.missionDesc.hasSegmentation()
 
+    def stop(self, idx=0):
+        if idx < len(self.agent_hosts):
+            self.agent_hosts[idx].stop()
+
 
 class RobustObserver:
 
@@ -335,7 +339,7 @@ class RobustObserver:
     def clear(self):
         with self.lock:
             self.cached = {k: (None, 0) for k in self.cached}
-    
+
     def getCachedObserve(self, method, key = None):
         with self.lock:
             val = self.cached[method][0]
@@ -385,7 +389,7 @@ class RobustObserver:
                 # It's better to return None rather than hanging too long
                 break
         return self.getCachedObserve(method)
-    
+
     def updateAllObservations(self):
         # we don't require observations to be updated in fact, but we try to do an update
         self.observeProcCached()
@@ -452,7 +456,7 @@ class RobustObserver:
     def getYawDeltas(self, observeReq=True):
         pos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
         return MalmoConnector.yawDelta(degree2rad(pos[4]))
-    
+
     def gridInYaw(self, observeReq=True):
         '''Vertical slice of the grid in the line-of-sight direction'''
         grid3D = self.getNearGrid3D(observeReq)
@@ -489,7 +493,7 @@ class RobustObserver:
                 z += deltas[2]
             objs += [line]
         return objs
-    
+
     def analyzeGridInYaw(self, observeReq=True):
         passableBlocks = RobustObserver.passableBlocks
         deadlyBlocks = RobustObserver.deadlyBlocks
@@ -628,3 +632,4 @@ class RobustObserverWithCallbacks(RobustObserver):
             self._futures[future] = (name, cb)
             self._in_process.add(cb)
         future.add_done_callback(self.done_callback)
+

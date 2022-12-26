@@ -74,6 +74,10 @@ class TestQuit(unittest.TestCase):
         assert mc.safeStart()
         time.sleep(3)
 
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        cls.mc.stop()
+
     def setUp(self):
         self.mc.sendCommand("chat /clear")
         time.sleep(3)

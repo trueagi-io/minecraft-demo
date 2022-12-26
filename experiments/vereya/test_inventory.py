@@ -71,13 +71,18 @@ class TestCraft(unittest.TestCase):
         assert mc.safeStart()
         time.sleep(4)
 
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        cls.mc.stop()
+
     def setUp(self):
         self.mc.sendCommand("chat /clear")
         time.sleep(4)
 
     def test_swap_inventory(self):
         mc = self.mc
-        mc.sendCommand("chat /give @p oak_planks 1")
+        mc.sendCommand("chat /give @p minecraft:oak_planks 1")
+        import pdb;pdb.set_trace()
         time.sleep(1)
         mc.sendCommand("chat /give @p wooden_pickaxe 1")
         time.sleep(1)

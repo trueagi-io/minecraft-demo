@@ -624,6 +624,9 @@ class AgentHost(ArgumentParser):
         pass
 
     def __del__(self):
+        self.stop()
+
+    def stop(self):
         self.close()
         self.io_service.stop()
 

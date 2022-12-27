@@ -10,7 +10,7 @@ import tagilmo.utils.mission_builder as mb
 from examples import minelogy
 from examples.agent import TAgent
 import logging
-from vis import Visualizer
+from examples.vis import Visualizer
 
 from tagilmo.utils.mathutils import *
 
@@ -193,7 +193,7 @@ class StatePredictor:
     def is_stucked(self):
         curr_pos = numpy.array(self.rob.cached['getAgentPos'][0])
         prev_pos = numpy.array(self.rob.cached_buffer['getAgentPos'][0])
-        if prev_pos is None or curr_pos is None:
+        if prev_pos is None or curr_pos is None or prev_pos.shape == ():
             return False
         action_magnitude = numpy.linalg.norm(curr_pos-prev_pos)
         if action_magnitude < self.stuck_thresh and action_magnitude > 1e-6:
@@ -256,10 +256,11 @@ class ApproachXZPos:
         los = self.rob.cached['getLineOfSights'][0]
         acts = []
         if los is not None:
-            if los['inRange']:
-                acts = [['attack', '1']]
-            else:
-                acts = [['attack', '0']]
+            if los['hitType'] != 'MISS':
+                if los['inRange']:
+                    acts = [['attack', '1']]
+                else:
+                    acts = [['attack', '0']]
         if self.perturb.precond():
             acts += self.perturb.act()
             print("Got stucked. Need perturbation.")
@@ -389,6 +390,8 @@ class MineAtSight:
 
     def _get_dist(self):
         los = self.rob.cached['getLineOfSights'][0]
+        if los['hitType'] == 'MISS':
+            return None
         return None if (los is None or los['type'] is None or not los['inRange']) else los['distance']
 
     def precond(self):
@@ -459,22 +462,23 @@ class MineAround:
 class LJAgent(TAgent):
 
     def howtoMine(self, targ):
-        t = minelogy.get_otype(targ[0]) # TODO?: other blocks?
-        if t == 'log':
-            target = targ + [{'type': 'log2'}, {'type': 'leaves'}, {'type': 'leaves2'}]
-        elif t == 'stone':
-            target = targ + [{'type': 'dirt'}, {'type': 'grass'}]
-        elif t == 'coal_ore' or t == 'iron_ore':
-            target = targ + [{'type': 'stone'}]
-        else:
-            target = targ
+        target = targ + minelogy.get_oatargets(targ[0]) # TODO?: other blocks?
+        # if t == 'log':
+        #     target = targ + [{'type': 'log2'}, {'type': 'leaves'}, {'type': 'leaves2'}]
+        # if t == 'stone':
+        #     target = targ + [{'type': 'dirt'}, {'type': 'grass'}]
+        # elif t == 'coal_ore' or t == 'iron_ore':
+        #     target = targ + [{'type': 'stone'}]
+        # else:
+        #     target = targ
         for targ in target:
             t = minelogy.get_otype(targ)
             ray = self.rob.cached['getLineOfSights'][0]
-            if minelogy.matchEntity(ray, targ):
-                if ray['inRange']:
-                    return [['mine', [ray]]]
-                return [['mine', [ray]], ['approach', ray]]
+            if (ray['hitType'] != 'MISS'):
+                if minelogy.matchEntity(ray, targ):
+                    if ray['inRange']:
+                        return [['mine', [ray]]]
+                    return [['mine', [ray]], ['approach', ray]]
             known = self.rob.nearestFromGrid(t, observeReq=False)
             if known is None:
                 if t in self.blockMem.blocks:
@@ -533,6 +537,10 @@ class LJAgent(TAgent):
                 if act is None:
                     next_acts = None
                     break
+                if (act[-1][0] == 'approach') and (len(act) == 3):
+                    new_act_type = minelogy.checkCraftType(act[-3][1], act[-1][1])
+                    if new_act_type is not None:
+                        act[-3][1] = new_act_type
                 next_acts += act
             if next_acts is not None:
                 if best_way is None or len(best_way) > len(next_acts):
@@ -565,7 +573,6 @@ class LJAgent(TAgent):
                 best_cnd = self.howtoGet({'type': mine[0]['tools'][-1]}, craft_only=False)
             acts += best_cnd
             return acts
-
         return ['UNKNOWN']
 
     def ccycle(self):
@@ -640,23 +647,26 @@ class LJAgent(TAgent):
                 continue
             if howto[-1][0] == 'search':
                 self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
+                continue
             if howto[-1][0] == 'craft':
                 t = minelogy.get_otype(howto[-1][1])
-                if t == 'planks': # hotfix
-                    invent = self.rob.cached['getInventory'][0]
-                    for item in invent:
-                        if item['type'] == 'log' or item['type'] == 'log2':
-                            t = item['variant'] + ' ' + t
-                            break
+                invent = self.rob.cached['getInventory'][0]
+                for inv in invent:
+                    new_t = minelogy.checkCraftType(howto[-1][1], inv)
+                    if new_t is not None:
+                        t = minelogy.get_otype(new_t)
+                        break
                 self.rob.craft(t)
                 sleep(0.2)
                 continue
             if howto[-1][0] == 'approach':
                 self.skill = ApproachXZPos(self.rob,
                                 [howto[-1][1]['x'], howto[-1][1]['y'], howto[-1][1]['z']])
+                continue
             if howto[-1][0] == 'mine':
                 #self.skill = MineAround(self.rob, minelogy.get_otlist(howto[-1][1]))
                 self.skill = MineAtSight(self.rob)
+                continue
             if self.skill is None:
                 print("Panic. No skill available for " + str(target))
                 print(str(howto))
@@ -687,12 +697,12 @@ if __name__ == '__main__':
              agenthandlers=agent_handlers,)])
 
 
-    world = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", seed='43', forceReset="false")
+    # world = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", seed='43', forceReset="false")
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
     world1 = mb.defaultworld(forceReset="true")
     miss.setWorld(world1)
-    # miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
+    miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     agent = LJAgent(miss, visualizer=visualizer)
     agent.rob.sendCommand("chat /difficulty peaceful")
     # agent.loop()

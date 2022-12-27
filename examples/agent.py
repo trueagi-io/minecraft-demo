@@ -35,9 +35,11 @@ class TAgent:
     def nearestBlock(self, blocks):
         bc = self.rob.blockCenterFromRay()
         los = self.rob.cached['getLineOfSights'][0]
-        if bc is not None and los['inRange'] and los['type'] in blocks:
-            return int_coords(bc)
+        if (los['hitType'] != 'MISS'):
+            if bc is not None and los['inRange'] and los['type'] in blocks:
+                return int_coords(bc)
         res = self.rob.nearestFromGrid(blocks, False)
+        # print("target block coords: "+str(res)+"\n")
         return int_coords(res) if res is not None \
             else self.blockMem.recallNearest(blocks, self.rob.cached['getAgentPos'][0])
 

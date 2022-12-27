@@ -1,17 +1,17 @@
+import torch
 import logging
 from time import sleep, time
-import math
-from random import random
-
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
-
 from examples.vis import Visualizer
-from examples.Vereya import minelogy
-from examples.Vereya.goal import *
-from examples.Vereya.skills import *
-from examples.Vereya.agent import TAgent
+import math
+from random import random
+
+from examples.Malmo import minelogy
+from examples.Malmo.goal import *
+from examples.Malmo.skills import *
+from examples.Malmo.agent import TAgent
 
 SCALE = 3
 
@@ -31,6 +31,7 @@ class Achiever(TAgent):
             for act in acts:
                 self.rob.sendCommand(act)
             sleep(0.05)
+            self.rob.observeProcCached()
             self.blockMem.updateBlocks(self.rob)
             self.visualize()
         acts = self.goal.stop()
@@ -59,20 +60,12 @@ if __name__ == '__main__':
     video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
     agent_handlers = mb.AgentHandlers(video_producer=video_producer)
     miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Robbo',
-                                                        agenthandlers=agent_handlers)])
+                agenthandlers=agent_handlers,)])
 
     world0 = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake")
-    world1 = mb.defaultworld(forceReset="false", forceReuse="true")
+    world1 = mb.defaultworld(forceReset="true")
     miss.setWorld(world1)
-    miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
 
     agent = Achiever(miss, visualizer=visualizer)
-    logging.info("Initializing the starting position")
-    #those commands needed if we are reusing same world
-    sleep(2)
-    agent.rob.sendCommand("jump 1")
-    agent.rob.update_in_background()
-    sleep(0.1)
-    agent.rob.sendCommand("jump 0")
     agent.run()
     visualizer.stop()

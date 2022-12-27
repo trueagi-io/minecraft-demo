@@ -1,14 +1,13 @@
-import torch
 import logging
 from experiments.log import setup_logger
 from time import sleep, time
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
-from vis import Visualizer
 import math
 from random import random
 
+from examples.vis import Visualizer
 from examples import minelogy
 from examples.goal import *
 from examples.skills import *
@@ -61,13 +60,18 @@ class StaticKnowledge:
 
     def is_known(self, entry):
         kb_entry = self.kb
+        flag = False
         for param in StaticKnowledge.ID_PARAMS:
             if param in entry:
+                flag = True
                 if param not in kb_entry or entry[param] not in kb_entry[param]:
                     return False
                 kb_entry = kb_entry[param][entry[param]]
-        return True
+        return flag
 
+def loopOr(fun, arg):
+    results = [fun(one_arg) for one_arg in arg]
+    return any(results)
 
 class Explore(Switcher):
 
@@ -100,12 +104,11 @@ class Explore(Switcher):
         # a little bit hacky, but this agent doesn't explore crafting
         if self.delegate is None or not isinstance(self.delegate, Obtain):
             inv = self.rob.cached['getInventory'][0]
-            #if self.agent.kb.is_known({'source': 'getInventory', 'type': 'cobblestone'}) and \
-            #   not minelogy.isInInventory(inv, {'type': 'stone_pickaxe'}):
-            #    self.delegate = Obtain(self.agent, [{'type': 'stone_pickaxe'}])
-            if (self.agent.kb.is_known({'source': 'getInventory', 'type': 'log'}) or \
-                  self.agent.kb.is_known({'source': 'getInventory', 'type': 'log2'})) and \
-                 not minelogy.isInInventory(inv, {'type': 'wooden_pickaxe'}):
+            logs = minelogy.get_target_variants({'source': 'getInventory', 'type': 'log'})
+            if self.agent.kb.is_known({'source': 'getInventory', 'type': 'cobblestone'}) and \
+              not minelogy.isInInventory(inv, {'type': 'stone_pickaxe'}):
+               self.delegate = Obtain(self.agent, [{'type': 'stone_pickaxe'}])
+            if (loopOr(self.agent.kb.is_known, logs)) and not minelogy.isInInventory(inv, {'type': 'wooden_pickaxe'}):
                 self.delegate = Obtain(self.agent, [{'type': 'wooden_pickaxe'}])
 
         if self.block2check != [] or self.pos2check != [] or self.item2pick != []:

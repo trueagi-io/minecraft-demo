@@ -1,5 +1,6 @@
 import logging
 
+
 class Goal:
 
     def __init__(self, delegate=None):

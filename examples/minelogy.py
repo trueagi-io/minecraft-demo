@@ -9,48 +9,30 @@ log_names_t = []
 planks_names_t = []
 drs = []
 # versions = minecraft_data.common().protocolVersions
-mcd = minecraft_data('1.11.2')  # here we must put current minecraft version
-count = 0
+mcd = minecraft_data('1.18.1')  # here we must put current minecraft version
+fuel_priority = {}
 for item in mcd.items_list:
     iname = item['name']
     if 'log' in iname:
         log_names.append(iname)
         log_names_t.append({'type': iname})
-    if 'planks' in iname:
+        fuel_priority[iname] = 2
+    elif 'planks' in iname:
         planks_names.append(iname)
         planks_names_t.append({'type': iname})
-    if 'leaves' in iname:
+        fuel_priority[iname] = 1
+    elif 'leaves' in iname:
         leaves_names.append(iname)
         leaves_names_t.append({'type': iname})
-    if '_door' in iname:
+    elif '_door' in iname:
         door_names_t.append({'type': iname})
-    if 'trapdoor' in iname:
+    elif 'trapdoor' in iname:
         trapdoor_names_t.append({'type': iname})
+    elif 'sapling' in iname:
+        fuel_priority[iname] = 0
 
-def make_log_plank_triple(log_names, plank_names):
-    res = []
-    for log_name in log_names:
-        log_variant = log_name.split("log")[0]
-        if log_variant == '':
-            return None
-        for plank_name in plank_names:
-            plank_variant = plank_name.split("plank")[0]
-            if plank_variant == log_variant:
-                res.append((log_name, plank_name, log_variant[:-1]))
-    return res
-
-def make_door_plank_quadriple(door_names, plank_names):
-    res = []
-    for door_name in door_names:
-        door_variant = door_name.split("door")[0]
-        if door_variant == '':
-            return None
-        for plank_name in plank_names:
-            plank_variant = plank_name.split("plank")[0]
-            if plank_variant == door_variant:
-                res.append((door_name, door_variant+"trapdoor", plank_name, door_variant[:-1]))
-    return res
-
+fuel_priority['stick'] = 3
+fuel_priority['coal'] = 4
 
 mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
@@ -77,28 +59,36 @@ mines = [({'blocks': [{'type': 'log'}],
           {'type': 'gravel'}
          ),
          ({'blocks': [{'type': 'sandstone'}],
-           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'sandstone'}
          ),
          ({'blocks': [{'type': 'stone'}],
-           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'stone'}
          ),
          ({'blocks': [{'type': 'stone', 'variant': 'stone'}],
-           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'cobblestone'}
          ),
          ({'blocks': [{'type': 'cobblestone'}],
-          'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+          'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
          {'type': 'cobblestone'}
          ),
          ({'blocks': [{'type': 'coal_ore'}],
-           'tools': ['stone_pickaxe', 'wooden_pickaxe']},
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'coal'}
          ),
+        ({'blocks': [{'type': 'diamond_ore'}],
+           'tools': ['iron_pickaxe']},
+          {'type': 'diamond'}
+         ),
+        ({'blocks': [{'type': 'copper_ore'}],
+           'tools': ['iron_pickaxe', 'stone_pickaxe']},
+          {'type': 'raw_copper'}
+         ),
          ({'blocks': [{'type': 'iron_ore'}],
-           'tools': ['stone_pickaxe']},
-          {'type': 'iron_ore'}
+           'tools': ['iron_pickaxe', 'stone_pickaxe']},
+          {'type': 'raw_iron'}
          ),
          ({'blocks': [{'type': 'pumpkin'}],
            'tools': [None]},
@@ -119,9 +109,12 @@ mines = [({'blocks': [{'type': 'log'}],
          ({'blocks': [{'type': 'deadbush'}],
           'tools': [None]},
          {'type': 'stick'}
-         )
+         ),
+         ({'blocks': [{'type': 'tallgrass'}],
+           'tools': [None]},
+          {'type': 'wheat_seeds'}
+         ),
         ]
-
 crafts = [([{'type': 'log', 'quantity': 1}],
            {'type': 'planks', 'quantity': 4}),
           ([{'type': 'planks', 'quantity': 2}],
@@ -138,11 +131,12 @@ crafts = [([{'type': 'log', 'quantity': 1}],
            {'type': 'stone_pickaxe'}),
           ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 1}],
            {'type': 'stone_shovel'}),
-          # we don't actually need coal with simplified furnance
-          ([{'type': 'iron_ore', 'quantity': 1}], #{'type': 'coal', 'quantity': 1}],
+          ([{'type': 'raw_iron', 'quantity': 1}, {'type': 'furnace', 'quantity': 1}, {'type': 'fuel', 'quantity': 1}],
            {'type': 'iron_ingot'}),
           ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
            {'type': 'iron_axe'}),
+          ([{'type': 'cobblestone', 'quantity': 8}],
+           {'type': 'furnace'}),
           ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
            {'type': 'iron_pickaxe'}),
           ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 1}],
@@ -150,11 +144,11 @@ crafts = [([{'type': 'log', 'quantity': 1}],
           ([{'type': 'stick', 'quantity': 1}, {'type': 'coal', 'quantity': 1}],
            {'type': 'torch', 'quantity': 4}),
           ([{'type': 'planks', 'quantity': 2}],
-            {'type': 'wooden_pressure_plate'}),
+            {'type': 'pressure_plate'}),
           ([{'type': 'planks', 'quantity': 3}],
-            {'type': 'wooden_slab', 'quantity': 6}),
+            {'type': 'slab', 'quantity': 6}),
           ([{'type': 'planks', 'quantity': 1}],
-            {'type': 'wooden_button'}),
+            {'type': 'button'}),
           ([{'type': 'planks', 'variant': 'spruce', 'quantity': 6}],
             {'type': 'spruce_door', 'quantity': 3}),
           ([{'type': 'planks', 'variant': 'birch', 'quantity': 6}],
@@ -171,8 +165,14 @@ crafts = [([{'type': 'log', 'quantity': 1}],
            {'type': 'lever'}),
           ([{'type': 'pumpkin', 'quantity': 1}],
             {'type': 'pumpkin_seeds'}),
-          ([{'type': 'sand', 'quantity': 1}],
-            {'type': 'glass'})
+          ([{'type': 'sand', 'quantity': 1}, {'type': 'furnace', 'quantity': 1}, {'type': 'fuel', 'quantity': 1}],
+            {'type': 'glass'}),
+          ([{"type": "stick", "quantity": 4}, {"type": "planks", "quantity": 2}],
+            {"type": "fence_gate", "quantity": 1}),
+          ([{"type": "planks", "quantity": 6}, {"type": "stick", "quantity": 1}],
+            {"type": "sign", "quantity": 3}),
+          ([{"type": "planks", "quantity": 5}],
+            {"type": "boat", "quantity": 1})
          ]
 
 def get_otype(obj):
@@ -184,7 +184,8 @@ def get_otype(obj):
     return t
 
 def get_oatargets(obj):
-    t = get_otype(obj)
+    # t = get_otype(obj)
+    t = obj
     if t == 'log':
         return log_names_t + leaves_names_t
     if t == 'stone':
@@ -201,6 +202,14 @@ def get_ovariant(obj):
         v = obj['variation']
     return v
 
+def mimic_target(target, variants):
+    res = []
+    for var in variants:
+        var_target = target.copy()
+        var_target['type'] = var['type']
+        res.append(var_target)
+    return res
+
 def get_target_variants(target):
     if target['type'] == "planks":
         res = []
@@ -212,7 +221,7 @@ def get_target_variants(target):
     elif target['type'] == "trapdoor":
         return trapdoor_names_t
     elif target['type'] == "log":
-        return log_names_t
+        return mimic_target(target, log_names_t)
     return target
 
 def get_new_type(obj):
@@ -257,9 +266,10 @@ def get_otlist(objs):
 def matchEntity(source, target):
     if source is None:
         return False
-    # if target is None: return True
-    source_type = get_otype(source)
-    target_type = get_otype(target)
+    source_type = get_otype(source) if isinstance(source, dict) else source
+    target_type = get_otype(target) if isinstance(target, dict) else target
+    if target_type == 'fuel' and source_type in fuel_priority:
+        return True
     if (source_type != target_type) and (source_type != target_type.split("_")[-1]) and (target_type != source_type.split("_")[-1]):
         return False
     target_v = get_ovariant(target)
@@ -281,15 +291,15 @@ def find_mines_by_result(entity):
 def find_crafts_by_result(entity):
     return list(filter(lambda craft: matchEntity(craft[1], entity), crafts))
 
+def find_fuel(invent):
+    return list(filter(lambda item: item is not None, list(findInInventory(invent, fl) for fl in fuel_priority)))
+
 def select_minetool(invent, mine_entry):
     if mine_entry is None:
         return None
-    inv = [{'type': 'air', 'index': n, 'quantity': 64} for n in range(36)]
-    for item in invent:
-        inv[item['index']] = item
     result = None
-    for tool in mine_entry[0]['tools']:
-        for item in inv:
+    for tool in reversed(mine_entry[0]['tools']):
+        for item in invent:
             if tool is None and (result is None or result['quantity'] < item['quantity']):
                 result = item
             elif tool == item['type']:
@@ -317,10 +327,10 @@ def lackCraftItems(invent, craft_entry):
     return missing
 
 def assoc_blocks(blocks):
-    assoc = {'log': log_names.extend(leaves_names),
-             # 'log2': ['log', 'leaves2', 'leaves'],
+    assoc = {'log': log_names+leaves_names,
              'coal_ore': ['stone'],
-             'iron_ore': ['stone']}
+             'iron_ore': ['stone'],
+             'diamond_ore': ['stone', 'iron_ore', 'coal_ore', 'copper_ore']}
     blocks2 = []
     for b in blocks:
         if b in assoc:
@@ -328,12 +338,41 @@ def assoc_blocks(blocks):
     return blocks2
 
 def checkCraftType(to_craft, to_mine):
-    to_mine_type = get_otype(to_mine)
-    to_craft_type = get_otype(to_craft)
-    if (to_mine_type in leaves_names) or (to_mine_type in log_names):
-        if matchEntity(to_craft, planks_names_t[0]):
-            to_craft_type = get_new_type(to_mine) + "_" + to_craft_type
-            if ('stripped' in to_mine_type):
-                to_craft_type = to_craft_type.split("stripped_")[1]
-            return {"type" : to_craft_type, "quantity": to_craft['quantity']}
-    return None
+    craft_is_str = False
+    if isinstance(to_craft, str):
+        craft_is_str = True
+        to_craft_dict = {"type" : to_craft}
+    else:
+        to_craft_dict = to_craft
+
+    if isinstance(to_mine, str):
+        to_mine = {"type" : to_mine}
+    if (to_craft_dict['type'] == 'planks' or to_craft_dict['type'] == 'fence_gate' or to_craft_dict['type'] == 'sign'
+        or to_craft_dict['type'] == "pressure_plate" or to_craft_dict['type'] == "button" or to_craft_dict['type'] == "boat"
+        or to_craft_dict['type'] == "slab"):
+        to_mine_type = get_otype(to_mine)
+        to_craft_type = get_otype(to_craft_dict)
+
+        if (to_mine_type in leaves_names) or (to_mine_type in log_names):
+            if matchEntity(to_craft_dict, planks_names_t[0]):
+                to_craft_type = get_new_type(to_mine) + "_" + to_craft_type
+                if ('stripped' in to_mine_type):
+                    to_craft_type = to_craft_type.split("stripped_")[1]
+                if craft_is_str:
+                    return to_craft_type
+                else:
+                    return {"type" : to_craft_type, "quantity": to_craft_dict['quantity']}
+    return to_craft
+
+def addFuel(to_craft, invent):
+    if (to_craft == 'iron_ingot' or to_craft == 'glass'):
+        fuels = find_fuel(invent)
+        least_priority = 999
+        least_prior_fuel = ''
+        for fuel in fuels:
+            cur_priority = fuel_priority[fuel['type']]
+            if cur_priority < least_priority:
+                least_priority = cur_priority
+                least_prior_fuel = fuel['type']
+        return f'{to_craft} {least_prior_fuel}'
+    return to_craft

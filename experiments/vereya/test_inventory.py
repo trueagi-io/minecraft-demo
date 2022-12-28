@@ -82,8 +82,7 @@ class TestCraft(unittest.TestCase):
     def test_swap_inventory(self):
         mc = self.mc
         mc.sendCommand("chat /give @p minecraft:oak_planks 1")
-        import pdb;pdb.set_trace()
-        time.sleep(1)
+        time.sleep(2)
         mc.sendCommand("chat /give @p wooden_pickaxe 1")
         time.sleep(1)
         
@@ -99,8 +98,6 @@ class TestCraft(unittest.TestCase):
         
 def main():
     unittest.main()
-#    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
-#    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
 
         
 if __name__ == '__main__':

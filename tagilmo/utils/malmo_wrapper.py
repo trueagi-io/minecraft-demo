@@ -62,6 +62,9 @@ class MalmoConnector:
         self.frames = [None] * nAgents
         self.segmentation_frames = [None] * nAgents
 
+    def getVersion(self, num=0) -> str:
+        return self.agent_hosts[num].version
+
     def receivedArgument(self, arg):
         return self.agent_hosts[0].receivedArgument(arg)
 

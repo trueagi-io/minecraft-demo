@@ -60,6 +60,7 @@ class AgentHost(ArgumentParser):
         self.current_mission_init: Optional[MissionInitSpec] = None
         self.current_mission_record: Optional[MissionRecord] = None
         self.rewards_policy = RewardsPolicy.SUM_REWARDS
+        self.version: Optional[str] = None
 
     def startMission(self, mission: MissionSpec, client_pool: List[ClientInfo],
                      mission_record: MissionRecordSpec, role: int,
@@ -542,7 +543,7 @@ class AgentHost(ArgumentParser):
                 self.close()
             elif root_node_name == "ping":
                 # The mod is pinging us to check we are still around - do nothing.
-                pass
+                self.version = elem.attrib.get("minecraft-version", None)
             else:
                 text = "Unknown mission control message root node or at wrong time: " + root_node_name + " :" + xml.text[:200]
                 logger.error(text)

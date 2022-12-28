@@ -1,10 +1,11 @@
 import asyncio
+import functools
 from asyncio import exceptions
 from asyncio import AbstractEventLoop, Server, Future
 import logging
 import random
 import time
-from typing import Callable, Optional
+from typing import List, Callable, Optional
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
 
 
@@ -24,8 +25,9 @@ class TCPServer:
         self.fixed_reply = b''
         self.expect_size_header = True
         self.log_name = log_name
-        self.closing = False
         self.server: Optional[Server] = None
+        self.writer: List[asyncio.StreamWriter] = []
+        self.closing = False
 
         assert(not asyncio.iscoroutinefunction(callback))
 
@@ -53,6 +55,7 @@ class TCPServer:
             self.server = await asyncio.start_server(self.__cb, None, self.port)
 
     async def __cb(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        self.writer.append(writer)
         while not self.closing:
             # read header
             try:
@@ -60,14 +63,14 @@ class TCPServer:
                 expected = int.from_bytes(data, byteorder='big', signed=False)
             except exceptions.IncompleteReadError as e:
                 # there is nothing to read apparently
-                await asyncio.sleep(2) 
+                await asyncio.sleep(2)
                 continue
             try:
                 data = await reader.readexactly(expected)
                 result = TimestampedUnsignedCharVector(data=data, timestamp=time.time())
             except exceptions.IncompleteReadError as e:
-                logger.exception("exception reading from stream in " + self.log_name, e)
-                await asyncio.sleep(1) 
+                logger.exception("exception reading from stream in " + self.log_name, exc_info=e)
+                await asyncio.sleep(1)
                 continue
 
             if self.confirm_with_fixed_reply:
@@ -76,17 +79,25 @@ class TCPServer:
 
             try:
                 # run in threadpool, who knows how fast is our callback
-                fut = self.io_service.run_in_executor(None, lambda: self.onMessageReceived(result))
+                fut = self.io_service.run_in_executor(None, functools.partial(self.onMessageReceived, result))
                 fut.add_done_callback(self.__done)
             except RuntimeError as e:
                 # work around https://github.com/python/cpython/issues/99704
                 logger.debug('error scheduling callback, closing the server', exc_info=e)
                 self.close()
+                continue
+        writer.close()
 
     def __done(self, fut: Future) -> None:
         e = fut.exception()
         if e is not None:
             logger.exception(f"Error running callback in {self.log_name}", exc_info=e)
+            return
+        if not fut.done():
+            return
+        result = fut.result()
+        if result is not None:
+            logger.info(f'done with result {result}')
 
     def expectSizeHeader(self, expect_size_header: bool):
         pass
@@ -97,9 +108,15 @@ class TCPServer:
         self.fixed_reply = reply.encode()
 
     def close(self):
-        self.closing = True
         assert self.server is not None
+        self.closing = True
         self.server.close()
+        asyncio.run_coroutine_threadsafe(self.server.wait_closed(), self.io_service).result()
+        for writer in self.writer:
+            logger.debug(f'closing {writer}')
+            self.io_service.call_soon_threadsafe(writer.close)
+            asyncio.run_coroutine_threadsafe(writer.wait_closed(), self.io_service).result()
+        logger.debug("server " + self.log_name + " closed")
 
     def getPort(self) -> int:
         return self.port

@@ -37,7 +37,7 @@ def init_mission(mc, start_x=None, start_y=None):
     world = mb.defaultworld(
         seed='5',
         forceReset="false",
-        forceReuse="true")
+        forceReuse="false")
     miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     # uncomment to disable passage of time:

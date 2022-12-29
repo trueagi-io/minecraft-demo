@@ -560,7 +560,7 @@ class AgentHost(ArgumentParser):
                 # The mod is pinging us to check we are still around - do nothing.
                 self.version = elem.attrib.get("minecraft-version", None)
                 if not self.world_state.has_mission_begun:
-                    logger.warn('got ping before mission begun')
+                    logger.debug('got ping before mission begun')
             else:
                 text = "Unknown mission control message root node or at wrong time: " + root_node_name + " :" + xml.text[:200]
                 logger.error(text)

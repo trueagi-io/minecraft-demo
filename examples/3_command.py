@@ -44,6 +44,8 @@ class TargetRunner:
         mc.sendCommand("turn 0")
 
 miss = mb.MissionXML()
+
+## FIXME: this code is not intended to work with default world, so we need to make flatworld working
 # miss.setWorld(mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake"))
 world = mb.defaultworld(
         seed='5',

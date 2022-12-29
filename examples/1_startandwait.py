@@ -4,7 +4,13 @@ import tagilmo.utils.mission_builder as mb
 
 miss = mb.MissionXML()
 # just an empty flat world for testing
-miss.setWorld(mb.flatworld(""))
+## FIXME: currently using flatworld could lead to an error when launching, so for now we're using defaultworld here
+# miss.setWorld(mb.flatworld(""))
+world = mb.defaultworld(
+        seed='5',
+        forceReset="false",
+        forceReuse="true")
+miss.setWorld(world)
 
 # addAgent currently breaks connection
 # miss.addAgent()

@@ -7,7 +7,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import normAngle, degree2rad
 
 import numpy as np
-import minecraft_data
+from minelogy import get_log_names
 
 
 # This script shows a relatively complex behavior of gathering resources
@@ -25,14 +25,6 @@ import minecraft_data
 
 # apparantely logs naming is different in different versions of Minecraft,
 # so we need to get right names for our current version
-
-log_names = []
-versions = minecraft_data.common().protocolVersions
-mcd = minecraft_data('1.18.1')  # here we must put current minecraft version
-for item in mcd.items_list:
-    iname = item['name']
-    if 'log' in iname:
-        log_names.append(iname)
 
 # ============== some hand-coded skills ==============
 
@@ -213,7 +205,7 @@ def getSticks(rob):
     logging.info("\tinside getSticks")
     # repeat 3 times, because the initial target can be wrong due to tallgrass
     # or imprecise direction to a distant tree
-    target_name = log_names
+    target_name = get_log_names()
     for i in range(3):
         target = search4blocks(rob, target_name)
         dist = lookAt(rob, target[1:4])

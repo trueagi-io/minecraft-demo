@@ -78,7 +78,7 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'coal'}
          ),
-        ({'blocks': [{'type': 'diamond_ore'}],
+        ({'blocks': [{'type': 'diamond_ore', 'depthmin': 10}],
            'tools': ['iron_pickaxe']},
           {'type': 'diamond'}
          ),
@@ -86,7 +86,7 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe']},
           {'type': 'raw_copper'}
          ),
-         ({'blocks': [{'type': 'iron_ore'}],
+         ({'blocks': [{'type': 'iron_ore', 'depthmin': 25}],
            'tools': ['iron_pickaxe', 'stone_pickaxe']},
           {'type': 'raw_iron'}
          ),

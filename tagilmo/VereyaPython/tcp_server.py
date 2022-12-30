@@ -59,17 +59,17 @@ class TCPServer:
         while not self.closing:
             # read header
             try:
+                err = 'reading size in bytes'
                 data = await reader.readexactly(4)
                 expected = int.from_bytes(data, byteorder='big', signed=False)
-            except exceptions.IncompleteReadError as e:
-                # there is nothing to read apparently
-                await asyncio.sleep(2)
-                continue
-            try:
+                err = 'reading bytes'
                 data = await reader.readexactly(expected)
                 result = TimestampedUnsignedCharVector(data=data, timestamp=time.time())
             except exceptions.IncompleteReadError as e:
-                logger.exception("exception reading from stream in " + self.log_name, exc_info=e)
+                if self.closing:
+                    continue
+                logger.debug("exception reading from stream in " + err
+                        + " " + self.log_name, exc_info=e)
                 await asyncio.sleep(1)
                 continue
 
@@ -85,7 +85,7 @@ class TCPServer:
                 # work around https://github.com/python/cpython/issues/99704
                 logger.debug('error scheduling callback, closing the server', exc_info=e)
                 self.close()
-                continue
+                break
         writer.close()
 
     def __done(self, fut: Future) -> None:
@@ -109,6 +109,8 @@ class TCPServer:
 
     def close(self):
         assert self.server is not None
+        if not self.server.is_serving():
+            return
         self.closing = True
         self.server.close()
         asyncio.run_coroutine_threadsafe(self.server.wait_closed(), self.io_service).result()

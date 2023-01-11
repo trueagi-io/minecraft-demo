@@ -34,10 +34,10 @@ class StringServer:
         else:
             logger.warning('failed to start string server %s on port %d', self.log_name, self.getPort())
 
-    def __cb(self, message: TimestampedUnsignedCharVector) -> None:
+    def __cb(self, message: TimestampedUnsignedCharVector) -> Optional[str]:
         string_message = TimestampedString.from_vector(message)
-        self.handle_string(string_message)
         self.recordMessage(string_message)
+        return self.handle_string(string_message)
 
     def recordMessage(self, message: TimestampedString) -> None:
         pass

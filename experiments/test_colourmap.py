@@ -67,13 +67,13 @@ def init_mission(mc, start_x=None, start_y=None, use_video=False, use_colormap=F
 
 
 def get_img(mc):
-    img_data = mc.waitNotNoneObserve('getImage')
+    img_data = mc.waitNotNoneObserve('getImageFrame')
     if img_data is not None:
         img_data = img_data.reshape((240 * 4, 320 * 4, 3))
         return img_data
 
 def get_segment(mc):
-    img_data = mc.waitNotNoneObserve('getSegmentation')
+    img_data = mc.waitNotNoneObserve('getSegmentationFrame')
     if img_data is not None:
         img_data = img_data.reshape((240 * 4, 320 * 4, 3))
         return img_data

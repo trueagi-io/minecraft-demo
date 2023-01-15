@@ -1,10 +1,7 @@
 from log import setup_logger
 import torch
+
 import logging
-import MalmoPython
-import json
-import logging
-import sys
 import time
 
 

@@ -6,8 +6,7 @@ import math
 from time import sleep
 from tagilmo.utils.malmo_wrapper import MalmoConnector
 import tagilmo.utils.mission_builder as mb
-from experiments.cliff_v2 import Trainer, load_agent
-from experiments import network
+from experiments.deprecated.cliff_v2 import Trainer, load_agent
 import torch
 
 

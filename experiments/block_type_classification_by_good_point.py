@@ -10,7 +10,6 @@ from examples.agent import TAgent
 import logging
 from examples.vis import Visualizer
 
-import imageio
 
 import sys
 
@@ -86,7 +85,14 @@ class BlockGPDescAnalyzer:
         # alpha (0, 1) only used when use_exp_avg is True
         los = self.rob.cached['getLineOfSights'][0]
         loc_dscr = self._getLocalDscr()[0]
-        if los is None and not(self.avg_block_dscr_hist.get('sky') is None):
+        sky_flag = False
+        if los is None:
+            sky_flag = True
+        elif los['hitType'] == 'MISS':
+            sky_flag = True
+        elif not('type' in los):
+            sky_flag = True
+        if sky_flag and not(self.avg_block_dscr_hist.get('sky') is None):
             curr_dscr = self.avg_block_dscr_hist['sky'][0]
             curr_num = self.avg_block_dscr_hist['sky'][NUM_OBS] + 1
             if use_exp_avg:
@@ -95,7 +101,7 @@ class BlockGPDescAnalyzer:
                 self.avg_block_dscr_hist['sky'][0] = curr_dscr + (loc_dscr - curr_dscr) / curr_num
             self.avg_block_dscr_hist['sky'][NUM_OBS] = curr_num
             return False
-        elif los is None:
+        elif sky_flag:
             self.avg_block_dscr_hist['sky'] = [loc_dscr, 1]
             return True
         variant = ''
@@ -140,7 +146,14 @@ class MockAgent(TAgent):
             self.visualize()
             block_dscr_analyzer.collectStat(use_exp_avg=True, alpha=0.1)
             los = self.rob.cached['getLineOfSights'][0]
+            sky_flag = False
             if los is None:
+                sky_flag = True
+            elif los['hitType'] == 'MISS':
+                sky_flag = True
+            elif not ('type' in los):
+                sky_flag = True
+            if sky_flag:
                 print('Expected object: sky.  Seen by agent as {}'.format(block_dscr_analyzer.searchNNBlock()))
             else:
                 block_type = los['type']

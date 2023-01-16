@@ -2,7 +2,6 @@ import cv2
 import common
 import math
 from common import *
-import MalmoPython
 import numpy
 import time
 from examples.neural import get_image

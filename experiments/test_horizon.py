@@ -12,6 +12,7 @@ from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserverWithCallba
 from tagilmo.utils import segment_mapping
 from tagilmo.utils.mathutils import degree2rad
 import tagilmo.utils.mission_builder as mb
+from tagilmo.VereyaPython import setupLogger
 
 
 SCALE = 2 
@@ -209,11 +210,8 @@ def show_horizon(rob, height=64, horizon_dist=200):
 def main():
     mc, rob = start_mission()
     mc.safeStart()
-    MalmoPython.setLogging("log.txt", MalmoPython.LoggingSeverityLevel.LOG_FINE)
-    MalmoPython.setLoggingComponent(MalmoPython.LoggingComponent.LOG_VIDEO, True)
-    MalmoPython.setLoggingComponent(MalmoPython.LoggingComponent.LOG_TCP, True)
-    MalmoPython.setLoggingComponent(MalmoPython.LoggingComponent.LOG_AGENTHOST, True)
 
+    setupLogger()
     while True:
         show_horizon(rob, 64)
 

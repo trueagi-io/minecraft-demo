@@ -1,11 +1,10 @@
 import random
-import cv2
 import time
 import numpy
 import logging
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
-from tagilmo.utils import segment_mapping
+
 
 
 mission_ending = """

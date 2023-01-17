@@ -9,7 +9,7 @@ log_names_t = []
 planks_names_t = []
 drs = []
 # versions = minecraft_data.common().protocolVersions
-mcd = minecraft_data('1.18.1')  # here we must put current minecraft version
+mcd = minecraft_data('1.19')  # here we must put current minecraft version
 fuel_priority = {}
 for item in mcd.items_list:
     iname = item['name']
@@ -33,6 +33,7 @@ for item in mcd.items_list:
 
 fuel_priority['stick'] = 3
 fuel_priority['coal'] = 4
+fuel_priority['bamboo'] = -1
 
 mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
@@ -78,7 +79,7 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'coal'}
          ),
-        ({'blocks': [{'type': 'diamond_ore', 'depthmin': 10}],
+        ({'blocks': [{'type': 'diamond_ore', 'depthmin': -60}],
            'tools': ['iron_pickaxe']},
           {'type': 'diamond'}
          ),

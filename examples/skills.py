@@ -534,27 +534,27 @@ class FindAndMine(Switcher):
         # we cannot use SAnd, because we don't know `target` for ApproachPos a priori
         # we also need to be able to choose another target during Search and Approach
         # this logic could be somehow unified...
-        targ = self.agent.nearestBlock(self.blocks)
+        targ, targ_block = self.agent.nearestBlock(self.blocks, True)
         if self.delegate is None:
             if targ is None and self.stage == 0:
                 self.last_targ = None
                 self.delegate = NeuralSearch(self.agent, self.blocks)
+            elif targ_block != self.blocks[0] and self.depthmin < self.aPos[1] and self.stage == 0:
+                self.stage = 0.5
+                self.delegate = SAnd([
+                    ApproachPos(self.agent, [self.aPos[0], self.aPos[1] - 1, self.aPos[2]], 2.5)
+                ])
+            elif targ_block != self.blocks[0] and self.depthmin < self.aPos[1] and self.stage == 0.5:
+                self.stage = 1
+                self.delegate = SAnd([
+                    LookAt(self.rob, [self.aPos[0], self.aPos[1] - 1, self.aPos[2]]),
+                    AttackBlockTool(self.rob)
+                ])
             elif self.stage == 0:
                 self.stage = 1
                 self.last_targ = targ
                 targ = list(map(lambda x: x+0.5, self.last_targ))
                 self.delegate = ApproachPos(self.agent, targ, 2.5)
-            elif self.depthmin < self.aPos[1] and self.stage == 1:
-                self.stage = 1.5
-                self.delegate = SAnd([
-                    ApproachPos(self.agent, [self.aPos[0], self.aPos[1] - 1, self.aPos[2]], 2.5)
-                ])
-            elif self.depthmin < self.aPos[1] and self.stage == 1.5:
-                self.stage = 2
-                self.delegate = SAnd([
-                    LookAt(self.rob, [self.aPos[0], self.aPos[1] - 1, self.aPos[2]]),
-                    AttackBlockTool(self.rob)
-                ])
             elif self.stage == 1:
                 self.stage = 2
                 self.delegate = SAnd([

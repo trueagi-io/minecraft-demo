@@ -32,16 +32,20 @@ class TAgent:
         self.visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
         self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
 
-    def nearestBlock(self, blocks):
+    def nearestBlock(self, blocks, return_target_block=False):
         bc = self.rob.blockCenterFromRay()
         los = self.rob.cached['getLineOfSights'][0]
         if (los['hitType'] != 'MISS'):
             if bc is not None and los['inRange'] and los['type'] in blocks:
-                return int_coords(bc)
-        res = self.rob.nearestFromGrid(blocks, False)
+                return int_coords(bc) if not return_target_block else [int_coords(bc), los['type']]
+        res = self.rob.nearestFromGrid(blocks, False, return_target_block)
         # print("target block coords: "+str(res)+"\n")
-        return int_coords(res) if res is not None \
-            else self.blockMem.recallNearest(blocks, self.rob.cached['getAgentPos'][0])
+        if return_target_block:
+            return [int_coords(res[0]), res[1]] if res is not None \
+                else self.blockMem.recallNearest(blocks, self.rob.cached['getAgentPos'][0], return_target_block)
+        else:
+            return int_coords(res) if res is not None \
+                else self.blockMem.recallNearest(blocks, self.rob.cached['getAgentPos'][0])
 
 
 class NoticeBlocks:
@@ -98,10 +102,11 @@ class NoticeBlocks:
             if bUpdate:
                 self.updateBlock(grid[i], pos)
 
-    def recallNearest(self, targets, aPos=None):
+    def recallNearest(self, targets, aPos=None, return_target_block=False):
         if aPos is None: aPos = [0,0,0]
         dist = 1e+16
         res = None
+        target_block = 'None'
         for b in targets:
             if b in self.blocks:
                 for pos in self.blocks[b]:
@@ -112,4 +117,5 @@ class NoticeBlocks:
                     if d < dist:
                         dist = d
                         res = pos
-        return res
+                        target_block = b
+        return res if not return_target_block else [res, target_block]

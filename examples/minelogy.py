@@ -224,6 +224,9 @@ def get_target_variants(target):
         return mimic_target(target, log_names_t)
     return target
 
+def get_log_names():
+    return log_names
+
 def get_new_type(obj):
     splitted_obj = obj['type'].split("_")
     if len(splitted_obj) != 1:

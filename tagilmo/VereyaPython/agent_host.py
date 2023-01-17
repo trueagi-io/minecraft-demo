@@ -40,7 +40,7 @@ logger = logging.getLogger()
 
 class AgentHost(ArgumentParser):
     def __init__(self) -> None:
-        self.world_state_mutex = threading.Lock()
+        self.world_state_mutex = threading.RLock()
         self.io_service: AbstractEventLoop = asyncio.new_event_loop()
         self.th = threading.Thread(target=self.io_service.run_forever, daemon=True)
         self.th.start()
@@ -65,6 +65,7 @@ class AgentHost(ArgumentParser):
     def startMission(self, mission: MissionSpec, client_pool: List[ClientInfo],
                      mission_record: MissionRecordSpec, role: int,
                      unique_experiment_id: str):
+        logger.debug('startMission')
         self.world_state.clear()
         self.testSchemasCompatible()
         if role < 0 or role >= mission.getNumberOfAgents():
@@ -87,6 +88,7 @@ class AgentHost(ArgumentParser):
 
         pool = None
         if role == 0:
+            logger.info("creating mission")
             # We are the agent responsible for the integrated server.
             # If we are part of a multi-agent mission, our mission should have been started before any of the others are attempted.
             # This means we are in a position to reserve clients in the client pool:
@@ -102,6 +104,8 @@ class AgentHost(ArgumentParser):
                 else:
                     raise MissionException("There are not enough clients available in the ClientPool to start self." + str(mission.getNumberOfAgents()) + " agent mission.", MissionErrorCode.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE)
             pool = reservedAgents
+        else:
+            logger.info(f"our role {role}, joining existing mission")
         assert self.current_mission_init is not None
         if( mission.getNumberOfAgents() > 1 and role > 0 \
             and not self.current_mission_init.hasMinecraftServerInformation()):
@@ -136,6 +140,9 @@ class AgentHost(ArgumentParser):
                 continue
             except RuntimeError as e:
                 logging.exception("error on reservation request", exc_info=e)
+                continue
+            except ConnectionRefusedError as e:
+                logging.exception(f"error connecting to {item.ip_address}:{item.control_port}", exc_info=e)
                 continue
             logger.info("Reserving client, received reply from " + str(item.ip_address) + ": " + reply)
             malmo_reservation_prefix = "MALMOOK"
@@ -301,7 +308,8 @@ class AgentHost(ArgumentParser):
 
     def close(self):
         logger.debug("Closing AgentHost.")
-        self.world_state.is_mission_running = False
+        with self.world_state_mutex:
+            self.world_state.is_mission_running = False
         self.closeServers()
         self.closeRecording()
 
@@ -424,6 +432,8 @@ class AgentHost(ArgumentParser):
 
     def sendCommand(self, command: str, key: str='') -> None:
         with self.world_state_mutex:
+            assert self.world_state.is_mission_running
+        with self.world_state_mutex:
             if self.commands_connection is None:
                 text = 'commands connection is not open.'
                 logger.error(text)
@@ -469,13 +479,13 @@ class AgentHost(ArgumentParser):
         self.mission_control_server = StringServer(self.io_service, port, self.onMissionControlMessage, "mcp")
         self.mission_control_server.start()
 
-    def onMissionControlMessage(self, xml: TimestampedString) -> None:
+    def onMissionControlMessage(self, xml: TimestampedString) -> Optional[None]:
         elem = None
         try:
             elem = str2xml(xml.text)
         except RuntimeError as e:
-            print(e)
             text = "Error parsing mission control message as XML: " + repr(e) + ":\n" + xml.text[:200] + "...\n"
+            logger.exception(text, exc_info=e)
             error_message = TimestampedString(timestamp=xml.timestamp, text=text)
             with self.world_state_mutex:
                 self.world_state.errors.append(error_message)
@@ -483,18 +493,23 @@ class AgentHost(ArgumentParser):
         if elem is None:
             text = "Empty XML string in mission control message"
             error_message = TimestampedString(timestamp=xml.timestamp, text=text)
+            logger.exception(text)
             with self.world_state_mutex:
                 self.world_state.errors.append(error_message)
             return
         root_node_name = elem.tag
+        logger.debug("got control message " + root_node_name)
         with self.world_state_mutex:
-            if (not self.world_state.is_mission_running) and (root_node_name == "MissionInit" ):
+            if (root_node_name == "MissionInit" ):
+                if self.world_state.is_mission_running:
+                    logger.error("self.world_state.is_mission_running")
                 logger.debug("got message, has_mission_begun=True, is_mission_running=True")
                 validate = True
                 self.current_mission_init = MissionInitSpec.fromstr(xml.text, validate)
                 self.world_state.is_mission_running = True
                 self.world_state.has_mission_begun = True
                 self.openCommandsConnection()
+                return "got mission init"
             elif root_node_name == "MissionEnded":
                 try:
                     mission_ended = MissionEndedXML(xml.text)
@@ -544,6 +559,8 @@ class AgentHost(ArgumentParser):
             elif root_node_name == "ping":
                 # The mod is pinging us to check we are still around - do nothing.
                 self.version = elem.attrib.get("minecraft-version", None)
+                if not self.world_state.has_mission_begun:
+                    logger.debug('got ping before mission begun')
             else:
                 text = "Unknown mission control message root node or at wrong time: " + root_node_name + " :" + xml.text[:200]
                 logger.error(text)
@@ -621,8 +638,22 @@ class AgentHost(ArgumentParser):
         pass
 
     def __del__(self):
+        self.stop()
+
+    def stop(self):
+        if not self.io_service.is_running():
+            return
         self.close()
-        self.io_service.stop()
+        for task in asyncio.all_tasks(self.io_service):
+            task.cancel()
+            logger.info(task)
+
+        self.io_service.call_soon_threadsafe(self.io_service.stop)
+        logger.debug('stopping loop')
+        while self.io_service.is_running():
+            time.sleep(1)
+        self.io_service.close()
+        logger.debug('loop stopped')
 
     def processReceivedReward(self, reward: TimestampedReward) -> None:
         if self.rewards_policy ==  RewardsPolicy.LATEST_REWARD_ONLY:

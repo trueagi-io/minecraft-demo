@@ -27,7 +27,7 @@ def init_mission(mc, start_x=None, start_y=None):
                          agentSections=[mb.AgentSection(name='Cristina',
              agenthandlers=agent_handlers,
                                       #    depth
-             agentstart=mb.AgentStart([start_x, 74.0, start_y, 1]))])
+             agentstart=mb.AgentStart([start_x, 78.0, start_y, 1]))])
     flat_json = {"biome":"minecraft:plains",
                  "layers":[{"block":"minecraft:diamond_block","height":1}],
                  "structures":{"structures": {"village":{}}}}
@@ -35,9 +35,9 @@ def init_mission(mc, start_x=None, start_y=None):
     flat_param = "3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake"
     flat_json = json.dumps(flat_json).replace('"', "%ESC")
     world = mb.defaultworld(
-        seed='5',
+        seed='4',
         forceReset="false",
-        forceReuse="true")
+        forceReuse="false")
     miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     # uncomment to disable passage of time:
@@ -58,8 +58,7 @@ class TestData(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = 316.5, 5375.5
-        start = (-108.0, -187.0)
+        start = (-125.0, 71.0)
         mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
         cls.mc = mc
         cls.rob = obs
@@ -78,6 +77,11 @@ class TestData(unittest.TestCase):
         self.rob.observeProcCached()
         command = self.rob.waitNotNoneObserve('getChat')
         self.assertEqual(command[0], "get wooden_axe")
+
+    def test_game_state(self):
+        self.mc.observeProc()
+        self.assertTrue(self.mc.getFullStat(key="isPaused") is not None)
+        self.assertTrue(self.mc.getFullStat(key="input_type") is not None)
 
     def getDist(self):
         mc = self.mc

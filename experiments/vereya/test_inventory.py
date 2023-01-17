@@ -37,7 +37,7 @@ def init_mission(mc, start_x=None, start_y=None):
     world = mb.defaultworld(
         seed='5',
         forceReset="false",
-        forceReuse="true")
+        forceReuse="false")
     miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     # uncomment to disable passage of time:
@@ -71,14 +71,18 @@ class TestCraft(unittest.TestCase):
         assert mc.safeStart()
         time.sleep(4)
 
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        cls.mc.stop()
+
     def setUp(self):
         self.mc.sendCommand("chat /clear")
         time.sleep(4)
 
     def test_swap_inventory(self):
         mc = self.mc
-        mc.sendCommand("chat /give @p oak_planks 1")
-        time.sleep(1)
+        mc.sendCommand("chat /give @p minecraft:oak_planks 1")
+        time.sleep(2)
         mc.sendCommand("chat /give @p wooden_pickaxe 1")
         time.sleep(1)
         
@@ -94,8 +98,6 @@ class TestCraft(unittest.TestCase):
         
 def main():
     unittest.main()
-#    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
-#    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
 
         
 if __name__ == '__main__':

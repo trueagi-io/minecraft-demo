@@ -59,7 +59,14 @@ class BlockHueAnalyzer:
         # alpha (0, 1) only used when use_exp_avg is True
         los = self.rob.cached['getLineOfSights'][0]
         loc_hue = self._getLocalHue()
-        if los is None and not(self.avg_block_hue_hist.get('sky') is None):
+        sky_flag = False
+        if los is None:
+            sky_flag = True
+        elif los['hitType'] == 'MISS':
+            sky_flag = True
+        elif not ('type' in los):
+            sky_flag = True
+        if sky_flag and not(self.avg_block_hue_hist.get('sky') is None):
             curr_hue = self.avg_block_hue_hist['sky'][0]
             curr_num = self.avg_block_hue_hist['sky'][1] + 1
             if use_exp_avg:
@@ -68,7 +75,7 @@ class BlockHueAnalyzer:
                 self.avg_block_hue_hist['sky'][0] = curr_hue + (loc_hue - curr_hue)/curr_num
             self.avg_block_hue_hist['sky'][1] = curr_num
             return False
-        elif los is None:
+        elif sky_flag:
             self.avg_block_hue_hist['sky'] = [loc_hue, 1]
             return True
         if not(self.avg_block_hue_hist.get(los['type']) is None):
@@ -106,7 +113,15 @@ class MockAgent(TAgent):
             self.rob.updateAllObservations()
             self.visualize()
             block_hue_analyzer.collectStat(use_exp_avg=True, alpha=0.1)
-            if self.rob.cached['getLineOfSights'][0] is None:
+            los = self.rob.cached['getLineOfSights'][0]
+            sky_flag = False
+            if los is None:
+                sky_flag = True
+            elif los['hitType'] == 'MISS':
+                sky_flag = True
+            elif not ('type' in los):
+                sky_flag = True
+            if sky_flag:
                 print('Expected object: sky.  Seen by agent as {}'.format(block_hue_analyzer.searchNNBlock()))
             else:
                 print('Expected object: {}.  Seen by agent as {}'.format(self.rob.cached['getLineOfSights'][0]['type'],

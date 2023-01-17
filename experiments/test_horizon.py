@@ -209,10 +209,6 @@ def show_horizon(rob, height=64, horizon_dist=200):
 def main():
     mc, rob = start_mission()
     mc.safeStart()
-    MalmoPython.setLogging("log.txt", MalmoPython.LoggingSeverityLevel.LOG_FINE)
-    MalmoPython.setLoggingComponent(MalmoPython.LoggingComponent.LOG_VIDEO, True)
-    MalmoPython.setLoggingComponent(MalmoPython.LoggingComponent.LOG_TCP, True)
-    MalmoPython.setLoggingComponent(MalmoPython.LoggingComponent.LOG_AGENTHOST, True)
 
     while True:
         show_horizon(rob, 64)

@@ -104,9 +104,6 @@ def main():
             img = extract(img.pixels)
             # print(mc.getNearEntities())
             if mc.observe[0] is not None and 'recipes' in mc.observe[0]:
-                for rec in mc.observe[0]['recipes']:
-                    if 'stick' in rec['name']:
-                        stub = 0
                 print("got recipes")
                 mc.sendCommand('recipes off')
             cv2.imshow('img', img)

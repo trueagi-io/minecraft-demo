@@ -123,7 +123,7 @@ def transform_item_nchannel(item):
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
     from dataset import MinecraftImageDataset
-    from goodpoint import GoodPoint
+    from examples.vision.goodpoint import GoodPoint
     import torch.optim as optim
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -137,7 +137,7 @@ if __name__ == '__main__':
     loader = DataLoader(data_set, batch_size=batch_size, shuffle=True)
     # +1 for None
     net = GoodPoint(8, len(to_train) + 1, n_channels=3, depth=train_depth, batchnorm=False).to(device)
-    model_path = 'goodpoint.pt'
+    model_path = 'examples/vision/goodpoint.pt'
     if os.path.exists(model_path):
         model_weights = torch.load(model_path, map_location=device)['model']
         net.load_checkpoint(model_weights)
@@ -184,5 +184,5 @@ if __name__ == '__main__':
             snap = dict()
             snap['model'] = net.state_dict()
             snap['optimizer'] = optimizer.state_dict()
-            torch.save(snap, 'goodpoint.pt')
+            torch.save(snap, 'examples/vision/goodpoint.pt')
 

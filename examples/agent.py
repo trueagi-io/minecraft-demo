@@ -3,7 +3,7 @@ import numpy
 import math
 
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserverWithCallbacks
-from examples.neural import NeuralWrapper
+from examples.vision.neural import NeuralWrapper
 from tagilmo.utils.mathutils import *
 
 class TAgent:

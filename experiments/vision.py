@@ -17,7 +17,7 @@ from common import stop_motion, grid_to_vec_walking, direction_to_target
 from tagilmo.utils.mathutils import normAngle, toRadAndNorm, degree2rad
 
 import tree
-from goodpoint import GoodPoint
+from examples.vision.goodpoint import GoodPoint
 
 
 def load_agent(path):

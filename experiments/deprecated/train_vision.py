@@ -181,7 +181,7 @@ def add_episode(data_set, ep):
 
 if __name__ == '__main__':
     from dataset import MinecraftImageDataset
-    from goodpoint import GoodPoint
+    from examples.vision.goodpoint import GoodPoint
     import torch.optim as optim
     device = 'cuda'
     train_depth = False
@@ -192,7 +192,7 @@ if __name__ == '__main__':
     loader = DataLoader(data_set, batch_size=batch_size, shuffle=False)
     # +1 for None
     net = GoodPoint(8, len(common.visible_blocks) + 1, n_channels=3, depth=train_depth).to('cpu')
-    model_weights = torch.load('goodpoint.pt')['model']
+    model_weights = torch.load('examples/vision/goodpoint.pt')['model']
     net.load_checkpoint(model_weights)
     net.to(device)
     net.train()
@@ -200,7 +200,7 @@ if __name__ == '__main__':
     epochs = 30
     eps = 0.0000001
     optimizer = optim.AdamW(net.parameters(), lr=lr)
-    optimizer.load_state_dict(torch.load('goodpoint.pt')['optimizer'])
+    optimizer.load_state_dict(torch.load('examples/vision/goodpoint.pt')['optimizer'])
     episode_files = os.listdir('episodes')
     leaves = common.visible_block_num['leaves']
     log = common.visible_block_num['log']
@@ -263,5 +263,5 @@ if __name__ == '__main__':
         snap = dict()
         snap['model'] = net.state_dict()
         snap['optimizer'] = optimizer.state_dict()
-        torch.save(snap, 'goodpoint.pt')
+        torch.save(snap, 'examples/vision/goodpoint.pt')
         print(loss)

@@ -545,7 +545,7 @@ class FindAndMine(Switcher):
                     ApproachPos(self.agent, [self.aPos[0], self.aPos[1] - 1, self.aPos[2]], 2.5)
                 ])
             elif targ_block != self.blocks[0] and self.depthmin < self.aPos[1] and self.stage == 0.5:
-                self.stage = 1
+                self.stage = 2
                 self.delegate = SAnd([
                     LookAt(self.rob, [self.aPos[0], self.aPos[1] - 1, self.aPos[2]]),
                     AttackBlockTool(self.rob)
@@ -652,13 +652,13 @@ class Obtain(Switcher):
                         diff = 3
                         goal = Obtain(self.agent, [{'type': tool}])
                     if blocks[0] == 'diamond_ore':
-                        logs_in_inv = minelogy.findInInventory(invent, {'type': 'stick'})
-                        if logs_in_inv is None:
+                        sticks_in_inv = minelogy.findInInventory(invent, {'type': 'stick'})
+                        if sticks_in_inv is None:
                             diff = -1
-                            goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 15}])
-                        elif logs_in_inv['quantity'] < 15:
+                            goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 20}])
+                        elif sticks_in_inv['quantity'] < 5:
                             diff = -1
-                            goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 15}])
+                            goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 20}])
                     if diff < best_diff:
                         best_diff = diff
                         best_goal = goal

@@ -67,6 +67,10 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'stone'}
          ),
+         ({'blocks': [{'type': 'deepslate'}],
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
+          {'type': 'deepslate'}
+         ),
          ({'blocks': [{'type': 'stone', 'variant': 'stone'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'cobblestone'}
@@ -79,7 +83,7 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'coal'}
          ),
-        ({'blocks': [{'type': 'diamond_ore', 'depthmin': -60}],
+        ({'blocks': [{'type': 'diamond_ore', 'depthmin': 5}],
            'tools': ['iron_pickaxe']},
           {'type': 'diamond'}
          ),
@@ -334,7 +338,7 @@ def assoc_blocks(blocks):
     assoc = {'log': log_names+leaves_names,
              'coal_ore': ['stone'],
              'iron_ore': ['stone'],
-             'diamond_ore': ['stone', 'iron_ore', 'coal_ore', 'copper_ore']}
+             'diamond_ore': ['stone', 'deepslate']}
     blocks2 = []
     for b in blocks:
         if b in assoc:

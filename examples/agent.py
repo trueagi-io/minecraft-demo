@@ -2,14 +2,14 @@ import logging
 import numpy
 import math
 
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserverWithCallbacks
+from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserverWithCallbacks
 from examples.neural import NeuralWrapper
 from tagilmo.utils.mathutils import *
 
 class TAgent:
 
     def __init__(self, miss, visualizer=None):
-        mc = MalmoConnector(miss)
+        mc = MCConnector(miss)
         mc.safeStart()
         self.rob = RobustObserverWithCallbacks(mc)
         vp = miss.agentSections[0].agenthandlers.video_producer

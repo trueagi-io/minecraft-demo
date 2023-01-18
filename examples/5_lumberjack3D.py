@@ -10,6 +10,7 @@ import tagilmo.utils.mission_builder as mb
 from examples import minelogy
 from examples.agent import TAgent
 import logging
+from examples.log import setup_logger
 from examples.vis import Visualizer
 
 from tagilmo.utils.mathutils import *
@@ -671,20 +672,6 @@ class LJAgent(TAgent):
                 print("Panic. No skill available for " + str(target))
                 print(str(howto))
                 break
-
-
-def setup_logger():
-    # create logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter('%(asctime)s: %(levelname)-8s %(message)s')
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setFormatter(formatter)
-    ch.setLevel(logging.DEBUG)
-    # add ch to logger
-    logger.addHandler(ch)
 
 
 if __name__ == '__main__':

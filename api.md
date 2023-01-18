@@ -12,7 +12,7 @@ pip install git+https://github.com/trueagi-io/minecraft-demo.git
 Two main modules in tagilmo are
 
 tagilmo.utils.mission_builder - used to set up a world in minecraft.
-tagilmo.utils.malmo_wrapper - used to control agent in the game
+tagilmo.utils.vereya_wrapper - used to control agent in the game
 
 
 mission_builder difines various classes to build xml description of the world.
@@ -20,7 +20,7 @@ mission_builder difines various classes to build xml description of the world.
 basic setup:
 ```
 import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
+from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 
 
 # use default observations
@@ -36,7 +36,7 @@ miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelo
 # disable passage of time
 miss.serverSection.initial_conditions.time_pass = 'false'
 miss.serverSection.initial_conditions.time_start = "1000"
-mc = MalmoConnector(miss)
+mc = MCConnector(miss)
 rob = RobustObserver(mc)
 
 # creates the world
@@ -54,7 +54,7 @@ Default observations include
 ```
 
 
-MalmoConnector object holds observations from the mod sends commands.  
+MCConnector object holds observations from the mod sends commands.  
 RobustObserver implements caching for observations.
 
 you can make your agent moving with 

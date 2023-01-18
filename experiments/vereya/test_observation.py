@@ -4,7 +4,7 @@ from tagilmo import VereyaPython
 import json
 import time
 import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
+from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from experiments import common
 from experiments.common import stop_motion, grid_to_vec_walking, direction_to_target
 
@@ -45,7 +45,7 @@ def init_mission(mc, start_x=None, start_y=None):
     miss.serverSection.initial_conditions.time_start = "1000"
 
     if mc is None:
-        mc = MalmoConnector(miss)
+        mc = MCConnector(miss)
         obs = RobustObserver(mc)
     else:
         mc.setMissionXML(miss)

@@ -1,9 +1,9 @@
 import logging
+from examples.log import setup_logger
 from time import sleep, time
 import math
 from random import random
 
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
 
@@ -36,20 +36,6 @@ class Achiever(TAgent):
         acts = self.goal.stop()
         for act in acts:
             self.rob.sendCommand(act)
-
-
-def setup_logger():
-    # create logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter('%(asctime)s: %(levelname)-8s %(message)s')
-    # create console handler and set level to debug
-    ch = logging.StreamHandler()
-    ch.setFormatter(formatter)
-    ch.setLevel(logging.DEBUG)
-    # add ch to logger
-    logger.addHandler(ch)
 
 
 if __name__ == '__main__':

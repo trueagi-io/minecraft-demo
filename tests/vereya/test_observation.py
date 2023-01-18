@@ -1,11 +1,10 @@
+import unittest
 import logging
+from tagilmo import VereyaPython
 import json
 import time
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
-from experiments import common
-from experiments.common import stop_motion, grid_to_vec_walking, direction_to_target
-
 
 
 def init_mission(mc, start_x=None, start_y=None):
@@ -26,7 +25,7 @@ def init_mission(mc, start_x=None, start_y=None):
                          agentSections=[mb.AgentSection(name='Cristina',
              agenthandlers=agent_handlers,
                                       #    depth
-             agentstart=mb.AgentStart([start_x, 74.0, start_y, 1]))])
+             agentstart=mb.AgentStart([start_x, 78.0, start_y, 1]))])
     flat_json = {"biome":"minecraft:plains",
                  "layers":[{"block":"minecraft:diamond_block","height":1}],
                  "structures":{"structures": {"village":{}}}}
@@ -34,12 +33,9 @@ def init_mission(mc, start_x=None, start_y=None):
     flat_param = "3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake"
     flat_json = json.dumps(flat_json).replace('"', "%ESC")
     world = mb.defaultworld(
-        seed='5',
-        forceReuse="true",
-        forceReset="false")
-    flat_world = mb.flatworld(flat_json,
-                    seed='43',
-                    )
+        seed='4',
+        forceReset="false",
+        forceReuse="false")
     miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     # uncomment to disable passage of time:
@@ -54,55 +50,60 @@ def init_mission(mc, start_x=None, start_y=None):
     return mc, obs
 
 
-def test_basic_motion():
-    pass 
+class TestData(unittest.TestCase):
+    mc = None
+    rob = None
 
+    @classmethod
+    def setUpClass(cls, *args, **kwargs):
+        start = (-125.0, 71.0)
+        mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
+        cls.mc = mc
+        cls.rob = obs
+        mc.safeStart()
+        time.sleep(1)
 
+    def setUp(self):
+        time.sleep(2)
+
+    def test_observation_from_ray(self):
+        dist = self.getDist()
+        self.assertGreater(dist, 0)
+
+    def test_observation_from_chat(self):
+        self.mc.sendCommand("chat get wooden_axe")
+        self.rob.observeProcCached()
+        command = self.rob.waitNotNoneObserve('getChat')
+        self.assertEqual(command[0], "get wooden_axe")
+
+    def test_game_state(self):
+        self.mc.observeProc()
+        self.assertTrue(self.mc.getFullStat(key="isPaused") is not None)
+        self.assertTrue(self.mc.getFullStat(key="input_type") is not None)
+
+    def getDist(self):
+        mc = self.mc
+        c = 0
+        while True:
+            mc.observeProc()
+            visible = mc.getFullStat('LineOfSight')
+            if visible and 'distance' in visible :
+                dist = visible['distance']
+                print(visible)
+                return dist
+            else:
+                c += 1
+                if c > 4:
+                    return 0
+                mc.sendCommand('pitch 0.1')
+                time.sleep(0.5)
+                mc.sendCommand('pitch 0')
+                continue 
+        
 def main():
-    from tagilmo import VereyaPython
-#    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
-#    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
-
-    start = 316.5, 5375.5
-    start = (-108.0, -187.0)
-    mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
-
-    mc.safeStart()
-    time.sleep(4)
-    print('sending command')
-    mc.sendCommand('move 1')
-        
-    #print('send chat')
-    #obs.sendCommand("chat /difficulty peaceful")
-    time.sleep(1)
-    print('sending command')
-    mc.sendCommand('move 1')
-        
-
-    time.sleep(1)
-    print('sending command move 0')
-    mc.sendCommand('move 0')
-    print('sending command turn 0.1')
-    mc.sendCommand('turn 0.1')
-    mc.observeProc()
-    pos = mc.getAgentPos()
-    print('sending command turn 0')
-    time.sleep(1)
-    mc.sendCommand('turn 0')
-    time.sleep(1)
-    mc.observeProc()
-    pos1 = mc.getAgentPos()
-    while True:
-       mc.observeProc()
-       time.sleep(2)
-       print('waiting')
-       img_frame = mc.frames[0] 
-       if img_frame is None:
-           print(img_frame)
-       ray = mc.getLineOfSights()
-       print(ray)
-
+    unittest.main()
 
         
 if __name__ == '__main__':
    main()
+

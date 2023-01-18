@@ -1,12 +1,8 @@
-import unittest
 import logging
-from tagilmo import VereyaPython
 import json
 import time
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
-from experiments import common
-from experiments.common import stop_motion, grid_to_vec_walking, direction_to_target
 
 
 def init_mission(mc, start_x=None, start_y=None):
@@ -36,8 +32,11 @@ def init_mission(mc, start_x=None, start_y=None):
     flat_json = json.dumps(flat_json).replace('"', "%ESC")
     world = mb.defaultworld(
         seed='5',
-        forceReset="false",
-        forceReuse="false")
+        forceReuse="true",
+        forceReset="false")
+    flat_world = mb.flatworld(flat_json,
+                    seed='43',
+                    )
     miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     # uncomment to disable passage of time:
@@ -52,52 +51,54 @@ def init_mission(mc, start_x=None, start_y=None):
     return mc, obs
 
 
-def getInvSafe(mc, item):
-    while True:
-        time.sleep(0.3)
-        mc.observeProc()
-        if mc.isInventoryAvailable(): return RobustObserver(mc).filterInventoryItem(item)
+def test_basic_motion():
+    pass 
 
 
-class TestCraft(unittest.TestCase):
-    mc = None
-
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        start = 316.5, 5375.5
-        start = (-108.0, -187.0)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
-        cls.mc = mc
-        assert mc.safeStart()
-        time.sleep(4)
-
-    @classmethod
-    def tearDownClass(cls, *args, **kwargs):
-        cls.mc.stop()
-
-    def setUp(self):
-        self.mc.sendCommand("chat /clear")
-        time.sleep(4)
-
-    def test_swap_inventory(self):
-        mc = self.mc
-        mc.sendCommand("chat /give @p minecraft:oak_planks 1")
-        time.sleep(2)
-        mc.sendCommand("chat /give @p wooden_pickaxe 1")
-        time.sleep(1)
-        
-        pickaxe = getInvSafe(mc, 'wooden_pickaxe')
-
-        mc.observeProc()
-        inv1 = mc.getInventory()
-        mc.sendCommand('swapInventoryItems 0 ' + str(pickaxe[0]['index']))
-        time.sleep(1)
-        pickaxe = getInvSafe(mc, 'wooden_pickaxe')
-        self.assertEquals(pickaxe[0]['index'], 0)
-
-        
 def main():
-    unittest.main()
+    from tagilmo import VereyaPython
+#    VereyaPython.setLoggingComponent(VereyaPython.LoggingComponent.LOG_TCP, True)
+#    VereyaPython.setLogging('log.txt', VereyaPython.LoggingSeverityLevel.LOG_FINE)
+
+    start = 316.5, 5375.5
+    start = (-108.0, -187.0)
+    mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
+
+    mc.safeStart()
+    time.sleep(4)
+    print('sending command')
+    mc.sendCommand('move 1')
+        
+    #print('send chat')
+    #obs.sendCommand("chat /difficulty peaceful")
+    time.sleep(1)
+    print('sending command')
+    mc.sendCommand('move 1')
+        
+
+    time.sleep(1)
+    print('sending command move 0')
+    mc.sendCommand('move 0')
+    print('sending command turn 0.1')
+    mc.sendCommand('turn 0.1')
+    mc.observeProc()
+    pos = mc.getAgentPos()
+    print('sending command turn 0')
+    time.sleep(1)
+    mc.sendCommand('turn 0')
+    time.sleep(1)
+    mc.observeProc()
+    pos1 = mc.getAgentPos()
+    while True:
+       mc.observeProc()
+       time.sleep(2)
+       print('waiting')
+       img_frame = mc.frames[0] 
+       if img_frame is None:
+           print(img_frame)
+       ray = mc.getLineOfSights()
+       print(ray)
+
 
         
 if __name__ == '__main__':

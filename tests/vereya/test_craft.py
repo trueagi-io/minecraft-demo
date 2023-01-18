@@ -5,9 +5,6 @@ import time
 from tagilmo import VereyaPython
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
-from experiments import common
-from experiments.common import stop_motion, grid_to_vec_walking, direction_to_target
-
 
 
 def init_mission(mc, start_x=None, start_y=None):
@@ -55,7 +52,6 @@ def init_mission(mc, start_x=None, start_y=None):
 
 def test_basic_motion():
     pass 
-
 
 
 def count_items(inv, name):

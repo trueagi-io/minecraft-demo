@@ -11,13 +11,13 @@ import network
 import numpy
 
 import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.malmo_wrapper import MalmoConnector
+from tagilmo.utils.vereya_wrapper import MCConnector
 import common
 from common import stop_motion, grid_to_vec_walking, direction_to_target
 from tagilmo.utils.mathutils import normAngle, toRadAndNorm, degree2rad
 
 import tree
-from goodpoint import GoodPoint
+from examples.vision.goodpoint import GoodPoint
 
 
 def load_agent(path):
@@ -187,7 +187,7 @@ class Trainer(tree.Trainer):
         miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
 
         if mc is None:
-            mc = MalmoConnector(miss)
+            mc = MCConnector(miss)
         else:
             mc.setMissionXML(miss)
         return mc

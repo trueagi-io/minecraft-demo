@@ -15,12 +15,12 @@ import network
 import numpy
 
 import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.malmo_wrapper import MalmoConnector
+from tagilmo.utils.vereya_wrapper import MCConnector
 import common
 from common import stop_motion, grid_to_vec_walking, direction_to_target
 from tagilmo.utils.mathutils import toRadAndNorm
 from vgg import VGG
-from goodpoint import GoodPoint
+from examples.vision.goodpoint import GoodPoint
 from pyramidpooling import PyramidPooling
 
 
@@ -56,7 +56,7 @@ def load_agent(path):
     location = 'cuda' if torch.cuda.is_available() else 'cpu'
     net = GoodPoint(8, n_out,
                     n_channels=3, depth=False)
-    model_weights = torch.load('goodpoint.pt', map_location=location)['model']
+    model_weights = torch.load('examples/vision/goodpoint.pt', map_location=location)['model']
     net.load_checkpoint(model_weights)
     net.to(location)
 
@@ -247,7 +247,7 @@ class Trainer(common.Trainer):
         miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
 
         if mc is None:
-            mc = MalmoConnector(miss)
+            mc = MCConnector(miss)
         else:
             mc.setMissionXML(miss)
         return mc

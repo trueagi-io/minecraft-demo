@@ -15,7 +15,7 @@ import copy
 from collections import deque, defaultdict
 
 import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.malmo_wrapper import MalmoConnector
+from tagilmo.utils.vereya_wrapper import MCConnector
 import common
 from common import stop_motion, grid_to_vec_walking, direction_to_target
 from tagilmo.utils.mathutils import normAngle
@@ -449,7 +449,7 @@ class Trainer(common.Trainer):
         miss.serverSection.initial_conditions.time_start = "1000"
 
         if mc is None:
-            mc = MalmoConnector(miss)
+            mc = MCConnector(miss)
         else:
             mc.setMissionXML(miss)
         return mc

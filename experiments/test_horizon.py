@@ -4,11 +4,11 @@ import math
 from common import *
 import numpy
 import time
-from examples.neural import get_image
+from examples.vision.neural import get_image
 from behaviours import TurnTo, PITCH, YAW
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mission_builder import AgentStart
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserverWithCallbacks
+from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserverWithCallbacks
 from tagilmo.utils import segment_mapping
 from tagilmo.utils.mathutils import degree2rad
 from tagilmo.VereyaPython import setupLogger
@@ -103,7 +103,7 @@ def start_mission():
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
 
-    mc = MalmoConnector(miss)
+    mc = MCConnector(miss)
     obs1 = RobustObserverWithCallbacks(mc)
     return mc, obs1
 

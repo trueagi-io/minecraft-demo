@@ -6,7 +6,7 @@ from examples.neural import get_image
 from behaviours import TurnTo, PITCH, YAW
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mission_builder import AgentStart
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserverWithCallbacks
+from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserverWithCallbacks
 from tagilmo.utils import segment_mapping
 import tagilmo.utils.mission_builder as mb
 
@@ -73,7 +73,7 @@ def start_mission():
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
 
-    mc = MalmoConnector(miss)
+    mc = MCConnector(miss)
     obs1 = RobustObserverWithCallbacks(mc)
     return mc, obs1
 

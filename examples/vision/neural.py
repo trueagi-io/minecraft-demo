@@ -48,11 +48,11 @@ class NeuralWrapper:
                 return heatmaps, img
 
     def load_model(self):
-        path = 'experiments/goodpoint.pt'
+        path = 'examples/vision/goodpoint.pt'
         logging.info('loading model from %s', path)
         if path in model_cache:
             return model_cache[path]
-        from experiments.goodpoint import GoodPoint
+        from examples.vision.goodpoint import GoodPoint
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         n_classes = 5 # other, log, leaves, coal_ore, stone
         depth = False

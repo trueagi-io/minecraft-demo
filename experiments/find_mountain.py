@@ -10,7 +10,7 @@ import numpy
 from collections import deque, defaultdict
 import time
 import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserverWithCallbacks
+from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserverWithCallbacks
 from tagilmo.utils import segment_mapping
 from behaviours import *
 import logging
@@ -80,7 +80,7 @@ def start_mission():
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
 
-    mc = MalmoConnector(miss)
+    mc = MCConnector(miss)
     obs1 = RobustObserverWithCallbacks(mc)
     return mc, obs1
 
@@ -113,7 +113,7 @@ def start_mission():
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
 
-    mc = MalmoConnector(miss)
+    mc = MCConnector(miss)
     obs1 = RobustObserverWithCallbacks(mc)
     return mc, obs1
 

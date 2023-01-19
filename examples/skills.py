@@ -4,7 +4,7 @@ from time import sleep, time
 import math
 from random import random
 
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
+from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
 
@@ -374,7 +374,7 @@ class BasicSearch(RobGoal):
 
     def __get_target_pos(self, dPitch, dYaw, dist=100):
         pos = self.rob.cached['getAgentPos'][0]
-        dPos = MalmoConnector.yawDelta(degree2rad(pos[4]) + dYaw)
+        dPos = MCConnector.yawDelta(degree2rad(pos[4]) + dYaw)
         dPos[1] = -math.sin(degree2rad(pos[3]) + dPitch)
         pos = [pos[0], pos[1] + 1.66, pos[2]]
         return [c + dc * dist for c, dc in zip(pos, dPos)]

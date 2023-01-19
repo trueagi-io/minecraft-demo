@@ -1,6 +1,6 @@
 import math
 from time import sleep
-from tagilmo.utils.malmo_wrapper import MalmoConnector
+from tagilmo.utils.vereya_wrapper import MCConnector
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import degree2rad
 
@@ -53,7 +53,7 @@ world = mb.defaultworld(
         forceReuse="true")
 miss.setWorld(world)
 miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
-mc = MalmoConnector(miss)
+mc = MCConnector(miss)
 mc.safeStart()
 
 tr = TargetRunner()

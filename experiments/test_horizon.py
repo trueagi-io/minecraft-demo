@@ -4,14 +4,13 @@ import math
 from common import *
 import numpy
 import time
-from examples.neural import get_image
+from examples.vision.neural import get_image
 from behaviours import TurnTo, PITCH, YAW
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mission_builder import AgentStart
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserverWithCallbacks
 from tagilmo.utils import segment_mapping
 from tagilmo.utils.mathutils import degree2rad
-import tagilmo.utils.mission_builder as mb
 from tagilmo.VereyaPython import setupLogger
 
 

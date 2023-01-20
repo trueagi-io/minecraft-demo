@@ -47,9 +47,9 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_shovel', 'wooden_shovel', None]},
           {'type': 'sand'}
          ),
-         ({'blocks': [{'type': 'sand'}],
-           'tools': ['stone_shovel', 'wooden_shovel', None]},
-          {'type': 'sand'}
+         ({'blocks': [{'type': 'diorite'}],
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
+          {'type': 'diorite'}
          ),
          ({'blocks': [{'type': 'clay'}],
            'tools': ['stone_shovel', 'wooden_shovel', None]},

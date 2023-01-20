@@ -469,7 +469,7 @@ class PickNear(Switcher):
         for entity in nearEnt:
             # TODO? add items ignored by *?
             if entity['name'] in self.items or \
-               ('life' not in entity and 'quantity' in entity and self.items[0] == '*'):
+               ('life' not in entity and self.items[0] == '*'):
                    target = entity
                    break
         if self.delegate is None and target is not None and self.cnt > 0:
@@ -560,7 +560,7 @@ class FindAndMine(Switcher):
                 self.delegate = SAnd([
                     LookAt(self.rob, list(map(lambda x: x+0.5, self.last_targ))),
                     AttackBlockTool(self.rob)
-                    # , PickNear(self.rob, ['*'])
+                    , PickNear(self.agent, ['*'])
                     ])
         elif targ is not None and self.last_targ != targ and self.stage < 2:
             self.bRestart = True

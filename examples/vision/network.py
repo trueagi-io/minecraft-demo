@@ -11,9 +11,9 @@ import torch
 import torch.nn as nn
 from torch.distributions.beta import Beta
 from torch.distributions.categorical import Categorical
-from experiments.pyramidpooling import PyramidPooling
-from experiments.vgg import VGG
-from experiments import common
+from examples.vision.pyramidpooling import PyramidPooling
+from examples.vision.vgg import VGG
+from examples.vision.common import BaseLoader
 
 
 def init_weights_xavier(m):
@@ -299,7 +299,7 @@ class DQN:
         return self.target_net.load_checkpoint(state_dict, strict)
 
 
-class QVisualNetwork(ContiniousActionAgent, VGG, common.BaseLoader):
+class QVisualNetwork(ContiniousActionAgent, VGG, BaseLoader):
     def __init__(self, actions, pos_enc_len, state_len=0, n_channels=1, activation=nn.ReLU(), batchnorm=True, num=128):
         super().__init__(actions)
         self.activation = activation
@@ -409,7 +409,7 @@ class QVisualNetwork(ContiniousActionAgent, VGG, common.BaseLoader):
         return result
 
 
-class QNetwork(ContiniousActionAgent, common.BaseLoader):
+class QNetwork(ContiniousActionAgent, BaseLoader):
     def __init__(self, actions, grid_len, grid_w,
                  target_enc_len, pos_enc_len):
         super().__init__(actions)

@@ -1,4 +1,4 @@
-from tagilmo.utils.malmo_wrapper import MalmoConnector
+from tagilmo.utils.vereya_wrapper import MCConnector
 import tagilmo.utils.mission_builder as mb
 
 
@@ -19,6 +19,6 @@ miss.setObservations(mb.Observations(bAll=False))
 # we typically don't need this for real Minecraft agents, but this example just checks the connection to Minecraft
 miss.setTimeLimit(5000)
 
-mc = MalmoConnector(miss)
+mc = MCConnector(miss)
 # Note that we need two instances of Minecraft running
 mc.safeStart()

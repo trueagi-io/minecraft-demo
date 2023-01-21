@@ -21,7 +21,7 @@ logger = logging.getLogger('malmo')
 
 module = VP
 
-class MalmoConnector:
+class MCConnector:
 
     @staticmethod
     def yawDelta(yawRad):
@@ -455,7 +455,7 @@ class RobustObserver:
 
     def getYawDeltas(self, observeReq=True):
         pos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
-        return MalmoConnector.yawDelta(degree2rad(pos[4]))
+        return MCConnector.yawDelta(degree2rad(pos[4]))
 
     def gridInYaw(self, observeReq=True):
         '''Vertical slice of the grid in the line-of-sight direction'''

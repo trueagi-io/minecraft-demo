@@ -3,8 +3,8 @@ import torch
 import numpy
 from torch import nn
 
-from experiments.network import init_weights_xavier
-from experiments.depth import DepthToSpace
+from examples.vision.network import init_weights_xavier
+from examples.vision.depth import DepthToSpace
 
 logger = logging.getLogger()
 

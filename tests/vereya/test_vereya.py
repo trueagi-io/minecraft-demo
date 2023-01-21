@@ -5,7 +5,7 @@ import numpy
 from collections import deque, defaultdict
 import time
 import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
+from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from tagilmo.utils import segment_mapping
 
 
@@ -48,7 +48,7 @@ def start_mission():
     # uncomment to disable passage of time:
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
-    mc = MalmoConnector(miss)
+    mc = MCConnector(miss)
     obs1 = RobustObserver(mc)
     return mc, obs1
 

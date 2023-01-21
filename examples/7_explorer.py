@@ -1,7 +1,6 @@
 import logging
-from experiments.log import setup_logger
+from examples.log import setup_logger
 from time import sleep, time
-from tagilmo.utils.malmo_wrapper import MalmoConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
 import math

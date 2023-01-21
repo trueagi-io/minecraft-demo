@@ -469,7 +469,7 @@ class PickNear(Switcher):
         for entity in nearEnt:
             # TODO? add items ignored by *?
             if entity['name'] in self.items or \
-               ('life' not in entity and 'quantity' in entity and self.items[0] == '*'):
+               ('life' not in entity and self.items[0] == '*'):
                    target = entity
                    break
         if self.delegate is None and target is not None and self.cnt > 0:
@@ -515,24 +515,41 @@ class SelectMineTool(RobGoal):
 
 class FindAndMine(Switcher):
 
-    def __init__(self, agent, blocks):
+    def __init__(self, agent, blocks, depthmin):
         self.agent = agent
         self.blocks = blocks
         self.stage = 0
         self.last_targ = None
+        self.aPos = self.agent.rob.cached['getAgentPos'][0]
+        if depthmin is None:
+            self.depthmin = self.aPos[1]
+        else:
+            self.depthmin = depthmin
         # we need to update focus blocks also within ApproachPos and AttackBlockTool
         self.agent.blockMem.add_focus_blocks(blocks)
         super().__init__(agent.rob)
 
     def update(self):
+        self.aPos = self.agent.rob.cached['getAgentPos'][0]
         # we cannot use SAnd, because we don't know `target` for ApproachPos a priori
         # we also need to be able to choose another target during Search and Approach
         # this logic could be somehow unified...
-        targ = self.agent.nearestBlock(self.blocks)
+        targ, targ_block = self.agent.nearestBlock(self.blocks, True)
         if self.delegate is None:
             if targ is None and self.stage == 0:
                 self.last_targ = None
                 self.delegate = NeuralSearch(self.agent, self.blocks)
+            elif targ_block != self.blocks[0] and self.depthmin < self.aPos[1] and self.stage == 0:
+                self.stage = 0.5
+                self.delegate = SAnd([
+                    ApproachPos(self.agent, [self.aPos[0], self.aPos[1] - 1, self.aPos[2]], 2.5)
+                ])
+            elif targ_block != self.blocks[0] and self.depthmin < self.aPos[1] and self.stage == 0.5:
+                self.stage = 2
+                self.delegate = SAnd([
+                    LookAt(self.rob, [self.aPos[0], self.aPos[1] - 1, self.aPos[2]]),
+                    AttackBlockTool(self.rob)
+                ])
             elif self.stage == 0:
                 self.stage = 1
                 self.last_targ = targ
@@ -543,7 +560,7 @@ class FindAndMine(Switcher):
                 self.delegate = SAnd([
                     LookAt(self.rob, list(map(lambda x: x+0.5, self.last_targ))),
                     AttackBlockTool(self.rob)
-                    # , PickNear(self.rob, ['*'])
+                    , PickNear(self.agent, ['*'])
                     ])
         elif targ is not None and self.last_targ != targ and self.stage < 2:
             self.bRestart = True
@@ -612,6 +629,9 @@ class Obtain(Switcher):
                     # blocks = list(map(lambda b: minelogy.get_target_variants(b), mine_entry[0]['blocks']))
                     # blocks = list(map(lambda b: b['type'], blocks))
                     blocks = [minelogy.get_target_variants(b) for b in mine_entry[0]['blocks']]
+                    depthmin = None
+                    if 'depthmin' in blocks[0]:
+                        depthmin = blocks[0]['depthmin']
                     if isinstance(blocks[0], list):
                         blocks = [b['type'] for b in blocks[0]]
                     else:
@@ -620,17 +640,25 @@ class Obtain(Switcher):
                         # self.chooseTool(invent, tool)
                         if self.agent.nearestBlock(blocks) is not None:
                             diff = 0
-                            goal = FindAndMine(self.agent, blocks)
+                            goal = FindAndMine(self.agent, blocks, depthmin)
                         else:
                             blocks2 = minelogy.assoc_blocks(blocks)
                             if blocks2 != [] and self.agent.nearestBlock(blocks2) is not None:
                                 diff = 1
                             else:
                                 diff = 2
-                            goal = FindAndMine(self.agent, blocks + blocks2)
+                            goal = FindAndMine(self.agent, blocks + blocks2, depthmin)
                     else:
                         diff = 3
                         goal = Obtain(self.agent, [{'type': tool}])
+                    if blocks[0] == 'diamond_ore':
+                        sticks_in_inv = minelogy.findInInventory(invent, {'type': 'stick'})
+                        if sticks_in_inv is None:
+                            diff = -1
+                            goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 20}])
+                        elif sticks_in_inv['quantity'] < 5:
+                            diff = -1
+                            goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 20}])
                     if diff < best_diff:
                         best_diff = diff
                         best_goal = goal

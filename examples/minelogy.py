@@ -9,7 +9,7 @@ log_names_t = []
 planks_names_t = []
 drs = []
 # versions = minecraft_data.common().protocolVersions
-mcd = minecraft_data('1.18.1')  # here we must put current minecraft version
+mcd = minecraft_data('1.19')  # here we must put current minecraft version
 fuel_priority = {}
 for item in mcd.items_list:
     iname = item['name']
@@ -33,6 +33,7 @@ for item in mcd.items_list:
 
 fuel_priority['stick'] = 3
 fuel_priority['coal'] = 4
+fuel_priority['bamboo'] = -1
 
 mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
@@ -46,9 +47,9 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_shovel', 'wooden_shovel', None]},
           {'type': 'sand'}
          ),
-         ({'blocks': [{'type': 'sand'}],
-           'tools': ['stone_shovel', 'wooden_shovel', None]},
-          {'type': 'sand'}
+         ({'blocks': [{'type': 'diorite'}],
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
+          {'type': 'diorite'}
          ),
          ({'blocks': [{'type': 'clay'}],
            'tools': ['stone_shovel', 'wooden_shovel', None]},
@@ -66,6 +67,10 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'stone'}
          ),
+         ({'blocks': [{'type': 'deepslate'}],
+           'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
+          {'type': 'deepslate'}
+         ),
          ({'blocks': [{'type': 'stone', 'variant': 'stone'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'cobblestone'}
@@ -78,7 +83,7 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
           {'type': 'coal'}
          ),
-        ({'blocks': [{'type': 'diamond_ore'}],
+        ({'blocks': [{'type': 'diamond_ore', 'depthmin': 5}],
            'tools': ['iron_pickaxe']},
           {'type': 'diamond'}
          ),
@@ -86,7 +91,7 @@ mines = [({'blocks': [{'type': 'log'}],
            'tools': ['iron_pickaxe', 'stone_pickaxe']},
           {'type': 'raw_copper'}
          ),
-         ({'blocks': [{'type': 'iron_ore'}],
+         ({'blocks': [{'type': 'iron_ore', 'depthmin': 25}],
            'tools': ['iron_pickaxe', 'stone_pickaxe']},
           {'type': 'raw_iron'}
          ),
@@ -333,7 +338,7 @@ def assoc_blocks(blocks):
     assoc = {'log': log_names+leaves_names,
              'coal_ore': ['stone'],
              'iron_ore': ['stone'],
-             'diamond_ore': ['stone', 'iron_ore', 'coal_ore', 'copper_ore']}
+             'diamond_ore': ['stone', 'deepslate']}
     blocks2 = []
     for b in blocks:
         if b in assoc:

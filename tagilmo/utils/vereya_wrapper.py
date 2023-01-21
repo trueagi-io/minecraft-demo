@@ -541,7 +541,7 @@ class RobustObserver:
         inv = self.waitNotNoneObserve('getInventory', True, observeReq=observeReq)
         return list(filter(lambda entry: item in entry['type'], inv))
 
-    def nearestFromGrid(self, objs, observeReq=True):
+    def nearestFromGrid(self, objs, observeReq=True, return_target_block=False):
         if not isinstance(objs, list):
             objs = [objs]
         grid = self.waitNotNoneObserve('getNearGrid', observeReq=observeReq)
@@ -557,6 +557,8 @@ class RobustObserver:
                 d2 = d2c
                 # target = self.gridIndexToAbsPos(i, observeReq)
                 target = [x + pos[0], y + pos[1], z + pos[2]]
+                if return_target_block:
+                    target = [target, grid[i]]
         return target
 
     def nearestFromEntities(self, obj, observeReq=True):

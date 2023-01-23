@@ -7,7 +7,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import normAngle, degree2rad
 
 import numpy as np
-from minelogy import get_log_names
+from minelogy import get_log_names, initialize_minelogy
 
 
 # This script shows a relatively complex behavior of gathering resources
@@ -300,6 +300,10 @@ if __name__ == '__main__':
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     mc = MCConnector(miss)
     mc.safeStart()
+    
+    # minelogy initialization with current minecraft version
+    mcver = mc.getVersion()
+    initialize_minelogy(mcver)
 
     rob = RobustObserver(mc)
     # fixing bug with falling through while reconnecting

@@ -188,6 +188,12 @@ if __name__ == '__main__':
 
     agent = Explorer(miss, visualizer=visualizer)
     sleep(4)
+
+    # minelogy initialization with current minecraft version
+    mcver = agent.getVersion()
+    minelogy.initialize_minelogy(mcver) # to initialize for usage in this script
+    initialize_minelogy(mcver) # to initialize for usage in skills.py
+
     agent.run()
 
     '''

@@ -11,6 +11,10 @@ from tagilmo.utils.mathutils import *
 from examples import minelogy
 from examples.goal import *
 
+def initialize_minelogy(mcver):
+    minelogy.initialize_minelogy(mcver)
+
+
 class LookPitch(RobGoal):
 
     def __init__(self, rob, pitch, speed = 0.4):

@@ -691,6 +691,11 @@ if __name__ == '__main__':
     miss.setWorld(world1)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     agent = LJAgent(miss, visualizer=visualizer)
+
+    # minelogy initialization with current minecraft version
+    mcver = agent.getVersion()
+    minelogy.initialize_minelogy(mcver)
+
     agent.rob.sendCommand("chat /difficulty peaceful")
     # agent.loop()
     agent.loop(target = {'type': 'wooden_pickaxe'})

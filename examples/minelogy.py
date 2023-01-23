@@ -7,33 +7,33 @@ door_names_t = []
 trapdoor_names_t = []
 log_names_t = []
 planks_names_t = []
-drs = []
-# versions = minecraft_data.common().protocolVersions
-mcd = minecraft_data('1.19')  # here we must put current minecraft version
 fuel_priority = {}
-for item in mcd.items_list:
-    iname = item['name']
-    if 'log' in iname:
-        log_names.append(iname)
-        log_names_t.append({'type': iname})
-        fuel_priority[iname] = 2
-    elif 'planks' in iname:
-        planks_names.append(iname)
-        planks_names_t.append({'type': iname})
-        fuel_priority[iname] = 1
-    elif 'leaves' in iname:
-        leaves_names.append(iname)
-        leaves_names_t.append({'type': iname})
-    elif '_door' in iname:
-        door_names_t.append({'type': iname})
-    elif 'trapdoor' in iname:
-        trapdoor_names_t.append({'type': iname})
-    elif 'sapling' in iname:
-        fuel_priority[iname] = 0
+# versions = minecraft_data.common().protocolVersions
+def initialize_minelogy(mc_ver):
+    mcd = minecraft_data(mc_ver.split("-")[-1])
+    for item in mcd.items_list:
+        iname = item['name']
+        if 'log' in iname:
+            log_names.append(iname)
+            log_names_t.append({'type': iname})
+            fuel_priority[iname] = 2
+        elif 'planks' in iname:
+            planks_names.append(iname)
+            planks_names_t.append({'type': iname})
+            fuel_priority[iname] = 1
+        elif 'leaves' in iname:
+            leaves_names.append(iname)
+            leaves_names_t.append({'type': iname})
+        elif '_door' in iname:
+            door_names_t.append({'type': iname})
+        elif 'trapdoor' in iname:
+            trapdoor_names_t.append({'type': iname})
+        elif 'sapling' in iname:
+            fuel_priority[iname] = 0
 
-fuel_priority['stick'] = 3
-fuel_priority['coal'] = 4
-fuel_priority['bamboo'] = -1
+    fuel_priority['stick'] = 3
+    fuel_priority['coal'] = 4
+    fuel_priority['bamboo'] = -1
 
 mines = [({'blocks': [{'type': 'log'}],
            'tools': ['stone_axe', 'wooden_axe', None]},
@@ -120,6 +120,7 @@ mines = [({'blocks': [{'type': 'log'}],
           {'type': 'wheat_seeds'}
          ),
         ]
+
 crafts = [([{'type': 'log', 'quantity': 1}],
            {'type': 'planks', 'quantity': 4}),
           ([{'type': 'planks', 'quantity': 2}],

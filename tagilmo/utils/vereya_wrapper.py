@@ -326,6 +326,9 @@ class RobustObserver:
         self.lock = threading.RLock()
         self._time_sleep = 0.05
 
+    def getVersion(self):
+        return self.mc.getVersion()
+
     def update_in_background(self, time_sleep=0.05):
         self._time_sleep = time_sleep
         self.thread = threading.Thread(target=self.__update_in_background, daemon=True)

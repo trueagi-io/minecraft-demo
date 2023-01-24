@@ -589,6 +589,10 @@ class RobustObserverWithCallbacks(RobustObserver):
         self._futures = dict()
         self._in_process = set()
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        self.minelogy_instance = None
+
+    def set_minelogy_instance(self, minelogy_instance):
+        self.minelogy_instance = minelogy_instance
 
     def changed(self, name):
         for (cb_name, on_change, cb) in self.callbacks:

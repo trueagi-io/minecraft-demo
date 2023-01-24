@@ -7,7 +7,7 @@ import math
 from random import random
 
 from examples.vis import Visualizer
-from examples import minelogy
+from examples.minelogy import minelogy
 from examples.goal import *
 from examples.skills import *
 from examples.agent import TAgent
@@ -103,11 +103,11 @@ class Explore(Switcher):
         # a little bit hacky, but this agent doesn't explore crafting
         if self.delegate is None or not isinstance(self.delegate, Obtain):
             inv = self.rob.cached['getInventory'][0]
-            logs = minelogy.get_target_variants({'source': 'getInventory', 'type': 'log'})
+            logs = self.rob.minelogy_instance.get_target_variants({'source': 'getInventory', 'type': 'log'})
             if self.agent.kb.is_known({'source': 'getInventory', 'type': 'cobblestone'}) and \
-              not minelogy.isInInventory(inv, {'type': 'stone_pickaxe'}):
+              not self.rob.minelogy_instance.isInInventory(inv, {'type': 'stone_pickaxe'}):
                self.delegate = Obtain(self.agent, [{'type': 'stone_pickaxe'}])
-            if (loopOr(self.agent.kb.is_known, logs)) and not minelogy.isInInventory(inv, {'type': 'wooden_pickaxe'}):
+            if (loopOr(self.agent.kb.is_known, logs)) and not self.rob.minelogy_instance.isInInventory(inv, {'type': 'wooden_pickaxe'}):
                 self.delegate = Obtain(self.agent, [{'type': 'wooden_pickaxe'}])
 
         if self.block2check != [] or self.pos2check != [] or self.item2pick != []:
@@ -191,9 +191,8 @@ if __name__ == '__main__':
 
     # minelogy initialization with current minecraft version
     mcver = agent.getVersion()
-    minelogy.initialize_minelogy(mcver) # to initialize for usage in this script
-    initialize_minelogy(mcver) # to initialize for usage in skills.py
-
+    minelogy_instance = minelogy(mcver) # to initialize for usage in this script
+    agent.set_minelogy_instance(minelogy_instance)
     agent.run()
 
     '''

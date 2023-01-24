@@ -7,7 +7,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import normAngle, degree2rad
 
 import numpy as np
-from minelogy import get_log_names, initialize_minelogy
+from minelogy import minelogy
 
 
 # This script shows a relatively complex behavior of gathering resources
@@ -201,11 +201,11 @@ def mineWhileInRange(rob):
     rob.sendCommand('attack 0')
 
 # A higher-level skill for getting sticks
-def getSticks(rob):
+def getSticks(rob, minelogy_instance):
     logging.info("\tinside getSticks")
     # repeat 3 times, because the initial target can be wrong due to tallgrass
     # or imprecise direction to a distant tree
-    target_name = get_log_names()
+    target_name = minelogy_instance.get_log_names()
     for i in range(3):
         target = search4blocks(rob, target_name)
         dist = lookAt(rob, target[1:4])
@@ -303,7 +303,7 @@ if __name__ == '__main__':
     
     # minelogy initialization with current minecraft version
     mcver = mc.getVersion()
-    initialize_minelogy(mcver)
+    minelogy_instance = minelogy(mcver)
 
     rob = RobustObserver(mc)
     # fixing bug with falling through while reconnecting
@@ -315,7 +315,7 @@ if __name__ == '__main__':
     lookDir(rob, 0, 0)
 
     logging.info("The first search for sticks")
-    getSticks(rob)
+    getSticks(rob, minelogy_instance)
 
     logging.info("Trying to craft a crafting table")
     rob.craft('crafting_table')
@@ -349,7 +349,7 @@ if __name__ == '__main__':
     rob.stopMove()
 
     logging.info("Getting sticks once again")
-    getSticks(rob)
+    getSticks(rob, minelogy_instance)
 
     logging.info("Mining for iron")
     lookDir(rob, math.pi/4, 0.0)

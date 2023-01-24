@@ -8,11 +8,8 @@ from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
 
-from examples import minelogy
 from examples.goal import *
 
-def initialize_minelogy(mcver):
-    minelogy.initialize_minelogy(mcver)
 
 
 class LookPitch(RobGoal):
@@ -300,7 +297,7 @@ class JumpUpOrObtain(RobGoal):
         build_blocks = ['dirt', 'grass', 'stone', 'sand', 'sandstone', 'gravel']
         invent = rob.cached['getInventory'][0]
         for block in build_blocks:
-            item = minelogy.findInInventory(invent, {'type': block})
+            item = rob.minelogy_instance.findInInventory(invent, {'type': block})
             if item:
                 super().__init__(rob,
                     SAnd([ActT(['swapInventoryItems', '0', str(item['index'])], [], 0.2, True),
@@ -496,8 +493,8 @@ class SelectMineTool(RobGoal):
         los = self.rob.cached['getLineOfSights'][0]
         inv = self.rob.cached['getInventory'][0]
         if los is not None and 'type' in los and los['type'] != self.last_target and inv is not None:
-            mine_entry = minelogy.find_mine_by_block({'type': los['type']})
-            tool = minelogy.select_minetool(inv, mine_entry)
+            mine_entry = self.rob.minelogy_instance.find_mine_by_block({'type': los['type']})
+            tool = self.rob.minelogy_instance.select_minetool(inv, mine_entry)
             self.tool_idx = 0 if tool is None else tool['index']
             self.last_target = los['type']
             # TODO: if tool is None and mine_entry is not None:
@@ -586,7 +583,7 @@ class Obtain(Switcher):
 
     def update(self):
         invent = self.rob.waitNotNoneObserve('getInventory', False)
-        new_items = list(filter(lambda item: not minelogy.isInInventory(invent, item), self.items))
+        new_items = list(filter(lambda item: not self.rob.minelogy_instance.isInInventory(invent, item), self.items))
         if self.delegate is not None:
             # TODO TODO: the problem here is that the agent can decide to find log,
             # but encounter log2, start mining it and doesn't reconsider its plan
@@ -597,7 +594,7 @@ class Obtain(Switcher):
             self.stopDelegate = new_items != self.items
         if self.delegate is None:
             for item in new_items:
-                name = minelogy.get_otype(item)
+                name = self.rob.minelogy_instance.get_otype(item)
                 target = self.rob.nearestFromEntities(name)
                 if target is not None:
                     # self.delegate = ApproachPos(self.agent, target)
@@ -609,18 +606,18 @@ class Obtain(Switcher):
             best_craft = None
             best_lack = None
             for item in new_items:
-                for craft_entry in minelogy.find_crafts_by_result(item):
-                    lack_items = minelogy.lackCraftItems(invent, craft_entry)
+                for craft_entry in self.rob.minelogy_instance.find_crafts_by_result(item):
+                    lack_items = self.rob.minelogy_instance.lackCraftItems(invent, craft_entry)
                     if best_craft is None or len(best_lack) > len(lack_items):
                         best_craft = craft_entry
                         best_lack = lack_items
             if best_lack is not None:
                 if len(best_lack) == 0:
-                    t = minelogy.get_otype(best_craft[1])
-                    i = minelogy.findInInventory(invent, best_craft[0][0])
-                    t = minelogy.checkCraftType(t,i)
+                    t = self.rob.minelogy_instance.get_otype(best_craft[1])
+                    i = self.rob.minelogy_instance.findInInventory(invent, best_craft[0][0])
+                    t = self.rob.minelogy_instance.checkCraftType(t,i)
                     # t = i['variant'] + ' ' + t
-                    t = minelogy.addFuel(t, invent)
+                    t = self.rob.minelogy_instance.addFuel(t, invent)
                     self.delegate = ActT(['craft', t], [], 0.5, True)
                 else:
                     self.delegate = Obtain(self.agent, best_lack)
@@ -628,11 +625,9 @@ class Obtain(Switcher):
             best_goal = None
             best_diff = 10
             for item in new_items:
-                for mine_entry in minelogy.find_mines_by_result(item):
+                for mine_entry in self.rob.minelogy_instance.find_mines_by_result(item):
                     tool = mine_entry[0]['tools'][-1]
-                    # blocks = list(map(lambda b: minelogy.get_target_variants(b), mine_entry[0]['blocks']))
-                    # blocks = list(map(lambda b: b['type'], blocks))
-                    blocks = [minelogy.get_target_variants(b) for b in mine_entry[0]['blocks']]
+                    blocks = [self.rob.minelogy_instance.get_target_variants(b) for b in mine_entry[0]['blocks']]
                     depthmin = None
                     if 'depthmin' in blocks[0]:
                         depthmin = blocks[0]['depthmin']
@@ -640,13 +635,13 @@ class Obtain(Switcher):
                         blocks = [b['type'] for b in blocks[0]]
                     else:
                         blocks = [b['type'] for b in blocks]
-                    if tool is None or minelogy.isInInventory(invent, {'type': tool}):
+                    if tool is None or self.rob.minelogy_instance.isInInventory(invent, {'type': tool}):
                         # self.chooseTool(invent, tool)
                         if self.agent.nearestBlock(blocks) is not None:
                             diff = 0
                             goal = FindAndMine(self.agent, blocks, depthmin)
                         else:
-                            blocks2 = minelogy.assoc_blocks(blocks)
+                            blocks2 = self.rob.minelogy_instance.assoc_blocks(blocks)
                             if blocks2 != [] and self.agent.nearestBlock(blocks2) is not None:
                                 diff = 1
                             else:
@@ -656,7 +651,7 @@ class Obtain(Switcher):
                         diff = 3
                         goal = Obtain(self.agent, [{'type': tool}])
                     if blocks[0] == 'diamond_ore':
-                        sticks_in_inv = minelogy.findInInventory(invent, {'type': 'stick'})
+                        sticks_in_inv = self.rob.minelogy_instance.findInInventory(invent, {'type': 'stick'})
                         if sticks_in_inv is None:
                             diff = -1
                             goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 20}])

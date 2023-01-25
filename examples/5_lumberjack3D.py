@@ -7,7 +7,7 @@ import numpy
 import os
 from time import sleep, time
 import tagilmo.utils.mission_builder as mb
-from examples import minelogy
+from examples.minelogy import Minelogy
 from examples.agent import TAgent
 import logging
 from examples.log import setup_logger
@@ -461,9 +461,15 @@ class MineAround:
 
 
 class LJAgent(TAgent):
+    def __init__(self, miss, visualizer=None):
+        super().__init__(miss, visualizer)
+        self.mlogy = None
+
+    def set_mlogy(self, mlogy):
+        self.mlogy = mlogy
 
     def howtoMine(self, targ):
-        target = targ + minelogy.get_oatargets(targ[0]) # TODO?: other blocks?
+        target = targ + self.mlogy.get_oatargets(targ[0]) # TODO?: other blocks?
         # if t == 'log':
         #     target = targ + [{'type': 'log2'}, {'type': 'leaves'}, {'type': 'leaves2'}]
         # if t == 'stone':
@@ -473,10 +479,10 @@ class LJAgent(TAgent):
         # else:
         #     target = targ
         for targ in target:
-            t = minelogy.get_otype(targ)
+            t = self.mlogy.get_otype(targ)
             ray = self.rob.cached['getLineOfSights'][0]
             if (ray['hitType'] != 'MISS'):
-                if minelogy.matchEntity(ray, targ):
+                if self.mlogy.matchEntity(ray, targ):
                     if ray['inRange']:
                         return [['mine', [ray]]]
                     return [['mine', [ray]], ['approach', ray]]
@@ -506,7 +512,7 @@ class LJAgent(TAgent):
         acts = []
 
         for item in invent:
-            if not minelogy.matchEntity(item, target):
+            if not self.mlogy.matchEntity(item, target):
                 continue
             if 'quantity' in target:
                 if item['quantity'] < target['quantity']:
@@ -514,7 +520,7 @@ class LJAgent(TAgent):
             return acts + [['tool' if tool else 'inventory', item]]
 
         for ent in nearEnt:
-            if not minelogy.matchEntity(ent, target):
+            if not self.mlogy.matchEntity(ent, target):
                 continue
             return acts + [['approach', ent]]
 
@@ -528,8 +534,8 @@ class LJAgent(TAgent):
 
         # There can be multiple ways to craft something (e.g. planks from log or log2)
         best_way = None
-        for craft in minelogy.crafts:
-            if not minelogy.matchEntity(craft[1], target):
+        for craft in self.mlogy.crafts:
+            if not self.mlogy.matchEntity(craft[1], target):
                 continue
             next_acts = [['craft', target]]
             for ingrid in craft[0]:
@@ -539,7 +545,7 @@ class LJAgent(TAgent):
                     next_acts = None
                     break
                 if (act[-1][0] == 'approach') and (len(act) == 3):
-                    new_act_type = minelogy.checkCraftType(act[-3][1], act[-1][1])
+                    new_act_type = self.mlogy.checkCraftType(act[-3][1], act[-1][1])
                     if new_act_type is not None:
                         act[-3][1] = new_act_type
                 next_acts += act
@@ -552,8 +558,8 @@ class LJAgent(TAgent):
         if craft_only:
             return None
 
-        for mine in minelogy.mines:
-            if not minelogy.matchEntity(mine[1], target):
+        for mine in self.mlogy.mines:
+            if not self.mlogy.matchEntity(mine[1], target):
                 continue
             # TODO: there can be alternative blocks to mine (OR instead of AND)
             acts += self.howtoMine(mine[0]['blocks'])
@@ -647,16 +653,21 @@ class LJAgent(TAgent):
                 target = 'terminate'
                 continue
             if howto[-1][0] == 'search':
-                self.skill = NeuralSearch(self.rob, self.blockMem, minelogy.get_otlist(howto[-1][1]))
+                blocks = [block['type'] for block in self.mlogy.get_target_variants(howto[-1][1][0])]
+                self.skill = NeuralSearch(self.rob, self.blockMem, blocks)
                 continue
             if howto[-1][0] == 'craft':
-                t = minelogy.get_otype(howto[-1][1])
+                t = self.mlogy.get_otype(howto[-1][1])
                 invent = self.rob.cached['getInventory'][0]
-                for inv in invent:
-                    new_t = minelogy.checkCraftType(howto[-1][1], inv)
-                    if new_t is not None:
-                        t = minelogy.get_otype(new_t)
-                        break
+                t_recipes = self.mlogy.find_crafts_by_result(t)
+                for t_recipe in t_recipes:
+                    to_mine = t_recipe[0][0]
+                    for inv in invent:
+                        if self.mlogy.matchEntity(inv, to_mine):
+                            new_t = self.mlogy.checkCraftType(howto[-1][1], inv)
+                            if new_t is not None:
+                                t = self.mlogy.get_otype(new_t)
+                                break
                 self.rob.craft(t)
                 sleep(0.2)
                 continue
@@ -665,7 +676,7 @@ class LJAgent(TAgent):
                                 [howto[-1][1]['x'], howto[-1][1]['y'], howto[-1][1]['z']])
                 continue
             if howto[-1][0] == 'mine':
-                #self.skill = MineAround(self.rob, minelogy.get_otlist(howto[-1][1]))
+                #self.skill = MineAround(self.rob, self.mlogy.get_otlist(howto[-1][1]))
                 self.skill = MineAtSight(self.rob)
                 continue
             if self.skill is None:
@@ -691,6 +702,12 @@ if __name__ == '__main__':
     miss.setWorld(world1)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     agent = LJAgent(miss, visualizer=visualizer)
+
+    # minelogy initialization with current minecraft version
+    mcver = agent.getVersion()
+    mlogy = Minelogy(mcver)
+    agent.set_mlogy(mlogy)
+
     agent.rob.sendCommand("chat /difficulty peaceful")
     # agent.loop()
     agent.loop(target = {'type': 'wooden_pickaxe'})

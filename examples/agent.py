@@ -20,6 +20,12 @@ class TAgent:
         self.blockMem = NoticeBlocks()
         self.visualizer = visualizer
 
+    def getVersion(self):
+        return self.rob.getVersion()
+
+    def set_mlogy(self, mlogy):
+        self.rob.set_mlogy(mlogy)
+
     def visualize(self):
         if self.visualizer is None:
             return

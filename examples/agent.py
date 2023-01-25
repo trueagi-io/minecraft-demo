@@ -23,8 +23,8 @@ class TAgent:
     def getVersion(self):
         return self.rob.getVersion()
 
-    def set_minelogy_instance(self, minelogy_instance):
-        self.rob.set_minelogy_instance(minelogy_instance)
+    def set_mlogy(self, mlogy):
+        self.rob.set_mlogy(mlogy)
 
     def visualize(self):
         if self.visualizer is None:

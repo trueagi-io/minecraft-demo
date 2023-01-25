@@ -7,7 +7,7 @@ from examples.vis import Visualizer
 
 from examples.skills import *
 from examples.agent import TAgent
-from examples.minelogy import minelogy
+from examples.minelogy import Minelogy
 
 SCALE = 3
 
@@ -58,8 +58,8 @@ if __name__ == '__main__':
     agent.rob.sendCommand("jump 0")
 
     #initialize_minelogy
-    minelogy_instance = minelogy(agent.getVersion())
-    agent.set_minelogy_instance(minelogy_instance)
+    mlogy = Minelogy(agent.getVersion())
+    agent.set_mlogy(mlogy)
 
     agent.run()
     visualizer.stop()

@@ -1,6 +1,6 @@
 import minecraft_data
 
-class minelogy():
+class Minelogy():
     def __init__(self, mcver):
         self.log_names = []
         self.planks_names = []
@@ -199,7 +199,7 @@ class minelogy():
         if t == 'log':
             return self.log_names_t + self.leaves_names_t
         if t == 'stone':
-            return [{'type': 'dirt'}, {'type': 'grass'}]
+            return [{'type': 'dirt'}, {'type': 'grass'}, {'type': 'grass_block'}]
         elif t == 'coal_ore' or t == 'iron_ore':
             return [{'type': 'stone'}]
         return []
@@ -365,7 +365,6 @@ class minelogy():
             or to_craft_dict['type'] == "slab"):
             to_mine_type = self.get_otype(to_mine)
             to_craft_type = self.get_otype(to_craft_dict)
-
             if (to_mine_type in self.leaves_names) or (to_mine_type in self.log_names):
                 if self.matchEntity(to_craft_dict, self.planks_names_t[0]):
                     to_craft_type = self.get_new_type(to_mine) + "_" + to_craft_type

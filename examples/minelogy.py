@@ -96,7 +96,7 @@ class Minelogy():
                   {'type': 'wheat_seeds'}
                   ),
                  ]
-
+        # self.crafts = []
         self.crafts = [([{'type': 'log', 'quantity': 1}],
                    {'type': 'planks', 'quantity': 4}),
                   ([{'type': 'planks', 'quantity': 2}],
@@ -159,6 +159,30 @@ class Minelogy():
                    {"type": "boat", "quantity": 1})
                   ]
         self.initialize_minelogy(mcver)
+
+    def set_recipes(self, mcrecipes):
+        self.crafts = []
+        for mcrecipe in mcrecipes:
+            craft_name = mcrecipe['name'].split('.')[-1]
+            craft_quantity = mcrecipe['count']
+            ingredients = {}
+            craft_ingredients = []
+            for material in mcrecipe['ingredients']:
+                if len(material) == 0:
+                    continue
+                material_name = material[0]['type'].split(".")[-1]
+                if material_name not in ingredients:
+                    ingredients[material_name] = 1
+                else:
+                    ingredients[material_name] += 1
+            for ingredient in ingredients:
+                craft_ingredients.append({'type' : ingredient, 'quantity' : ingredients[ingredient]})
+            if len(craft_ingredients) == 0:
+                continue
+            craft_entity = (craft_ingredients,
+                    {'type': craft_name, 'quantity': craft_quantity})
+            if (craft_entity not in self.crafts) and (len(craft_entity) > 0):
+                self.crafts.append(craft_entity)
 
     def initialize_minelogy(self, mc_ver):
         mcd = minecraft_data(mc_ver.split("-")[-1])

@@ -57,8 +57,19 @@ if __name__ == '__main__':
     sleep(0.1)
     agent.rob.sendCommand("jump 0")
 
+
     #initialize_minelogy
     mlogy = Minelogy(agent.getVersion())
+    '''
+    Currently we don't use all recipes from the game since there are some issues with
+    agent not be able to work properly with all recipes available
+    '''
+
+    # agent.rob.sendCommand('recipes')
+    # sleep(2)
+    # recipes = agent.rob.mc.observe[0]['recipes']
+    # mlogy.set_recipes(recipes)
+
     agent.set_mlogy(mlogy)
 
     agent.run()

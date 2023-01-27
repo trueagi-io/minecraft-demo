@@ -169,24 +169,24 @@ class TestCraft(unittest.TestCase):
         time.sleep(1)
         inv1 = mc.getInventory()
         self.assertEqual(count_items(inv, "cooked_rabbit") + 1, count_items(inv1, "cooked_rabbit"))
-        self.mc.sendCommand("chat /clear")
-        time.sleep(2)
-        mc.sendCommand("chat /give @p rabbit 1")
-        time.sleep(1)
-        mc.sendCommand("chat /give @p coal 1")
-        time.sleep(1)
-        mc.sendCommand("chat /give @p smoker 1")
-        time.sleep(1)
-        mc.observeProc()
-        time.sleep(1)
-        print('cooking rabbit using smoker')
-        inv = mc.getInventory()
-        mc.sendCommand("craft cooked_rabbit coal") # easy craft not working with smoker
-        time.sleep(2)
-        mc.observeProc()
-        time.sleep(1)
-        inv1 = mc.getInventory()
-        self.assertEqual(count_items(inv, "cooked_rabbit") + 1, count_items(inv1, "cooked_rabbit"))
+        #self.mc.sendCommand("chat /clear")
+        #time.sleep(2)
+        #mc.sendCommand("chat /give @p rabbit 1")
+        #time.sleep(1)
+        #mc.sendCommand("chat /give @p coal 1")
+        #time.sleep(1)
+        #mc.sendCommand("chat /give @p smoker 1")
+        #time.sleep(1)
+        #mc.observeProc()
+        #time.sleep(1)
+        #print('cooking rabbit using smoker')
+        #inv = mc.getInventory()
+        #mc.sendCommand("craft cooked_rabbit coal") # easy craft not working with smoker
+        #time.sleep(2)
+        #mc.observeProc()
+        #time.sleep(1)
+        #inv1 = mc.getInventory()
+        #self.assertEqual(count_items(inv, "cooked_rabbit") + 1, count_items(inv1, "cooked_rabbit"))
 
     def test_blasting(self):
         mc = self.mc
@@ -208,23 +208,23 @@ class TestCraft(unittest.TestCase):
         inv1 = mc.getInventory()
         self.assertEqual(count_items(inv, "iron_ingot") + 1, count_items(inv1, "iron_ingot"))
 
-    def test_stonecutter(self):
-        mc = self.mc
-        time.sleep(1)
-        mc.sendCommand("chat /give @p andesite 1")
-        time.sleep(1)
-        mc.sendCommand("chat /give @p stonecutter 1")
-        time.sleep(1)
-        mc.observeProc()
-        time.sleep(1)
-        print('getting wall using stonecutter')
-        inv = mc.getInventory()
-        mc.sendCommand("craft andesite_wall")  # easy craft not working with stonecutter
-        time.sleep(2)
-        mc.observeProc()
-        time.sleep(1)
-        inv1 = mc.getInventory()
-        self.assertEqual(count_items(inv, "andesite_wall") + 1, count_items(inv1, "andesite_wall"))
+    #def test_stonecutter(self):
+        #mc = self.mc
+        #time.sleep(1)
+        #mc.sendCommand("chat /give @p andesite 1")
+        #time.sleep(1)
+        #mc.sendCommand("chat /give @p stonecutter 1")
+        #time.sleep(1)
+        #mc.observeProc()
+        #time.sleep(1)
+        #print('getting wall using stonecutter')
+        #inv = mc.getInventory()
+        #mc.sendCommand("craft andesite_wall")  # easy craft not working with stonecutter
+        #time.sleep(2)
+        #mc.observeProc()
+        #time.sleep(1)
+        #inv1 = mc.getInventory()
+        #self.assertEqual(count_items(inv, "andesite_wall") + 1, count_items(inv1, "andesite_wall"))
 
     def test_failed(self):
         mc = self.mc

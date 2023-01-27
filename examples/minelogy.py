@@ -160,11 +160,33 @@ class Minelogy():
                   ]
         self.initialize_minelogy(mcver)
 
+    def add_craft_tool(self, craft_tool):
+        ingredient = None
+        if craft_tool == 'crafting':
+            return ingredient
+        elif craft_tool == 'smelting':
+            ingredient = [{'type': 'furnace', 'quantity': 1},
+                    {'type': 'fuel', 'quantity': 1}]
+        elif craft_tool == 'stonecutting':
+            ingredient = [{'type': 'stonecutter', 'quantity': 1}]
+        elif craft_tool == 'blasting':
+            ingredient = [{'type': 'blast_furnace', 'quantity': 1}]
+        elif craft_tool == 'smoking':
+            ingredient = [{'type': 'smoker', 'quantity': 1}, #Probably Smoker can be replaced by furnace?
+                          {'type': 'fuel', 'quantity': 1}]
+        elif craft_tool == 'campfire_cooking':
+            ingredient = [{'type': 'campfire', 'quantity': 1}]
+        else:
+            print("unknown craft_tool detected")
+        return ingredient
+
     def set_recipes(self, mcrecipes):
         self.crafts = []
         for mcrecipe in mcrecipes:
             craft_name = mcrecipe['name'].split('.')[-1]
             craft_quantity = mcrecipe['count']
+            craft_tool = mcrecipe['recipe_type']
+            craft_group = mcrecipe['group'] # Need to understand how this could be used
             ingredients = {}
             craft_ingredients = []
             for material in mcrecipe['ingredients']:
@@ -179,6 +201,9 @@ class Minelogy():
                 craft_ingredients.append({'type' : ingredient, 'quantity' : ingredients[ingredient]})
             if len(craft_ingredients) == 0:
                 continue
+            additional_tool = self.add_craft_tool(craft_tool)
+            if additional_tool is not None:
+                craft_ingredients.extend(additional_tool)
             craft_entity = (craft_ingredients,
                     {'type': craft_name, 'quantity': craft_quantity})
             if (craft_entity not in self.crafts) and (len(craft_entity) > 0):

@@ -1,7 +1,5 @@
-import minecraft_data
-
 class Minelogy():
-    def __init__(self, mcver):
+    def __init__(self, item_list):
         self.log_names = []
         self.planks_names = []
         self.leaves_names = []
@@ -96,7 +94,6 @@ class Minelogy():
                   {'type': 'wheat_seeds'}
                   ),
                  ]
-        # self.crafts = []
         self.crafts = [([{'type': 'log', 'quantity': 1}],
                    {'type': 'planks', 'quantity': 4}),
                   ([{'type': 'planks', 'quantity': 2}],
@@ -158,7 +155,7 @@ class Minelogy():
                   ([{"type": "planks", "quantity": 5}],
                    {"type": "boat", "quantity": 1})
                   ]
-        self.initialize_minelogy(mcver)
+        self.initialize_minelogy(item_list)
 
     def add_craft_tool(self, craft_tool):
         ingredient = None
@@ -209,10 +206,8 @@ class Minelogy():
             if (craft_entity not in self.crafts) and (len(craft_entity) > 0):
                 self.crafts.append(craft_entity)
 
-    def initialize_minelogy(self, mc_ver):
-        mcd = minecraft_data(mc_ver.split("-")[-1])
-        for item in mcd.items_list:
-            iname = item['name']
+    def initialize_minelogy(self, item_list):
+        for iname in item_list:
             if 'log' in iname:
                 self.log_names.append(iname)
                 self.log_names_t.append({'type': iname})

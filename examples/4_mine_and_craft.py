@@ -300,10 +300,6 @@ if __name__ == '__main__':
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     mc = MCConnector(miss)
     mc.safeStart()
-    
-    # minelogy initialization with current minecraft version
-    mcver = mc.getVersion()
-    mlogy = Minelogy(mcver)
 
     rob = RobustObserver(mc)
     # fixing bug with falling through while reconnecting
@@ -313,6 +309,14 @@ if __name__ == '__main__':
     sleep(0.1)
     rob.sendCommand("jump 0")
     lookDir(rob, 0, 0)
+
+    # initialize minelogy
+    rob.sendCommand('item_list')
+    sleep(2)
+    rob.observeProcCached()
+    item_list = mc.observe[0]['item_list']
+    mlogy = Minelogy(item_list)
+    rob.sendCommand('item_list off')
 
     logging.info("The first search for sticks")
     getSticks(rob, mlogy)

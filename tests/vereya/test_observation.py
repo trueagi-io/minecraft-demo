@@ -76,6 +76,13 @@ class TestData(unittest.TestCase):
         command = self.rob.waitNotNoneObserve('getChat')
         self.assertEqual(command[0], "get wooden_axe")
 
+    def test_observation_from_item(self):
+        self.mc.sendCommand("item_list")
+        time.sleep(2)
+        self.rob.observeProcCached()
+        item_list = self.rob.mc.observe[0]['item_list']
+        self.assertGreater(len(item_list), 0, "item_list len")
+
     def test_game_state(self):
         self.mc.observeProc()
         self.assertTrue(self.mc.getFullStat(key="isPaused") is not None)

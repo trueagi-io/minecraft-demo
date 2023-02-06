@@ -58,11 +58,8 @@ if __name__ == '__main__':
     agent.rob.sendCommand("jump 0")
 
     #initialize_minelogy
-    agent.rob.sendCommand('item_list')
-    sleep(2)
-    item_list = agent.rob.mc.observe[0]['item_list']
+    item_list = agent.rob.mc.getItemList()
     mlogy = Minelogy(item_list)
-    agent.rob.sendCommand('item_list off')
 
     '''
     Currently we don't use all recipes from the game since there are some issues with

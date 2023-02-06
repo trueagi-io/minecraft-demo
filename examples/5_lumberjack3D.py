@@ -704,12 +704,8 @@ if __name__ == '__main__':
     agent = LJAgent(miss, visualizer=visualizer)
 
     # initialize minelogy
-    agent.rob.sendCommand('item_list')
-    sleep(2)
-    agent.rob.observeProcCached()
-    item_list = agent.rob.mc.observe[0]['item_list']
+    item_list = agent.rob.mc.getItemList()
     mlogy = Minelogy(item_list)
-    agent.rob.sendCommand('item_list off')
     agent.set_mlogy(mlogy)
 
     agent.rob.sendCommand("chat /difficulty peaceful")

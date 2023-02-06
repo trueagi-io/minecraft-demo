@@ -311,12 +311,8 @@ if __name__ == '__main__':
     lookDir(rob, 0, 0)
 
     # initialize minelogy
-    rob.sendCommand('item_list')
-    sleep(2)
-    rob.observeProcCached()
-    item_list = mc.observe[0]['item_list']
+    item_list = rob.mc.getItemList()
     mlogy = Minelogy(item_list)
-    rob.sendCommand('item_list off')
 
     logging.info("The first search for sticks")
     getSticks(rob, mlogy)

@@ -189,9 +189,9 @@ if __name__ == '__main__':
     agent = Explorer(miss, visualizer=visualizer)
     sleep(4)
 
-    # minelogy initialization with current minecraft version
-    mcver = agent.getVersion()
-    mlogy = Minelogy(mcver) # to initialize for usage in this script
+    # initialize minelogy
+    item_list = agent.rob.mc.getItemList()
+    mlogy = Minelogy(item_list)
     agent.set_mlogy(mlogy)
     agent.run()
 

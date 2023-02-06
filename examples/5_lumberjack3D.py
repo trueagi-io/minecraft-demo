@@ -703,9 +703,9 @@ if __name__ == '__main__':
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     agent = LJAgent(miss, visualizer=visualizer)
 
-    # minelogy initialization with current minecraft version
-    mcver = agent.getVersion()
-    mlogy = Minelogy(mcver)
+    # initialize minelogy
+    item_list = agent.rob.mc.getItemList()
+    mlogy = Minelogy(item_list)
     agent.set_mlogy(mlogy)
 
     agent.rob.sendCommand("chat /difficulty peaceful")

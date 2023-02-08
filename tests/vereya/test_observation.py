@@ -72,7 +72,6 @@ class TestData(unittest.TestCase):
 
     def test_observation_from_chat(self):
         self.mc.sendCommand("chat get wooden_axe")
-        self.rob.observeProcCached()
         command = self.rob.waitNotNoneObserve('getChat')
         self.assertEqual(command[0], "get wooden_axe")
 

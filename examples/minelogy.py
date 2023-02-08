@@ -185,13 +185,13 @@ class Minelogy():
             if craft_entity is not None:
                 self.crafts.append(craft_entity)
 
-    def set_recipes_for_items(self, items_to_add, mcrecipes, clear_recipes=False):  # here we're sending list of items we want to add recipes for
+    def set_recipes_for_items(self, items_to_add, mcrecipes, clear_recipes=False, strict_matching=True):  # here we're sending list of items we want to add recipes for
         if clear_recipes:
             self.crafts = []
         for mcrecipe in mcrecipes:
             craft_name = mcrecipe['name'].split('.')[-1]
             # this condition is probably too weak since instead of adding just "stick" we are also adding 'warped_fungus_on_a_stick'
-            if craft_name in items_to_add or craft_name.split("_")[-1] in items_to_add:
+            if (craft_name in items_to_add) or (not strict_matching and craft_name.split("_")[-1] in items_to_add):
                 craft_entity = self.set_one_recipe(mcrecipe, craft_name)
                 if craft_entity is not None:
                     self.crafts.append(craft_entity)

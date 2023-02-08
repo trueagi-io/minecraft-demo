@@ -69,6 +69,34 @@ if __name__ == '__main__':
     # sleep(2)
     # recipes = agent.rob.mc.observe[0]['recipes']
     # mlogy.set_recipes(recipes)
+    # items_to_craft = ["planks",
+    #                  "stick",
+    #                  "wooden_axe",
+    #                  "wooden_pickaxe",
+    #                  "wooden_shovel",
+    #                  "stone_axe",
+    #                  "stone_pickaxe",
+    #                  "stone_shovel",
+    #                  "iron_ingot",
+    #                  "iron_axe",
+    #                  "furnace",
+    #                  "iron_pickaxe",
+    #                  "iron_shovel",
+    #                  "torch",
+    #                  "pressure_plate",
+    #                  "slab",
+    #                  "button",
+    #                  "door",
+    #                  "trapdoor",
+    #                  "wall",
+    #                  "lever",
+    #                  "pumpkin_seeds",
+    #                  "glass",
+    #                  "fence_gate",
+    #                  "sign",
+    #                  "boat"
+    #                  ]
+    # mlogy.set_recipes_for_items(items_to_craft, recipes)
 
     agent.set_mlogy(mlogy)
 

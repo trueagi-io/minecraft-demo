@@ -96,7 +96,7 @@ if __name__ == '__main__':
     #                  "sign",
     #                  "boat"
     #                  ]
-    # mlogy.set_recipes_for_items(items_to_craft, recipes)
+    # mlogy.set_recipes_for_items(items_to_craft, recipes, True)
 
     agent.set_mlogy(mlogy)
 

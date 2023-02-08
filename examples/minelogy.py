@@ -181,59 +181,48 @@ class Minelogy():
         self.crafts = []
         for mcrecipe in mcrecipes:
             craft_name = mcrecipe['name'].split('.')[-1]
-            craft_quantity = mcrecipe['count']
-            craft_tool = mcrecipe['recipe_type']
-            craft_group = mcrecipe['group'] # Need to understand how this could be used
-            ingredients = {}
-            craft_ingredients = []
-            for material in mcrecipe['ingredients']:
-                if len(material) == 0:
-                    continue
-                material_name = material[0]['type'].split(".")[-1]
-                if material_name not in ingredients:
-                    ingredients[material_name] = 1
-                else:
-                    ingredients[material_name] += 1
-            for ingredient in ingredients:
-                craft_ingredients.append({'type' : ingredient, 'quantity' : ingredients[ingredient]})
-            if len(craft_ingredients) == 0:
-                continue
-            additional_tool = self.add_craft_tool(craft_tool)
-            if additional_tool is not None:
-                craft_ingredients.extend(additional_tool)
-            craft_entity = (craft_ingredients,
-                    {'type': craft_name, 'quantity': craft_quantity})
-            if (craft_entity not in self.crafts) and (len(craft_entity) > 0):
+            craft_entity = self.set_one_recipe(mcrecipe, craft_name)
+            if craft_entity is not None:
                 self.crafts.append(craft_entity)
 
-    def set_recipes_for_items(self, items_to_add, mcrecipes):  # here we're sending list of items we want to add recipes for
+    def set_recipes_for_items(self, items_to_add, mcrecipes, clear_recipes=False):  # here we're sending list of items we want to add recipes for
+        if clear_recipes:
+            self.crafts = []
         for mcrecipe in mcrecipes:
             craft_name = mcrecipe['name'].split('.')[-1]
+            # this condition is probably too weak since instead of adding just "stick" we are also adding 'warped_fungus_on_a_stick'
             if craft_name in items_to_add or craft_name.split("_")[-1] in items_to_add:
-                craft_quantity = mcrecipe['count']
-                craft_tool = mcrecipe['recipe_type']
-                craft_group = mcrecipe['group'] # Need to understand how this could be used
-                ingredients = {}
-                craft_ingredients = []
-                for material in mcrecipe['ingredients']:
-                    if len(material) == 0:
-                        continue
-                    material_name = material[0]['type'].split(".")[-1]
-                    if material_name not in ingredients:
-                        ingredients[material_name] = 1
-                    else:
-                        ingredients[material_name] += 1
-                for ingredient in ingredients:
-                    craft_ingredients.append({'type' : ingredient, 'quantity' : ingredients[ingredient]})
-                if len(craft_ingredients) == 0:
-                    continue
-                additional_tool = self.add_craft_tool(craft_tool)
-                if additional_tool is not None:
-                    craft_ingredients.extend(additional_tool)
-                craft_entity = (craft_ingredients,
-                        {'type': craft_name, 'quantity': craft_quantity})
-                if (craft_entity not in self.crafts) and (len(craft_entity) > 0):
+                craft_entity = self.set_one_recipe(mcrecipe, craft_name)
+                if craft_entity is not None:
                     self.crafts.append(craft_entity)
+
+    def set_one_recipe(self, mcrecipe, craft_name):
+        craft_quantity = mcrecipe['count']
+        craft_tool = mcrecipe['recipe_type']
+        craft_group = mcrecipe['group']  # Need to understand how this could be used
+        ingredients = {}
+        craft_ingredients = []
+        for material in mcrecipe['ingredients']:
+            if len(material) == 0:
+                continue
+            material_name = material[0]['type'].split(".")[-1]
+            if material_name not in ingredients:
+                ingredients[material_name] = 1
+            else:
+                ingredients[material_name] += 1
+        for ingredient in ingredients:
+            craft_ingredients.append({'type': ingredient, 'quantity': ingredients[ingredient]})
+        if len(craft_ingredients) == 0:
+            return None
+        additional_tool = self.add_craft_tool(craft_tool)
+        if additional_tool is not None:
+            craft_ingredients.extend(additional_tool)
+        craft_entity = (craft_ingredients,
+                        {'type': craft_name, 'quantity': craft_quantity})
+        if (craft_entity not in self.crafts) and (len(craft_entity) > 0):
+            return craft_entity
+        else:
+            return None
 
     def initialize_minelogy(self, item_list):
         for iname in item_list:

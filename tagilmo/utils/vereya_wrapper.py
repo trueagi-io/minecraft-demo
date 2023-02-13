@@ -260,7 +260,6 @@ class MCConnector:
 
     def getItemList(self, nAgent=0):
         self.sendCommand('item_list')
-        self.observeProc(nAgent)
         if self.isItemsListAvailable(nAgent):
             observations = self.observe[nAgent]
             item_list = observations['item_list']
@@ -271,8 +270,7 @@ class MCConnector:
 
     def getRecipeList(self, nAgent=0):
         self.sendCommand('recipes')
-        self.observeProc(nAgent)
-        if self.isItemsListAvailable(nAgent):
+        if self.isRecipesListAvailable(nAgent):
             observations = self.observe[nAgent]
             recipes = observations['recipes']
             self.sendCommand('recipes off')
@@ -338,7 +336,7 @@ class RobustObserver:
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
                         'getItemList']
-        self.canBeNone = ['getLineOfSights', 'getChat']
+        self.canBeNone = ['getLineOfSights', 'getChat', 'getItemList', 'getRecipeList']
 
         if not self.mc.supportsVideo():
             self.canBeNone.append('getImageFrame')

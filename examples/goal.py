@@ -21,7 +21,7 @@ class Goal:
             # `update` should not necessarily be implemented
             pass
         else:
-            self.delegate.update()
+            return self.delegate.update()
 
     def act(self):
         if self.delegate is None:

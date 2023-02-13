@@ -252,13 +252,18 @@ class MCConnector:
         else:
             return None
 
-    def getItemList(self, nAgent=0):
+    def getItemAndRecipeList(self, nAgent=0):
         self.sendCommand('item_list')
+        self.sendCommand('recipes')
         time.sleep(2)
         self.observeProc(nAgent)
-        item_list = self.observe[nAgent]['item_list']
+        time.sleep(2)
+        observations = self.observe[nAgent]
+        item_list = observations['item_list']
+        recipes = observations['recipes']
         self.sendCommand('item_list off')
-        return item_list
+        self.sendCommand('recipes off')
+        return item_list, recipes
 
     def isInventoryAvailable(self, nAgent=0):
         return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]

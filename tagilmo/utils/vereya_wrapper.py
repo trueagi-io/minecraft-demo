@@ -300,6 +300,12 @@ class MCConnector:
         if idx < len(self.agent_hosts):
             self.agent_hosts[idx].stop()
 
+    def getHumanInputs(self, nAgent=0):
+        if self.observe[nAgent] is not None:
+            data = self.observe[nAgent]
+            if "input_events" in data:
+                return data["input_events"]
+
 
 class RobustObserver:
 
@@ -316,8 +322,8 @@ class RobustObserver:
         self.nAgent = nAgent
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
-                        'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat']
-        self.canBeNone = ['getLineOfSights', 'getChat']
+                        'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getHumanInputs']
+        self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs']
 
         if not self.mc.supportsVideo():
             self.canBeNone.append('getImageFrame')

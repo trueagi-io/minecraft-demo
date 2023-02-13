@@ -88,7 +88,7 @@ class TestQuit(unittest.TestCase):
             self.mc.observeProc()
             if self.mc.observe[0] is None:
                 continue
-            obs = self.mc.observe[0].get("input_events", None)
+            obs = self.mc.getHumanInputs()
             if obs is not None:
                 print(obs)
         self.mc.sendCommand("quit")

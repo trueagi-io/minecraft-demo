@@ -252,18 +252,33 @@ class MCConnector:
         else:
             return None
 
-    def getItemAndRecipeList(self, nAgent=0):
+    def isItemsListAvailable(self, nAgent=0):
+        return not self.observe[nAgent] is None and 'item_list' in self.observe[nAgent]
+
+    def isRecipesListAvailable(self, nAgent=0):
+        return not self.observe[nAgent] is None and 'recipes' in self.observe[nAgent]
+
+    def getItemList(self, nAgent=0):
         self.sendCommand('item_list')
-        self.sendCommand('recipes')
-        time.sleep(2)
         self.observeProc(nAgent)
-        time.sleep(2)
-        observations = self.observe[nAgent]
-        item_list = observations['item_list']
-        recipes = observations['recipes']
-        self.sendCommand('item_list off')
-        self.sendCommand('recipes off')
-        return item_list, recipes
+        if self.isItemsListAvailable(nAgent):
+            observations = self.observe[nAgent]
+            item_list = observations['item_list']
+            self.sendCommand('item_list off')
+            return item_list
+        else:
+            return None
+
+    def getRecipeList(self, nAgent=0):
+        self.sendCommand('recipes')
+        self.observeProc(nAgent)
+        if self.isItemsListAvailable(nAgent):
+            observations = self.observe[nAgent]
+            recipes = observations['recipes']
+            self.sendCommand('recipes off')
+            return recipes
+        else:
+            return None
 
     def isInventoryAvailable(self, nAgent=0):
         return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]
@@ -321,7 +336,8 @@ class RobustObserver:
         self.nAgent = nAgent
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
-                        'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat']
+                        'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
+                        'getItemList']
         self.canBeNone = ['getLineOfSights', 'getChat']
 
         if not self.mc.supportsVideo():

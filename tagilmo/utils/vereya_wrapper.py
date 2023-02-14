@@ -252,13 +252,31 @@ class MCConnector:
         else:
             return None
 
+    def isItemsListAvailable(self, nAgent=0):
+        return not self.observe[nAgent] is None and 'item_list' in self.observe[nAgent]
+
+    def isRecipesListAvailable(self, nAgent=0):
+        return not self.observe[nAgent] is None and 'recipes' in self.observe[nAgent]
+
     def getItemList(self, nAgent=0):
         self.sendCommand('item_list')
-        time.sleep(2)
-        self.observeProc(nAgent)
-        item_list = self.observe[nAgent]['item_list']
-        self.sendCommand('item_list off')
-        return item_list
+        if self.isItemsListAvailable(nAgent):
+            observations = self.observe[nAgent]
+            item_list = observations['item_list']
+            self.sendCommand('item_list off')
+            return item_list
+        else:
+            return None
+
+    def getRecipeList(self, nAgent=0):
+        self.sendCommand('recipes')
+        if self.isRecipesListAvailable(nAgent):
+            observations = self.observe[nAgent]
+            recipes = observations['recipes']
+            self.sendCommand('recipes off')
+            return recipes
+        else:
+            return None
 
     def isInventoryAvailable(self, nAgent=0):
         return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]
@@ -322,8 +340,9 @@ class RobustObserver:
         self.nAgent = nAgent
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
-                        'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getHumanInputs']
-        self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs']
+                        'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
+                        'getItemList', 'getHumanInputs']
+        self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList']
 
         if not self.mc.supportsVideo():
             self.canBeNone.append('getImageFrame')

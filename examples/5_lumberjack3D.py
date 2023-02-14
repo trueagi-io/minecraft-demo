@@ -15,6 +15,8 @@ from examples.vis import Visualizer
 
 from tagilmo.utils.mathutils import *
 
+from item_list_to_craft import items_to_craft
+
 SCALE = 4
 
 class MoveForward:
@@ -704,8 +706,9 @@ if __name__ == '__main__':
     agent = LJAgent(miss, visualizer=visualizer)
 
     # initialize minelogy
-    item_list = agent.rob.mc.getItemList()
-    mlogy = Minelogy(item_list)
+    item_list = agent.rob.waitNotNoneObserve('getItemList', False)
+    recipes = agent.rob.waitNotNoneObserve('getRecipeList', False)
+    mlogy = Minelogy(item_list, items_to_craft, recipes)
     agent.set_mlogy(mlogy)
 
     agent.rob.sendCommand("chat /difficulty peaceful")

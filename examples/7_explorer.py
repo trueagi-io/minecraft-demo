@@ -12,6 +12,8 @@ from examples.goal import *
 from examples.skills import *
 from examples.agent import TAgent
 
+from item_list_to_craft import items_to_craft
+
 class StaticKnowledge:
 
     ID_PARAMS = ['source', 'type', 'name', 'hitType', 'variant'] # + prop_type?
@@ -190,8 +192,9 @@ if __name__ == '__main__':
     sleep(4)
 
     # initialize minelogy
-    item_list = agent.rob.mc.getItemList()
-    mlogy = Minelogy(item_list)
+    item_list = agent.rob.waitNotNoneObserve('getItemList', False)
+    recipes = agent.rob.waitNotNoneObserve('getRecipeList', False)
+    mlogy = Minelogy(item_list, items_to_craft, recipes)
     agent.set_mlogy(mlogy)
     agent.run()
 

@@ -576,10 +576,23 @@ class FindAndMine(Switcher):
 
 class Obtain(Switcher):
 
-    def __init__(self, agent, items):
+    def __init__(self, agent, items, rec_depth=0, depthlimit=None):
         super().__init__(agent.rob)
         self.agent = agent
         self.items = items
+        self.depthlimit = depthlimit
+        self.rec_depth = rec_depth
+
+    def __short_search__(self, item_to_obtain):
+        # tmp_items = self.items
+        # self.items = item_to_obtain
+        # tmp_depthlimit = self.depthlimit
+        # self.depthlimit = 10
+        short_obtain = Obtain(self.agent, item_to_obtain, 0, 10)
+        # check = self.update()
+        # self.depthlimit = tmp_depthlimit
+        # self.items = tmp_items
+        return short_obtain.update()
 
     def update(self):
         invent = self.rob.waitNotNoneObserve('getInventory', False)
@@ -598,6 +611,8 @@ class Obtain(Switcher):
                 target = self.rob.nearestFromEntities(name)
                 if target is not None:
                     # self.delegate = ApproachPos(self.agent, target)
+                    if self.depthlimit is not None:
+                        return True
                     self.delegate = PickNear(self.agent, [name]) #TODO: add radius?
                     break
         if self.delegate is None:
@@ -608,11 +623,15 @@ class Obtain(Switcher):
             for item in new_items:
                 for craft_entry in self.rob.mlogy.find_crafts_by_result(item):
                     lack_items = self.rob.mlogy.lackCraftItems(invent, craft_entry)
+                    if not self.__short_search__(lack_items) and lack_items != []:
+                        continue
                     if best_craft is None or len(best_lack) > len(lack_items):
                         best_craft = craft_entry
                         best_lack = lack_items
             if best_lack is not None:
                 if len(best_lack) == 0:
+                    if self.depthlimit is not None:
+                        return True
                     t = self.rob.mlogy.get_otype(best_craft[1])
                     i = self.rob.mlogy.findInInventory(invent, best_craft[0][0])
                     t = self.rob.mlogy.checkCraftType(t,i)
@@ -620,7 +639,7 @@ class Obtain(Switcher):
                     t = self.rob.mlogy.addFuel(t, invent)
                     self.delegate = ActT(['craft', t], [], 0.5, True)
                 else:
-                    self.delegate = Obtain(self.agent, best_lack)
+                    self.delegate = Obtain(self.agent, best_lack, self.rec_depth+1, self.depthlimit)
         if self.delegate is None:
             best_goal = None
             best_diff = 10
@@ -649,24 +668,31 @@ class Obtain(Switcher):
                             goal = FindAndMine(self.agent, blocks + blocks2, depthmin)
                     else:
                         diff = 3
-                        goal = Obtain(self.agent, [{'type': tool}])
+                        goal = Obtain(self.agent, [{'type': tool}], self.rec_depth+1, self.depthlimit)
                     if blocks[0] == 'diamond_ore':
                         sticks_in_inv = self.rob.mlogy.findInInventory(invent, {'type': 'stick'})
                         if sticks_in_inv is None:
                             diff = -1
-                            goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 20}])
+                            goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 20}], self.rec_depth+1, self.depthlimit)
                         elif sticks_in_inv['quantity'] < 5:
                             diff = -1
-                            goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 20}])
+                            goal = Obtain(self.agent, [{'type': 'stick', 'quantity': 20}], self.rec_depth+1, self.depthlimit)
                     if diff < best_diff:
                         best_diff = diff
                         best_goal = goal
+            if isinstance(best_goal, FindAndMine) and self.depthlimit is not None:
+                return True
             self.delegate = best_goal
         if self.delegate is None and new_items != []:
             logging.warn("PANIC: don't know how to obtain %s", str(new_items))
             new_items = []
         self.items = new_items
-        super().update()
+        if new_items == []:
+            return False
+        if self.depthlimit is not None:
+            if self.rec_depth >= self.depthlimit:
+                return False
+        return super().update()
 
     def finished(self):
         return self.items == []

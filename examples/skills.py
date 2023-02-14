@@ -469,8 +469,8 @@ class PickNear(Switcher):
         # TODO: reuse rob.nearestFromEntities ?
         for entity in nearEnt:
             # TODO? add items ignored by *?
-            if entity['name'] in self.items or \
-               ('life' not in entity and self.items[0] == '*'):
+            if (entity['name'] in self.items or \
+               ('life' not in entity and self.items[0] == '*')) and entity['type'] == 'item':
                    target = entity
                    break
         if self.delegate is None and target is not None and self.cnt > 0:

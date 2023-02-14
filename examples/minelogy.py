@@ -28,6 +28,10 @@ class Minelogy():
                    'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
                   {'type': 'diorite'}
                   ),
+                  ({'blocks': [{'type': 'granite'}],
+                    'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
+                   {'type': 'granite'}
+                   ),
                  ({'blocks': [{'type': 'clay'}],
                    'tools': ['stone_shovel', 'wooden_shovel', None]},
                   {'type': 'clay_ball'}

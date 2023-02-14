@@ -76,8 +76,9 @@ class TestData(unittest.TestCase):
         self.assertEqual(command[0], "get wooden_axe")
 
     def test_observation_from_item(self):
-        item_list, recipes = self.rob.mc.getItemAndRecipeList()
+        item_list = self.rob.mc.getItemList()
         self.assertGreater(len(item_list), 0, "item_list len")
+        recipes = self.rob.mc.getRecipeList()
         self.assertGreater(len(recipes), 0, "recipes len")
 
     def test_game_state(self):

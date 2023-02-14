@@ -22,7 +22,8 @@ class Visualizer(threading.Thread):
             while self.queue:
                 with self._lock:
                     data = self.queue.pop()
-                cv2.imshow(*data)
+                    image = cv2.cvtColor(data[1], cv2.COLOR_BGR2RGB)
+                cv2.imshow(data[0], image)
             cv2.waitKey(300)
 
 

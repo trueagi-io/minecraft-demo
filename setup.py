@@ -8,6 +8,9 @@ setup(name='tagilmo',
       version='0.1.0',
       packages=['tagilmo',
                 'tagilmo.VereyaPython',
-                'tagilmo.utils'],
+                'tagilmo.utils',
+                'tagilmo.agenttools',
+                'tagilmo.vision'],
+
       install_requires=['numpy']
 )

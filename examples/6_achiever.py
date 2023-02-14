@@ -1,12 +1,9 @@
 from examples.log import setup_logger
 
-import tagilmo.utils.mission_builder as mb
-from tagilmo.utils.mathutils import *
-
-from examples.vis import Visualizer
+from tagilmo.vision.vis import Visualizer
 
 from examples.skills import *
-from examples.agent import TAgent
+from tagilmo.agenttools.agent import TAgent
 from examples.minelogy import Minelogy
 
 SCALE = 3

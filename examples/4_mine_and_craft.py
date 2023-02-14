@@ -314,8 +314,7 @@ if __name__ == '__main__':
 
     # initialize minelogy
     sleep(2)
-    item_list = rob.waitNotNoneObserve('getItemList', False)
-    recipes = rob.waitNotNoneObserve('getRecipeList', False)
+    item_list, recipes = rob.getItemsAndRecipesLists()
     mlogy = Minelogy(item_list, items_to_craft, recipes)
 
     logging.info("The first search for sticks")

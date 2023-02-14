@@ -706,8 +706,7 @@ if __name__ == '__main__':
     agent = LJAgent(miss, visualizer=visualizer)
 
     # initialize minelogy
-    item_list = agent.rob.waitNotNoneObserve('getItemList', False)
-    recipes = agent.rob.waitNotNoneObserve('getRecipeList', False)
+    item_list, recipes = agent.rob.getItemsAndRecipesLists()
     mlogy = Minelogy(item_list, items_to_craft, recipes)
     agent.set_mlogy(mlogy)
 

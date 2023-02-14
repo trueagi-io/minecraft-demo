@@ -259,7 +259,6 @@ class MCConnector:
         return not self.observe[nAgent] is None and 'recipes' in self.observe[nAgent]
 
     def getItemList(self, nAgent=0):
-        self.sendCommand('item_list')
         if self.isItemsListAvailable(nAgent):
             observations = self.observe[nAgent]
             item_list = observations['item_list']
@@ -269,11 +268,9 @@ class MCConnector:
             return None
 
     def getRecipeList(self, nAgent=0):
-        self.sendCommand('recipes')
         if self.isRecipesListAvailable(nAgent):
             observations = self.observe[nAgent]
             recipes = observations['recipes']
-            self.sendCommand('recipes off')
             return recipes
         else:
             return None
@@ -406,6 +403,15 @@ class RobustObserver:
 
     def changed(self, name):
         pass
+
+    def getItemsAndRecipesLists(self):
+        self.sendCommand('recipes')
+        self.sendCommand('item_list')
+        item_list = self.waitNotNoneObserve('getItemList', False)
+        recipes = self.waitNotNoneObserve('getRecipeList', False)
+        self.sendCommand('recipes off')
+        self.sendCommand('item_list off')
+        return item_list, recipes
 
     def waitNotNoneObserve(self, method, updateReq=False, observeReq=True):
         # REM: do not use with 'getLineOfSights'

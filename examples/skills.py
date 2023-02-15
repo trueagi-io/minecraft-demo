@@ -463,14 +463,14 @@ class PickNear(Switcher):
             (5 if items[0] == '*' else 20)
 
     def update(self):
-        nearEnt = self.rob.cached['getNearEntities'][0]
+        nearEnt = self.rob.cached['getNearPickableEntities'][0]
         target = None
         # TODO: choose the nearest item first?
         # TODO: reuse rob.nearestFromEntities ?
         for entity in nearEnt:
             # TODO? add items ignored by *?
-            if (entity['name'] in self.items or \
-               ('life' not in entity and self.items[0] == '*')) and entity['type'] == 'item':
+            if entity['name'] in self.items or \
+               ('life' not in entity and self.items[0] == '*'):
                    target = entity
                    break
         if self.delegate is None and target is not None and self.cnt > 0:

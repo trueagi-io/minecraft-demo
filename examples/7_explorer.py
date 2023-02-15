@@ -24,7 +24,7 @@ class StaticKnowledge:
         self.novelty_list = []
 
     def update(self):
-        sources = ['getInventory', 'getNearEntities', 'getLineOfSights', 'getNearGrid']
+        sources = ['getInventory', 'getNearPickableEntities', 'getLineOfSights', 'getNearGrid']
         for source in sources:
             data = self.rob.cached[source][0]
             tm = self.rob.cached[source][1]

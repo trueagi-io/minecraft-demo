@@ -9,8 +9,9 @@ setup(name='tagilmo',
       packages=['tagilmo',
                 'tagilmo.VereyaPython',
                 'tagilmo.utils',
-                'tagilmo.agenttools',
-                'tagilmo.vision'],
+                'mcdemoaux',
+                'mcdemoaux.agenttools',
+                'mcdemoaux.vision'],
 
       install_requires=['numpy']
 )

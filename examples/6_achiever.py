@@ -3,7 +3,7 @@ from examples.log import setup_logger
 from tagilmo.vision.vis import Visualizer
 
 from examples.skills import *
-from tagilmo.agenttools.agent import TAgent
+from mcdemoaux.agenttools import TAgent
 from examples.minelogy import Minelogy
 
 SCALE = 3

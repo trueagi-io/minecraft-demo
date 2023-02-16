@@ -4,7 +4,7 @@ import numpy
 from time import sleep, time
 import tagilmo.utils.mission_builder as mb
 from examples.minelogy import Minelogy
-from tagilmo.agenttools.agent import TAgent
+from mcdemoaux.agenttools import TAgent
 import logging
 from examples.log import setup_logger
 from tagilmo.vision.vis import Visualizer

@@ -82,7 +82,7 @@ class TestData(unittest.TestCase):
 
     def test_observation_from_triples(self):
         triples = self.rob.getTriplesList()
-        self.assertGreater(len(triples), 0, "item_list len")
+        self.assertGreater(len(triples), 0, "triples len")
 
     def test_game_state(self):
         self.mc.observeProc()

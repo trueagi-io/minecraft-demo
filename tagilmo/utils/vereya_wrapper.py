@@ -280,7 +280,7 @@ class MCConnector:
         else:
             return None
 
-    def getTriplesList(self, nAgent=0):
+    def getBlocksDropsList(self, nAgent=0):
         if self.isTriplesListAvailable(nAgent):
             observations = self.observe[nAgent]
             triples = observations['block_item_tool_triple']
@@ -359,9 +359,9 @@ class RobustObserver:
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
-                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getTriplesList']
+                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList']
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
-                          'getNearPickableEntities', 'getTriplesList']
+                          'getNearPickableEntities', 'getBlocksDropsList']
 
         if not self.mc.supportsVideo():
             self.canBeNone.append('getImageFrame')
@@ -435,10 +435,10 @@ class RobustObserver:
         self.sendCommand('item_list off')
         return item_list, recipes
 
-    def getTriplesList(self):
-        self.sendCommand('triples')
-        triples = self.waitNotNoneObserve('getTriplesList', False)
-        self.sendCommand('triples off')
+    def getBlocksDropsList(self):
+        self.sendCommand('blockdrops')
+        triples = self.waitNotNoneObserve('getBlocksDropsList', False)
+        self.sendCommand('blockdrops off')
         return triples
 
     def waitNotNoneObserve(self, method, updateReq=False, observeReq=True):

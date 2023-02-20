@@ -80,6 +80,10 @@ class TestData(unittest.TestCase):
         self.assertGreater(len(item_list), 0, "item_list len")
         self.assertGreater(len(recipes), 0, "recipes len")
 
+    def test_observation_from_triples(self):
+        triples = self.rob.getTriplesList()
+        self.assertGreater(len(triples), 0, "item_list len")
+
     def test_game_state(self):
         self.mc.observeProc()
         self.assertTrue(self.mc.getFullStat(key="isPaused") is not None)

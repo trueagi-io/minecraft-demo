@@ -269,12 +269,22 @@ class MCConnector:
     def isRecipesListAvailable(self, nAgent=0):
         return not self.observe[nAgent] is None and 'recipes' in self.observe[nAgent]
 
+    def isTriplesListAvailable(self, nAgent=0):
+        return not self.observe[nAgent] is None and 'block_item_tool_triple' in self.observe[nAgent]
+
     def getItemList(self, nAgent=0):
         if self.isItemsListAvailable(nAgent):
             observations = self.observe[nAgent]
             item_list = observations['item_list']
-            self.sendCommand('item_list off')
             return item_list
+        else:
+            return None
+
+    def getTriplesList(self, nAgent=0):
+        if self.isTriplesListAvailable(nAgent):
+            observations = self.observe[nAgent]
+            triples = observations['block_item_tool_triple']
+            return triples
         else:
             return None
 
@@ -349,8 +359,9 @@ class RobustObserver:
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
-                        'getItemList', 'getHumanInputs', 'getNearPickableEntities']
-        self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList', 'getNearPickableEntities']
+                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getTriplesList']
+        self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
+                          'getNearPickableEntities', 'getTriplesList']
 
         if not self.mc.supportsVideo():
             self.canBeNone.append('getImageFrame')
@@ -423,6 +434,12 @@ class RobustObserver:
         self.sendCommand('recipes off')
         self.sendCommand('item_list off')
         return item_list, recipes
+
+    def getTriplesList(self):
+        self.sendCommand('triples')
+        triples = self.waitNotNoneObserve('getTriplesList', False)
+        self.sendCommand('triples off')
+        return triples
 
     def waitNotNoneObserve(self, method, updateReq=False, observeReq=True):
         # REM: do not use with 'getLineOfSights'

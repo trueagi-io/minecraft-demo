@@ -61,6 +61,7 @@ if __name__ == '__main__':
     #initialize_minelogy
     # item_list, recipes = agent.rob.mc.getItemAndRecipeList()
     item_list, recipes = agent.rob.getItemsAndRecipesLists()
+    triples = agent.rob.getTriplesList()
     mlogy = Minelogy(item_list, items_to_craft, recipes)
     '''
     Currently we don't use all recipes from the game since there are some issues with

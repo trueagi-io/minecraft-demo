@@ -156,7 +156,7 @@ class Observations:
 
     def __init__(self, bAll=True, bRay=None, bFullStats=None,
             bInvent=None, bNearby=None, bGrid=None, bChat=None, bRecipes=False, bItems=False,
-            bHuman=None):
+            bHuman=None, bTriples=False):
         self.bAll = bAll
         self.bRay = bRay
         self.bFullStats = bFullStats
@@ -168,6 +168,7 @@ class Observations:
         self.bRecipes = bRecipes
         self.bItems = bItems
         self.bHuman = bHuman
+        self.bTriples = bTriples
 
     def xml(self):
         _xml = ""
@@ -183,6 +184,8 @@ class Observations:
             _xml += "<ObservationFromItems/>"
         if (self.bAll or self.bHuman) and not (self.bHuman == False):
             _xml += "<ObservationFromHuman/>"
+        if (self.bAll or self.bTriples):
+            _xml += "<ObservationFromTriples/>"
         # <ObservationFromHotBar /> --
         if (self.bAll or self.bNearby) and not (self.bNearby == False):
             # we don't need higher update_frequency; it seems we can get new observations in 0.1 with frequency=1

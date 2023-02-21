@@ -1,10 +1,7 @@
-import logging
 from examples.log import setup_logger
-from time import sleep, time
+from time import sleep
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
-import math
-from random import random
 
 from examples.vis import Visualizer
 from examples.minelogy import Minelogy
@@ -12,7 +9,7 @@ from examples.goal import *
 from examples.skills import *
 from examples.agent import TAgent
 
-from item_list_to_craft import items_to_craft
+from examples.item_list_to_craft import items_to_craft
 
 class StaticKnowledge:
 

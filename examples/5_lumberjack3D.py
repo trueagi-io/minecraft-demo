@@ -1,10 +1,7 @@
 import math
 import torch
 import random
-import threading
-import cv2
 import numpy
-import os
 from time import sleep, time
 import tagilmo.utils.mission_builder as mb
 from examples.minelogy import Minelogy
@@ -15,7 +12,7 @@ from examples.vis import Visualizer
 
 from tagilmo.utils.mathutils import *
 
-from item_list_to_craft import items_to_craft
+from examples.item_list_to_craft import items_to_craft
 
 SCALE = 4
 

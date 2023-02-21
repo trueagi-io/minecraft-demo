@@ -50,6 +50,9 @@ def init_mission(mc, start_x=None, start_y=None):
     return mc, obs
 
 
+logger = logging.getLogger(__name__)
+
+
 class TestData(unittest.TestCase):
     mc = None
     rob = None
@@ -71,8 +74,19 @@ class TestData(unittest.TestCase):
         self.assertGreater(dist, 0)
 
     def test_observation_from_chat(self):
+        logger.info("send chat")
         self.mc.sendCommand("chat get wooden_axe")
-        command = self.rob.waitNotNoneObserve('getChat')
+        logger.info("wait chat")
+        start = time.time()
+        while True:
+            command = self.rob.waitNotNoneObserve('getChat')
+            if command is not None:
+                break
+            time.sleep(0.05)
+            end = time.time()
+            if end - start > 2:
+                break
+        logger.info("result chat " + str(command))
         self.assertEqual(command[0], "get wooden_axe")
 
     def test_observation_from_item(self):

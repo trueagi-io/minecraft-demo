@@ -263,28 +263,19 @@ class MCConnector:
         else:
             return None
 
-    def isItemsListAvailable(self, nAgent=0):
-        return not self.observe[nAgent] is None and 'item_list' in self.observe[nAgent]
-
-    def isRecipesListAvailable(self, nAgent=0):
-        return not self.observe[nAgent] is None and 'recipes' in self.observe[nAgent]
+    def getParticularObservation(self, observation_name, nAgent=0):
+        obs = self.observe[nAgent]
+        if obs is not None:
+            return obs.get(observation_name, None)
 
     def getItemList(self, nAgent=0):
-        if self.isItemsListAvailable(nAgent):
-            observations = self.observe[nAgent]
-            item_list = observations['item_list']
-            self.sendCommand('item_list off')
-            return item_list
-        else:
-            return None
+        return self.getParticularObservation('item_list', nAgent)
+
+    def getBlocksDropsList(self, nAgent=0):
+        return self.getParticularObservation('block_item_tool_triple', nAgent)
 
     def getRecipeList(self, nAgent=0):
-        if self.isRecipesListAvailable(nAgent):
-            observations = self.observe[nAgent]
-            recipes = observations['recipes']
-            return recipes
-        else:
-            return None
+        return self.getParticularObservation('recipes', nAgent)
 
     def isInventoryAvailable(self, nAgent=0):
         return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]
@@ -349,8 +340,9 @@ class RobustObserver:
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
-                        'getItemList', 'getHumanInputs', 'getNearPickableEntities']
-        self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList', 'getNearPickableEntities']
+                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList']
+        self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
+                          'getNearPickableEntities', 'getBlocksDropsList']
 
         if not self.mc.supportsVideo():
             self.canBeNone.append('getImageFrame')
@@ -423,6 +415,12 @@ class RobustObserver:
         self.sendCommand('recipes off')
         self.sendCommand('item_list off')
         return item_list, recipes
+
+    def getBlocksDropsList(self):
+        self.sendCommand('blockdrops')
+        triples = self.waitNotNoneObserve('getBlocksDropsList', False)
+        self.sendCommand('blockdrops off')
+        return triples
 
     def waitNotNoneObserve(self, method, updateReq=False, observeReq=True):
         # REM: do not use with 'getLineOfSights'

@@ -263,38 +263,25 @@ class MCConnector:
         else:
             return None
 
-    def isItemsListAvailable(self, nAgent=0):
-        return not self.observe[nAgent] is None and 'item_list' in self.observe[nAgent]
+    def isParticularObservationAvailable(self, observation_name, nAgent=0):
+        return not self.observe[nAgent] is None and observation_name in self.observe[nAgent]
 
-    def isRecipesListAvailable(self, nAgent=0):
-        return not self.observe[nAgent] is None and 'recipes' in self.observe[nAgent]
-
-    def isTriplesListAvailable(self, nAgent=0):
-        return not self.observe[nAgent] is None and 'block_item_tool_triple' in self.observe[nAgent]
+    def getParticularObservation(self, observation_name, nAgent=0):
+        if self.isParticularObservationAvailable(observation_name, nAgent):
+            observations = self.observe[nAgent]
+            result = observations[observation_name]
+            return result
+        else:
+            return None
 
     def getItemList(self, nAgent=0):
-        if self.isItemsListAvailable(nAgent):
-            observations = self.observe[nAgent]
-            item_list = observations['item_list']
-            return item_list
-        else:
-            return None
+        return self.getParticularObservation('item_list', nAgent)
 
     def getBlocksDropsList(self, nAgent=0):
-        if self.isTriplesListAvailable(nAgent):
-            observations = self.observe[nAgent]
-            triples = observations['block_item_tool_triple']
-            return triples
-        else:
-            return None
+        return self.getParticularObservation('block_item_tool_triple', nAgent)
 
     def getRecipeList(self, nAgent=0):
-        if self.isRecipesListAvailable(nAgent):
-            observations = self.observe[nAgent]
-            recipes = observations['recipes']
-            return recipes
-        else:
-            return None
+        return self.getParticularObservation('recipes', nAgent)
 
     def isInventoryAvailable(self, nAgent=0):
         return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]

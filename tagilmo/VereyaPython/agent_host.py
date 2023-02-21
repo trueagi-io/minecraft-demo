@@ -199,12 +199,13 @@ class AgentHost(ArgumentParser):
                          item.ip_address + ":" + str(item.control_port))
 
             try:
-                reply = asyncio.run(rpc.sendStringAndGetShortReply(item.ip_address,
-                                                       item.control_port,
-                                                       mission_init_xml))
-            except RuntimeError as e:
+                reply = asyncio.run_coroutine_threadsafe(rpc.sendStringAndGetShortReply(
+                                                         item.ip_address,
+                                                         item.control_port,
+                                                         mission_init_xml), self.io_service).result(3)
+            except (exceptions.TimeoutError, RuntimeError) as e:
                 logger.info("No response from %s: %i", item.ip_address, item.control_port)
-
+                logger.debug("error", exc_info=e)
                 # This is expected quite often - client is likely not running.
                 continue
             except asyncio.exceptions.IncompleteReadError as e:

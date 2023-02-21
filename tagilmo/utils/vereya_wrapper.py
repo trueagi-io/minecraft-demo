@@ -263,16 +263,10 @@ class MCConnector:
         else:
             return None
 
-    def isParticularObservationAvailable(self, observation_name, nAgent=0):
-        return not self.observe[nAgent] is None and observation_name in self.observe[nAgent]
-
     def getParticularObservation(self, observation_name, nAgent=0):
-        if self.isParticularObservationAvailable(observation_name, nAgent):
-            observations = self.observe[nAgent]
-            result = observations[observation_name]
-            return result
-        else:
-            return None
+        obs = self.observe[nAgent]
+        if obs is not None:
+            return obs.get(observation_name, None)
 
     def getItemList(self, nAgent=0):
         return self.getParticularObservation('item_list', nAgent)

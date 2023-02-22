@@ -11,6 +11,8 @@ from mcdemoaux.vision.vis import Visualizer
 
 from tagilmo.utils.mathutils import *
 
+from examples.item_list_to_craft import items_to_craft
+
 SCALE = 4
 
 class MoveForward:
@@ -476,17 +478,20 @@ class LJAgent(TAgent):
         #     target = targ
         for targ in target:
             t = self.mlogy.get_otype(targ)
+            t_list = [var['type'] for var in self.mlogy.get_target_variants(targ)]
             ray = self.rob.cached['getLineOfSights'][0]
             if (ray['hitType'] != 'MISS'):
                 if self.mlogy.matchEntity(ray, targ):
                     if ray['inRange']:
                         return [['mine', [ray]]]
                     return [['mine', [ray]], ['approach', ray]]
-            known = self.rob.nearestFromGrid(t, observeReq=False)
+            known = self.rob.nearestFromGrid(t_list, observeReq=False)
             if known is None:
-                if t in self.blockMem.blocks:
-                    # TODO? updateBlocks
-                    known = self.blockMem.blocks[t][-1]
+                for _t in t_list:
+                    if _t in self.blockMem.blocks:
+                        # TODO? updateBlocks
+                        known = self.blockMem.blocks[_t][-1]
+                        break
             # REM: 'approach' should include lookAt
             if known is not None:
                 return [['mine', [targ]], ['approach', {'type': t, 'x': known[0], 'y': known[1], 'z': known[2]}]]
@@ -537,7 +542,7 @@ class LJAgent(TAgent):
             for ingrid in craft[0]:
                 # TODO? amounts
                 act = self.howtoGet(ingrid, craft_only)
-                if act is None:
+                if act is None or 'UNKNOWN' in act:
                     next_acts = None
                     break
                 if (act[-1][0] == 'approach') and (len(act) == 3):
@@ -625,13 +630,14 @@ class LJAgent(TAgent):
                     elif words[-1] == 'terminate':
                         break
                 self.rob.cached['getChat'] = (None, self.rob.cached['getChat'][1])
-            
+
             if self.skill is not None:
                 if self.ccycle():
                     continue
                 self.skill = None
 
             howto = self.howtoGet(target)
+
             if howto == []:
                 target = None
             elif howto[-1][0] == 'UNKNOWN':
@@ -669,7 +675,7 @@ class LJAgent(TAgent):
                 continue
             if howto[-1][0] == 'approach':
                 self.skill = ApproachXZPos(self.rob,
-                                [howto[-1][1]['x'], howto[-1][1]['y'], howto[-1][1]['z']])
+                                           [howto[-1][1]['x'], howto[-1][1]['y'], howto[-1][1]['z']])
                 continue
             if howto[-1][0] == 'mine':
                 #self.skill = MineAround(self.rob, self.mlogy.get_otlist(howto[-1][1]))
@@ -700,8 +706,8 @@ if __name__ == '__main__':
     agent = LJAgent(miss, visualizer=visualizer)
 
     # initialize minelogy
-    item_list = agent.rob.mc.getItemList()
-    mlogy = Minelogy(item_list)
+    item_list, recipes = agent.rob.getItemsAndRecipesLists()
+    mlogy = Minelogy(item_list, items_to_craft, recipes)
     agent.set_mlogy(mlogy)
 
     agent.rob.sendCommand("chat /difficulty peaceful")

@@ -9,6 +9,8 @@ from tagilmo.utils.mathutils import normAngle, degree2rad
 import numpy as np
 from minelogy import Minelogy
 
+from examples.item_list_to_craft import items_to_craft
+
 
 # This script shows a relatively complex behavior of gathering resources
 # for an iron pickaxe. It includes searchng for logs, mining stones, etc.
@@ -311,8 +313,9 @@ if __name__ == '__main__':
     lookDir(rob, 0, 0)
 
     # initialize minelogy
-    item_list = rob.mc.getItemList()
-    mlogy = Minelogy(item_list)
+    sleep(2)
+    item_list, recipes = rob.getItemsAndRecipesLists()
+    mlogy = Minelogy(item_list, items_to_craft, recipes)
 
     logging.info("The first search for sticks")
     getSticks(rob, mlogy)

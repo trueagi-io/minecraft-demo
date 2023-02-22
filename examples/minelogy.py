@@ -1,5 +1,8 @@
+from difflib import SequenceMatcher
+import time
+
 class Minelogy():
-    def __init__(self, item_list):
+    def __init__(self, item_list, items_to_craft, mcrecipes):
         self.log_names = []
         self.planks_names = []
         self.leaves_names = []
@@ -25,6 +28,10 @@ class Minelogy():
                    'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
                   {'type': 'diorite'}
                   ),
+                  ({'blocks': [{'type': 'granite'}],
+                    'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
+                   {'type': 'granite'}
+                   ),
                  ({'blocks': [{'type': 'clay'}],
                    'tools': ['stone_shovel', 'wooden_shovel', None]},
                   {'type': 'clay_ball'}
@@ -94,68 +101,70 @@ class Minelogy():
                   {'type': 'wheat_seeds'}
                   ),
                  ]
-        self.crafts = [([{'type': 'log', 'quantity': 1}],
-                   {'type': 'planks', 'quantity': 4}),
-                  ([{'type': 'planks', 'quantity': 2}],
-                   {'type': 'stick', 'quantity': 4}),
-                  ([{'type': 'stick', 'quantity': 2}, {'type': 'planks', 'quantity': 3}],
-                   {'type': 'wooden_axe'}),
-                  ([{'type': 'stick', 'quantity': 2}, {'type': 'planks', 'quantity': 3}],
-                   {'type': 'wooden_pickaxe'}),
-                  ([{'type': 'stick', 'quantity': 2}, {'type': 'planks', 'quantity': 1}],
-                   {'type': 'wooden_shovel'}),
-                  ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 3}],
-                   {'type': 'stone_axe'}),
-                  ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 3}],
-                   {'type': 'stone_pickaxe'}),
-                  ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 1}],
-                   {'type': 'stone_shovel'}),
-                  ([{'type': 'raw_iron', 'quantity': 1}, {'type': 'furnace', 'quantity': 1},
-                    {'type': 'fuel', 'quantity': 1}],
-                   {'type': 'iron_ingot'}),
-                  ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
-                   {'type': 'iron_axe'}),
-                  ([{'type': 'cobblestone', 'quantity': 8}],
-                   {'type': 'furnace'}),
-                  ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
-                   {'type': 'iron_pickaxe'}),
-                  ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 1}],
-                   {'type': 'iron_shovel'}),
-                  ([{'type': 'stick', 'quantity': 1}, {'type': 'coal', 'quantity': 1}],
-                   {'type': 'torch', 'quantity': 4}),
-                  ([{'type': 'planks', 'quantity': 2}],
-                   {'type': 'pressure_plate'}),
-                  ([{'type': 'planks', 'quantity': 3}],
-                   {'type': 'slab', 'quantity': 6}),
-                  ([{'type': 'planks', 'quantity': 1}],
-                   {'type': 'button'}),
-                  ([{'type': 'planks', 'variant': 'spruce', 'quantity': 6}],
-                   {'type': 'spruce_door', 'quantity': 3}),
-                  ([{'type': 'planks', 'variant': 'birch', 'quantity': 6}],
-                   {'type': 'birch_door', 'quantity': 3}),
-                  ([{'type': 'planks', 'variant': 'oak', 'quantity': 6}],
-                   {'type': 'wooden_door', 'quantity': 3}),
-                  ([{'type': 'planks', 'quantity': 6}],
-                   {'type': 'trapdoor', 'quantity': 2}),
-                  ([{'type': 'cobblestone', 'quantity': 3}],
-                   {'type': 'stone_slab', 'quantity': 6}),
-                  ([{'type': 'cobblestone', 'quantity': 3}],
-                   {'type': 'cobblestone_wall', 'quantity': 6}),
-                  ([{'type': 'stick', 'quantity': 1}, {'type': 'cobblestone', 'quantity': 1}],
-                   {'type': 'lever'}),
-                  ([{'type': 'pumpkin', 'quantity': 1}],
-                   {'type': 'pumpkin_seeds'}),
-                  ([{'type': 'sand', 'quantity': 1}, {'type': 'furnace', 'quantity': 1},
-                    {'type': 'fuel', 'quantity': 1}],
-                   {'type': 'glass'}),
-                  ([{"type": "stick", "quantity": 4}, {"type": "planks", "quantity": 2}],
-                   {"type": "fence_gate", "quantity": 1}),
-                  ([{"type": "planks", "quantity": 6}, {"type": "stick", "quantity": 1}],
-                   {"type": "sign", "quantity": 3}),
-                  ([{"type": "planks", "quantity": 5}],
-                   {"type": "boat", "quantity": 1})
-                  ]
+        self.crafts = []
+        # self.crafts = [([{'type': 'log', 'quantity': 1}],
+        #            {'type': 'planks', 'quantity': 4}),
+        #           ([{'type': 'planks', 'quantity': 2}],
+        #            {'type': 'stick', 'quantity': 4}),
+        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'planks', 'quantity': 3}],
+        #            {'type': 'wooden_axe'}),
+        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'planks', 'quantity': 3}],
+        #            {'type': 'wooden_pickaxe'}),
+        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'planks', 'quantity': 1}],
+        #            {'type': 'wooden_shovel'}),
+        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 3}],
+        #            {'type': 'stone_axe'}),
+        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 3}],
+        #            {'type': 'stone_pickaxe'}),
+        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 1}],
+        #            {'type': 'stone_shovel'}),
+        #           ([{'type': 'raw_iron', 'quantity': 1}, {'type': 'furnace', 'quantity': 1},
+        #             {'type': 'fuel', 'quantity': 1}],
+        #            {'type': 'iron_ingot'}),
+        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
+        #            {'type': 'iron_axe'}),
+        #           ([{'type': 'cobblestone', 'quantity': 8}],
+        #            {'type': 'furnace'}),
+        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
+        #            {'type': 'iron_pickaxe'}),
+        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 1}],
+        #            {'type': 'iron_shovel'}),
+        #           ([{'type': 'stick', 'quantity': 1}, {'type': 'coal', 'quantity': 1}],
+        #            {'type': 'torch', 'quantity': 4}),
+        #           ([{'type': 'planks', 'quantity': 2}],
+        #            {'type': 'pressure_plate'}),
+        #           ([{'type': 'planks', 'quantity': 3}],
+        #            {'type': 'slab', 'quantity': 6}),
+        #           ([{'type': 'planks', 'quantity': 1}],
+        #            {'type': 'button'}),
+        #           ([{'type': 'planks', 'variant': 'spruce', 'quantity': 6}],
+        #            {'type': 'spruce_door', 'quantity': 3}),
+        #           ([{'type': 'planks', 'variant': 'birch', 'quantity': 6}],
+        #            {'type': 'birch_door', 'quantity': 3}),
+        #           ([{'type': 'planks', 'variant': 'oak', 'quantity': 6}],
+        #            {'type': 'wooden_door', 'quantity': 3}),
+        #           ([{'type': 'planks', 'quantity': 6}],
+        #            {'type': 'trapdoor', 'quantity': 2}),
+        #           ([{'type': 'cobblestone', 'quantity': 3}],
+        #            {'type': 'stone_slab', 'quantity': 6}),
+        #           ([{'type': 'cobblestone', 'quantity': 3}],
+        #            {'type': 'cobblestone_wall', 'quantity': 6}),
+        #           ([{'type': 'stick', 'quantity': 1}, {'type': 'cobblestone', 'quantity': 1}],
+        #            {'type': 'lever'}),
+        #           ([{'type': 'pumpkin', 'quantity': 1}],
+        #            {'type': 'pumpkin_seeds'}),
+        #           ([{'type': 'sand', 'quantity': 1}, {'type': 'furnace', 'quantity': 1},
+        #             {'type': 'fuel', 'quantity': 1}],
+        #            {'type': 'glass'}),
+        #           ([{"type": "stick", "quantity": 4}, {"type": "planks", "quantity": 2}],
+        #            {"type": "fence_gate", "quantity": 1}),
+        #           ([{"type": "planks", "quantity": 6}, {"type": "stick", "quantity": 1}],
+        #            {"type": "sign", "quantity": 3}),
+        #           ([{"type": "planks", "quantity": 5}],
+        #            {"type": "boat", "quantity": 1})
+        #           ]
         self.initialize_minelogy(item_list)
+        self.set_recipes_for_items(items_to_craft, mcrecipes)
 
     def add_craft_tool(self, craft_tool):
         ingredient = None
@@ -181,30 +190,67 @@ class Minelogy():
         self.crafts = []
         for mcrecipe in mcrecipes:
             craft_name = mcrecipe['name'].split('.')[-1]
-            craft_quantity = mcrecipe['count']
-            craft_tool = mcrecipe['recipe_type']
-            craft_group = mcrecipe['group'] # Need to understand how this could be used
-            ingredients = {}
-            craft_ingredients = []
-            for material in mcrecipe['ingredients']:
-                if len(material) == 0:
-                    continue
-                material_name = material[0]['type'].split(".")[-1]
-                if material_name not in ingredients:
-                    ingredients[material_name] = 1
-                else:
-                    ingredients[material_name] += 1
-            for ingredient in ingredients:
-                craft_ingredients.append({'type' : ingredient, 'quantity' : ingredients[ingredient]})
-            if len(craft_ingredients) == 0:
+            self.__set_one_recipe(mcrecipe, craft_name)
+
+    def set_recipes_for_items(self, items_to_add, mcrecipes, clear_recipes=False, strict_matching=True):  # here we're sending list of items we want to add recipes for
+        if clear_recipes:
+            self.crafts = []
+        for mcrecipe in mcrecipes:
+            craft_name = mcrecipe['name'].split('.')[-1]
+            if (craft_name in items_to_add) or (not strict_matching and craft_name.split("_")[-1] in items_to_add):
+                self.__set_one_recipe(mcrecipe, craft_name)
+
+    def __match_materials(self, materials):
+        materials = [material['type'].split(".")[-1] for material in materials]
+        name1 = materials[0]
+        materials_list=[name1]
+        if "log" in name1:
+            return "log"
+        for i in range(1, len(materials)):
+            name2 = materials[i]
+            if "log" in name2:
+                return "log"
+            materials_list.append(name2)
+            match = SequenceMatcher(None, name1, name2).find_longest_match()
+            if match.size > 1:
+                name1 = name2[match.b:match.b + match.size]
+        if name1 == "stone":
+            materials_list.append(name1) #  temporary stub
+        exec("self.{}_types=materials_list".format(name1.replace("_", "")))
+        return name1.replace("_", "")
+
+    # this private method is just to avoid code duplication in set_recipes and set_recipes_for_items
+    def __set_one_recipe(self, mcrecipe, craft_name):
+        if "planks" in craft_name:
+            craft_name = "planks"
+        craft_quantity = mcrecipe['count']
+        craft_tool = mcrecipe['recipe_type']
+        craft_group = mcrecipe['group']  # Need to understand how this could be used
+        ingredients = {}
+        craft_ingredients = []
+        for material in mcrecipe['ingredients']:
+            if len(material) == 0:
                 continue
-            additional_tool = self.add_craft_tool(craft_tool)
-            if additional_tool is not None:
-                craft_ingredients.extend(additional_tool)
-            craft_entity = (craft_ingredients,
-                    {'type': craft_name, 'quantity': craft_quantity})
-            if (craft_entity not in self.crafts) and (len(craft_entity) > 0):
-                self.crafts.append(craft_entity)
+            if len(material) > 1:
+                material_name = self.__match_materials(material)
+            else:
+                material_name = material[0]['type'].split(".")[-1]
+            if material_name not in ingredients:
+                ingredients[material_name] = 1
+            else:
+                ingredients[material_name] += 1
+        for ingredient in ingredients:
+            craft_ingredients.append({'type': ingredient, 'quantity': ingredients[ingredient]})
+        if len(craft_ingredients) == 0:
+            return
+        additional_tool = self.add_craft_tool(craft_tool)
+        if additional_tool is not None:
+            craft_ingredients.extend(additional_tool)
+        craft_entity = (craft_ingredients,
+                        {'type': craft_name, 'quantity': craft_quantity})
+        if (craft_entity not in self.crafts) and (len(craft_entity) > 0):
+            self.crafts.append(craft_entity)
+
 
     def initialize_minelogy(self, item_list):
         for iname in item_list:
@@ -260,7 +306,10 @@ class Minelogy():
         res = []
         for var in variants:
             var_target = target.copy()
-            var_target['type'] = var['type']
+            if isinstance(var, str):
+                var_target['type'] = var
+            else:
+                var_target['type'] = var['type']
             res.append(var_target)
         return res
 
@@ -276,6 +325,8 @@ class Minelogy():
             return self.trapdoor_names_t
         elif target['type'] == "log":
             return self.mimic_target(target, self.log_names_t)
+        elif hasattr(self, target['type']+"_types"):
+            return self.mimic_target(target, getattr(self, "{}_types".format(target['type'])))
         return target
 
     def get_log_names(self):
@@ -292,7 +343,7 @@ class Minelogy():
         return None
 
     def get_craft_variants(self, to_craft, target):
-        if to_craft['type'] == "planks":
+        if "planks" in to_craft['type']:
             target_type = self.get_new_type(target)
             res = []
             exact_res = []
@@ -304,11 +355,11 @@ class Minelogy():
                     exact_res.append(temp)
                     return exact_res
             return res
-        elif to_craft['type'] == "door":
+        elif "door" in to_craft['type']:
             return self.door_names_t
-        elif to_craft['type'] == "trapdoor":
+        elif "trapdoor" in to_craft['type']:
             return self.trapdoor_names_t
-        elif to_craft['type'] == "log":
+        elif "log" in to_craft['type']:
             target_type = self.get_new_type(target)
             for log_name in self.log_names_t:
                 log_type = self.get_new_type(log_name)
@@ -320,20 +371,33 @@ class Minelogy():
     def get_otlist(self, objs):
         return list(map(self.get_otype, objs))
 
+    def __matchEntity(self, source_type, target_type):
+        if target_type == 'fuel' and source_type in self.fuel_priority:
+            return True
+        if (source_type != target_type) and (source_type != target_type.split("_")[-1]) and (target_type != source_type.split("_")[-1]):
+            return False
+        # target_v = self.get_ovariant(target)
+        # if target_v is not None:
+        #     if target_v != self.get_ovariant(source) and target_v[0] != '$':
+        #         return False
+        return True
+
     def matchEntity(self, source, target):
         if source is None:
             return False
         source_type = self.get_otype(source) if isinstance(source, dict) else source
         target_type = self.get_otype(target) if isinstance(target, dict) else target
-        if target_type == 'fuel' and source_type in self.fuel_priority:
-            return True
-        if (source_type != target_type) and (source_type != target_type.split("_")[-1]) and (target_type != source_type.split("_")[-1]):
-            return False
-        target_v = self.get_ovariant(target)
-        if target_v is not None:
-            if target_v != self.get_ovariant(source) and target_v[0] != '$':
-                return False
-        return True
+        if hasattr(self, source_type+"_types"):
+            source_types = getattr(self, "{}_types".format(source_type))
+            for s_type in source_types:
+                if self.__matchEntity(s_type, target_type):
+                    return True
+        elif hasattr(self, target_type+"_types"):
+            target_types = getattr(self, "{}_types".format(target_type))
+            for t_type in target_types:
+                if self.__matchEntity(source_type, t_type):
+                    return True
+        return self.__matchEntity(source_type, target_type)
 
     def find_mine_by_block(self, block):
         for mine in self.mines:

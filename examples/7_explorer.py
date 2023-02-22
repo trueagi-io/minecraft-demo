@@ -1,9 +1,15 @@
 from examples.log import setup_logger
 
+from time import sleep
+import tagilmo.utils.mission_builder as mb
+from tagilmo.utils.mathutils import *
+
 from mcdemoaux.vision.vis import Visualizer
 from examples.minelogy import Minelogy
 from examples.skills import *
 from mcdemoaux.agenttools.agent import TAgent
+
+from examples.item_list_to_craft import items_to_craft
 
 class StaticKnowledge:
 
@@ -15,7 +21,7 @@ class StaticKnowledge:
         self.novelty_list = []
 
     def update(self):
-        sources = ['getInventory', 'getNearEntities', 'getLineOfSights', 'getNearGrid']
+        sources = ['getInventory', 'getNearPickableEntities', 'getLineOfSights', 'getNearGrid']
         for source in sources:
             data = self.rob.cached[source][0]
             tm = self.rob.cached[source][1]
@@ -183,8 +189,8 @@ if __name__ == '__main__':
     sleep(4)
 
     # initialize minelogy
-    item_list = agent.rob.mc.getItemList()
-    mlogy = Minelogy(item_list)
+    item_list, recipes = agent.rob.getItemsAndRecipesLists()
+    mlogy = Minelogy(item_list, items_to_craft, recipes)
     agent.set_mlogy(mlogy)
     agent.run()
 

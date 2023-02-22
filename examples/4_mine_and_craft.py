@@ -9,7 +9,7 @@ from tagilmo.utils.mathutils import normAngle, degree2rad
 import numpy as np
 from minelogy import Minelogy
 
-from item_list_to_craft import items_to_craft
+from examples.item_list_to_craft import items_to_craft
 
 
 # This script shows a relatively complex behavior of gathering resources

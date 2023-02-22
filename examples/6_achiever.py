@@ -8,7 +8,7 @@ from examples.vis import Visualizer
 from examples.skills import *
 from examples.agent import TAgent
 from examples.minelogy import Minelogy
-from item_list_to_craft import items_to_craft
+from examples.item_list_to_craft import items_to_craft
 
 SCALE = 3
 

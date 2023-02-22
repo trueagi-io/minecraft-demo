@@ -52,7 +52,7 @@ class NeuralWrapper:
         logging.info('loading model from %s', path)
         if path in model_cache:
             return model_cache[path]
-        from examples.vision.goodpoint import GoodPoint
+        from mcdemoaux.vision.goodpoint import GoodPoint
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         n_classes = 5 # other, log, leaves, coal_ore, stone
         depth = False

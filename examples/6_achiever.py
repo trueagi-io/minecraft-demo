@@ -1,9 +1,9 @@
 from examples.log import setup_logger
 
-from tagilmo.vision.vis import Visualizer
+from mcdemoaux.vision.vis import Visualizer
 
 from examples.skills import *
-from mcdemoaux.agenttools import TAgent
+from mcdemoaux.agenttools.agent import TAgent
 from examples.minelogy import Minelogy
 
 SCALE = 3

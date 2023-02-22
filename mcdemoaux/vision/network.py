@@ -11,9 +11,9 @@ import torch
 import torch.nn as nn
 from torch.distributions.beta import Beta
 from torch.distributions.categorical import Categorical
-from examples.vision.pyramidpooling import PyramidPooling
-from examples.vision.vgg import VGG
-from examples.vision.common import BaseLoader
+from mcdemoaux.vision.pyramidpooling import PyramidPooling
+from mcdemoaux.vision.vgg import VGG
+from mcdemoaux.vision.common import BaseLoader
 
 
 def init_weights_xavier(m):

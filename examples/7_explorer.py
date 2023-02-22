@@ -1,9 +1,9 @@
 from examples.log import setup_logger
 
-from tagilmo.vision.vis import Visualizer
+from mcdemoaux.vision.vis import Visualizer
 from examples.minelogy import Minelogy
 from examples.skills import *
-from mcdemoaux.agenttools import TAgent
+from mcdemoaux.agenttools.agent import TAgent
 
 class StaticKnowledge:
 

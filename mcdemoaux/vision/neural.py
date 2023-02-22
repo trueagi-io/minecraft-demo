@@ -48,7 +48,9 @@ class NeuralWrapper:
                 return heatmaps, img
 
     def load_model(self):
-        path = 'examples/vision/goodpoint.pt'
+        from mcdemoaux import vision
+        pth = os.path.dirname(vision.__file__)
+        path = pth+'/goodpoint.pt'
         logging.info('loading model from %s', path)
         if path in model_cache:
             return model_cache[path]

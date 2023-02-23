@@ -1,10 +1,9 @@
 import logging
 import torch
-import numpy
 from torch import nn
 
-from examples.vision.network import init_weights_xavier
-from examples.vision.depth import DepthToSpace
+from mcdemoaux.vision.network import init_weights_xavier
+from mcdemoaux.vision.depth import DepthToSpace
 
 logger = logging.getLogger()
 

@@ -1,14 +1,13 @@
-import math
 import torch
 import random
 import numpy
 from time import sleep, time
 import tagilmo.utils.mission_builder as mb
 from examples.minelogy import Minelogy
-from examples.agent import TAgent
+from mcdemoaux.agenttools.agent import TAgent
 import logging
 from examples.log import setup_logger
-from examples.vis import Visualizer
+from mcdemoaux.vision.vis import Visualizer
 
 from tagilmo.utils.mathutils import *
 

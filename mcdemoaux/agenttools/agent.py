@@ -1,9 +1,8 @@
 import logging
 import numpy
-import math
 
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserverWithCallbacks
-from examples.vision.neural import NeuralWrapper
+from mcdemoaux.vision.neural import NeuralWrapper
 from tagilmo.utils.mathutils import *
 
 class TAgent:

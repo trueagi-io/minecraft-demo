@@ -5,6 +5,7 @@ import json
 import time
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
+from base_test import BaseTest
 
 
 def init_mission(mc, start_x=None, start_y=None):
@@ -59,7 +60,7 @@ class TestData(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = (-125.0, 71.0)
+        start = (-125.0, 73.0)
         mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
         cls.mc = mc
         cls.rob = obs
@@ -67,6 +68,7 @@ class TestData(unittest.TestCase):
         time.sleep(1)
 
     def setUp(self):
+        super().setUp()
         time.sleep(2)
 
     def test_observation_from_ray(self):

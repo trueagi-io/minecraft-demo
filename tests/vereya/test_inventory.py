@@ -5,6 +5,7 @@ import json
 import time
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
+from base_test import BaseTest
 
 
 def init_mission(mc, start_x=None, start_y=None):
@@ -74,6 +75,7 @@ class TestCraft(unittest.TestCase):
         cls.mc.stop()
 
     def setUp(self):
+        super().setUp()
         self.mc.sendCommand("chat /clear")
         time.sleep(4)
 

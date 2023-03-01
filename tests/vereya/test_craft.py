@@ -5,6 +5,7 @@ import time
 from tagilmo import VereyaPython
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
+from base_test import BaseTest
 
 
 def init_mission(mc, start_x=None, start_y=None):
@@ -62,7 +63,7 @@ def count_items(inv, name):
     return result
 
 
-class TestCraft(unittest.TestCase):
+class TestCraft(BaseTest):
     mc = None
 
     @classmethod
@@ -78,6 +79,7 @@ class TestCraft(unittest.TestCase):
         cls.mc.stop()
 
     def setUp(self):
+        super().setUp()
         self.mc.sendCommand("chat /clear")
         time.sleep(4)
 

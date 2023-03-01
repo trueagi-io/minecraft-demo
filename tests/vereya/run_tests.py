@@ -2,24 +2,24 @@ from tagilmo import VereyaPython
 import time
 import sys
 import unittest
+import logging
 
+logger = logging.getLogger(__name__)
 
 def run_tests(test_files):
     # create a test suite from the list of test files
     for test_file in test_files:
         suite = unittest.TestSuite()
-
-        print('running ' + test_file)
         # load the tests from the file
         tests = unittest.defaultTestLoader.loadTestsFromName(test_file)
-        # add the tests to the suite
-        suite.addTests(tests)
-    # create a test runner and run the tests
+        # create a test runner and run the tests
         runner = unittest.TextTestRunner()
-        result = runner.run(suite)
+        logger.info('running ' + test_file)
+        result = runner.run(tests)
         if not result.wasSuccessful():
+            logger.info('suite '+ test_file + ' failed')
             return result
-        print('sleeping')
+        logger.info('sleeping')
         time.sleep(5)
     return result
 

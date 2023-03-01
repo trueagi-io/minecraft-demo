@@ -30,6 +30,12 @@ class BaseTest(unittest.TestCase):
             logger.info(f"assertEqual failed in {self.getTestName()}" + str(first) + " != " + str(second) + str(msg))
         super().assertEqual(first, second, msg)
 
+    def assertNotEqual(self, first, second, msg=None):
+        # log if equal
+        if first == second:
+            logger.info(f"assertNotEqual failed in {self.getTestName()}" + str(first) + " == " + str(second) + str(msg))
+        super().assertNotEqual(first, second, msg)
+
     def assertTrue(self, expr, msg=None):
         # log if not true
         if not expr:

@@ -323,6 +323,9 @@ class MCConnector:
             if "input_events" in data:
                 return data["input_events"]
 
+    def placeBlock(self, x: int, y: int, z: int, block_name: str, placement: str, nAgent=0):
+        self.agent_hosts[nAgent].sendCommand("placeBlock {} {} {} {} {}".format(x, y, z, block_name, placement))
+
 
 class RobustObserver:
 

@@ -125,13 +125,14 @@ class ServerSection:
 class Commands:
 
     def __init__(self, bAll=True, bContinuous=None, bDiscrete=None, bInventory=None,
-                 bSimpleCraft=None, bChat=None):
+                 bSimpleCraft=None, bChat=None, bPlaceBlock=None):
         self.bAll = bAll
         self.bContinuous = bContinuous
         self.bDiscrete = bDiscrete
         self.bInventory = bInventory
         self.bSimpleCraft = bSimpleCraft
         self.bChat = bChat
+        self.bPlaceBlock = bPlaceBlock
 
     def xml(self):
         _xml = ""
@@ -145,6 +146,8 @@ class Commands:
             _xml += "<SimpleCraftCommands />\n"
         if self.bAll or self.bChat:
             _xml += "<ChatCommands />\n"
+        if self.bAll or self.bPlaceBlock:
+            _xml += "<BlockPlaceCommands />\n"
         #<AbsoluteMovementCommands /> --
         #<MissionQuitCommands /> --
         #<HumanLevelCommands/> --

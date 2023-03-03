@@ -35,8 +35,7 @@ class MissionRecordSpec:
         self.destination = ''
 
     def setDestination(self, destination: str) -> None:
-        if destination:
-            raise NotImplementedError("setting destination is not implemented")
+        self.destination = destination
 
     def recordMP4(self, frames_per_second: int, bit_rate: int) -> None:
         raise NotImplementedError("recording is not implemented")

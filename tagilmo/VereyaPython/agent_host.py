@@ -116,8 +116,6 @@ class AgentHost(ArgumentParser):
         self.findClient( list(pool) )
         self.world_state.clear()
         assert self.current_mission_record is not None
-        if (self.current_mission_record.isRecording()):
-            raise NotImplementedError('mission recoding is not implemented')
 
     def testSchemasCompatible(self):
         pass

@@ -1,3 +1,4 @@
+import os
 import unittest
 import logging
 from tagilmo import VereyaPython
@@ -45,6 +46,9 @@ def init_mission(mc, start_x=None, start_y=None):
 
     if mc is None:
         mc = MCConnector(miss)
+        mc.mission_record.is_recording_observations = True
+        os.makedirs('test_observation', exist_ok=True)
+        mc.mission_record.setDestination("test_observation")
         obs = RobustObserver(mc)
     else:
         mc.setMissionXML(miss)
@@ -54,7 +58,7 @@ def init_mission(mc, start_x=None, start_y=None):
 logger = logging.getLogger(__name__)
 
 
-class TestData(unittest.TestCase):
+class TestData(BaseTest):
     mc = None
     rob = None
 
@@ -66,6 +70,10 @@ class TestData(unittest.TestCase):
         cls.rob = obs
         mc.safeStart()
         time.sleep(1)
+
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        cls.mc.stop()
 
     def setUp(self):
         super().setUp()

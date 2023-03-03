@@ -9,8 +9,8 @@ class TestPlacement(BaseTest):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = (-125.0, 73.0)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], seed=4)
+        start = (-125.0, 73)
+        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], seed=4, forceReset='true')
         cls.mc = mc
         cls.rob = obs
         mc.safeStart()
@@ -21,7 +21,6 @@ class TestPlacement(BaseTest):
         mc = self.mc
         rob = self.rob
         rob.update_in_background()
-
         time.sleep(1)
         grid = rob.getCachedObserve('getNearGrid')
         mc.sendCommand("placeBlock -125 72 74 minecraft:dirt replace")

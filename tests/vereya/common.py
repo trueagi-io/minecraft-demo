@@ -8,7 +8,7 @@ from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from base_test import BaseTest
 
 
-def init_mission(mc, start_x, start_y, seed):
+def init_mission(mc, start_x, start_y, seed, forceReset="false", forceReuse="false"):
     want_depth = False
     video_producer = mb.VideoProducer(width=320 * 4,
                                       height=240 * 4, want_depth=want_depth)
@@ -35,8 +35,8 @@ def init_mission(mc, start_x, start_y, seed):
     flat_json = json.dumps(flat_json).replace('"', "%ESC")
     world = mb.defaultworld(
         seed=seed,
-        forceReset="false",
-        forceReuse="false")
+        forceReset=forceReset,
+        forceReuse=forceReuse)
     miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     # uncomment to disable passage of time:

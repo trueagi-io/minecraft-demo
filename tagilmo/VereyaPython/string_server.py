@@ -8,7 +8,7 @@ from typing import Callable, Optional
 from .tcp_server import TCPServer
 from .timestamped_string import TimestampedString
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
-
+from .timestamped_string_writer import TimestampedStringWriter
 logger = logging.getLogger()
 
 class StringServer:
@@ -22,6 +22,7 @@ class StringServer:
         self.handle_string = handle_string
         self.log_name = log_name
         self.server = TCPServer(self.io_service, self.port, self.__cb, self.log_name)
+        self.writer = None
 
     def start(self) -> None:
         fut = asyncio.run_coroutine_threadsafe(self.server.startAccept(), self.io_service)
@@ -40,7 +41,10 @@ class StringServer:
         return self.handle_string(string_message)
 
     def recordMessage(self, message: TimestampedString) -> None:
-        pass
+        if self.writer is None:
+            return
+        if self.writer.is_open():
+            self.writer.write(message)
 
     def getPort(self) -> int:
         return self.server.getPort()
@@ -49,12 +53,12 @@ class StringServer:
         self.server.close()
 
     def record(self, path: str) -> 'StringServer':
-        raise NotImplementedError('recording in string server not implemented')
-       # if self.writer.is_open():
-       #     self.writer.close()
-
-       # self.writer.open(path, 'aw')
-       # return self
+        if self.writer is None:
+            self.writer = TimestampedStringWriter()
+        if self.writer.is_open():
+            self.writer.close()
+        self.writer.open(path, 'wt')
+        return self
 
     def stopRecording(self) -> None:
         pass

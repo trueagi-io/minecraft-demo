@@ -12,8 +12,13 @@ class MissionRecord:
         self.commands_path = ''
         self.mission_ended_path = ''
         self.mp4_colourmap_path = ''
-        if self.spec.isRecording():
-            raise NotImplementedError('mission recording is not implemented')
+        if self.spec.destination:
+            if self.spec.is_recording_observations:
+                self.observations_path = self.spec.destination + '/observations.txt'
+            if self.spec.is_recording_rewards:
+                self.rewards_path = self.spec.destination + '/rewards.txt'
+            if self.spec.is_recording_commands:
+                self.commands_path = self.spec.destination + '/commands.txt'
 
     def isRecordingMP4(self, _type: FrameType) -> bool:
         it: Optional[FrameRecordingSpec] = self.spec.video_recordings.get(_type, None)

@@ -12,7 +12,6 @@ import re
 from tagilmo import VereyaPython as VP
 
 import numpy
-import tagilmo.utils.malmoutils as malmoutils
 from tagilmo.utils.mission_builder import MissionXML
 from tagilmo.utils.mathutils import *
 
@@ -20,6 +19,29 @@ logger = logging.getLogger('malmo')
 
 
 module = VP
+
+
+def get_recordings_directory(agent_host):
+    # Check the dir passed in:
+    recordingsDirectory = agent_host.getStringArgument('recording_dir')
+    if recordingsDirectory:
+        # If we're running as an integration test, we want to send all our recordings
+        # to the central test location specified in the environment variable MALMO_TEST_RECORDINGS_PATH:
+        if agent_host.receivedArgument("test"):
+            try:
+                test_path = os.environ['MALMO_TEST_RECORDINGS_PATH']
+                if test_path:
+                    recordingsDirectory = os.path.join(test_path, recordingsDirectory)
+            except:
+                pass
+        # Now attempt to create the folder we want to write to:
+        try:
+            os.makedirs(recordingsDirectory)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST: # ignore error if already existed
+                raise
+    return recordingsDirectory
+
 
 class MCConnector:
 
@@ -46,7 +68,7 @@ class MCConnector:
         self.agent_hosts += [module.AgentHost() for n in range(nAgents)]
         self.agent_hosts[0].parse( sys.argv )
         if self.receivedArgument('recording_dir'):
-            recordingsDirectory = malmoutils.get_recordings_directory(self.agent_hosts[0])
+            recordingsDirectory = get_recordings_directory(self.agent_hosts[0])
             self.mission_record.recordRewards()
             self.mission_record.recordObservations()
             self.mission_record.recordCommands()

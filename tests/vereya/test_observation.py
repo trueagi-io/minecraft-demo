@@ -22,7 +22,6 @@ def init_mission(mc, start_x=None, start_y=None):
 
     print('starting at ({0}, {1})'.format(start_x, start_y))
 
-    #miss = mb.MissionXML(namespace="ProjectMalmo.microsoft.com",
     miss = mb.MissionXML(
                          agentSections=[mb.AgentSection(name='Cristina',
              agenthandlers=agent_handlers,
@@ -89,7 +88,7 @@ class TestData(BaseTest):
         logger.info("wait chat")
         start = time.time()
         while True:
-            command = self.rob.waitNotNoneObserve('getChat')
+            command = self.rob.waitNotNoneObserve('getChat', observeReq=False)
             if command is not None:
                 break
             time.sleep(0.05)

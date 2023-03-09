@@ -45,11 +45,11 @@ class BaseTest(unittest.TestCase):
     def assertFalse(self, expr, msg=None):
         # log if not false
         if expr:
-            logger.info(f"assertFalse failed in {getTestName()}" + str(expr) + str(msg))
+            logger.info(f"assertFalse failed in {self.getTestName()}" + str(expr) + str(msg))
         super().assertFalse(expr, msg)
 
     def assertGreater(self, a, b, msg=None):
         # log if not greater
         if a <= b:
-            logger.info(f"assertGreater failed in {getTestName()}" + str(a) + " <= " + str(b) + str(msg))
+            logger.info(f"assertGreater failed in {self.getTestName()}" + str(a) + " <= " + str(b) + str(msg))
         super().assertGreater(a, b, msg)

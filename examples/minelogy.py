@@ -441,7 +441,7 @@ class Minelogy():
         if mine_entry is None:
             return None
         for tool in reversed(mine_entry[0]['tools']):
-            if tool == None:
+            if tool == None and isinstance(result, str):
                 return None
             for item in invent:
                 if tool is None and (result is None or isinstance(result, str) or result['quantity'] < item['quantity']):

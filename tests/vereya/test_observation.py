@@ -106,6 +106,13 @@ class TestData(BaseTest):
     def test_observation_from_triples(self):
         blockdrops = self.rob.getBlocksDropsList()
         self.assertGreater(len(blockdrops), 0, "blockdrops len")
+        for blockdrop in blockdrops:
+            if blockdrop['block_name'] == 'diamond_ore' and blockdrop['item_name'] == 'diamond_ore':
+                self.assertEqual(blockdrop['tool'], 'silkt_iron_pickaxe', "check diamond_ore tool")
+            if blockdrop['block_name'] == 'iron_ore' and blockdrop['tool'] == 'stone_pickaxe':
+                self.assertEqual(blockdrop['item_name'], 'raw_iron', "check iron")
+            if blockdrop['block_name'] == 'birch_leaves' and blockdrop['tool'] == 'shears':
+                self.assertEqual(blockdrop['item_name'], 'birch_leaves', "check leaves")
 
     def test_game_state(self):
         self.mc.observeProc()

@@ -530,6 +530,15 @@ class FindAndMine(Switcher):
         self.agent.blockMem.add_focus_blocks(blocks)
         super().__init__(agent.rob)
 
+    def checkToolAvailability(self):
+        inv = self.rob.cached['getInventory'][0]
+        los = self.rob.cached['getLineOfSights'][0]
+        if los is not None and 'type' in los and inv is not None:
+            mine_entry = self.rob.mlogy.find_mine_by_block({'type': los['type']})
+            tool = self.rob.mlogy.select_minetool(inv, mine_entry, result="tool_unavailable")
+            return not tool == "tool_unavailable"
+        return True
+
     def update(self):
         self.aPos = self.agent.rob.cached['getAgentPos'][0]
         # we cannot use SAnd, because we don't know `target` for ApproachPos a priori
@@ -594,6 +603,13 @@ class Obtain(Switcher):
         # self.items = tmp_items
         return short_obtain.update()
 
+    def blocksToStrings(self, blocks):
+        if isinstance(blocks[0], list):
+            blocks = [b['type'] for b in blocks[0]]
+        else:
+            blocks = [b['type'] for b in blocks]
+        return blocks
+
     def update(self):
         invent = self.rob.waitNotNoneObserve('getInventory', False)
         new_items = list(filter(lambda item: not self.rob.mlogy.isInInventory(invent, item), self.items))
@@ -605,6 +621,9 @@ class Obtain(Switcher):
             # to consider, although update other branches checking if they become more
             # achievable (also, it would be nice to associate costs with plans) -- TODO
             self.stopDelegate = new_items != self.items
+        if isinstance(self.delegate, FindAndMine):
+            if not self.delegate.checkToolAvailability():
+                self.delegate = None
         if self.delegate is None:
             for item in new_items:
                 name = self.rob.mlogy.get_otype(item)
@@ -644,16 +663,18 @@ class Obtain(Switcher):
             best_goal = None
             best_diff = 10
             for item in new_items:
+                blocks3 = []
+                for mine_entry in self.rob.mlogy.find_mines_by_result(item):
+                    temp = [self.rob.mlogy.get_target_variants(b) for b in mine_entry[0]['blocks']]
+                    temp = self.blocksToStrings(temp)
+                    blocks3.extend(temp)
                 for mine_entry in self.rob.mlogy.find_mines_by_result(item):
                     tool = mine_entry[0]['tools'][-1]
                     blocks = [self.rob.mlogy.get_target_variants(b) for b in mine_entry[0]['blocks']]
                     depthmin = None
                     if 'depthmin' in blocks[0]:
                         depthmin = blocks[0]['depthmin']
-                    if isinstance(blocks[0], list):
-                        blocks = [b['type'] for b in blocks[0]]
-                    else:
-                        blocks = [b['type'] for b in blocks]
+                    blocks = self.blocksToStrings(blocks)
                     if tool is None or self.rob.mlogy.isInInventory(invent, {'type': tool}):
                         # self.chooseTool(invent, tool)
                         if self.agent.nearestBlock(blocks) is not None:
@@ -661,15 +682,16 @@ class Obtain(Switcher):
                             goal = FindAndMine(self.agent, blocks, depthmin)
                         else:
                             blocks2 = self.rob.mlogy.assoc_blocks(blocks)
-                            if blocks2 != [] and self.agent.nearestBlock(blocks2) is not None:
+                            if (blocks2 != [] and self.agent.nearestBlock(blocks2) is not None) or \
+                                    (blocks3 != [] and self.agent.nearestBlock(blocks3) is not None):
                                 diff = 1
                             else:
                                 diff = 2
-                            goal = FindAndMine(self.agent, blocks + blocks2, depthmin)
+                            goal = FindAndMine(self.agent, blocks + blocks2 + blocks3, depthmin)
                     else:
                         diff = 3
                         goal = Obtain(self.agent, [{'type': tool}], self.rec_depth+1, self.depthlimit)
-                    if blocks[0] == 'diamond_ore':
+                    if blocks[0] == 'diamond_ore' or blocks[0] == 'deepslate_diamond_ore':
                         sticks_in_inv = self.rob.mlogy.findInInventory(invent, {'type': 'stick'})
                         if sticks_in_inv is None:
                             diff = -1

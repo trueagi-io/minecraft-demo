@@ -1,8 +1,10 @@
 from difflib import SequenceMatcher
 import time
 
+
+
 class Minelogy():
-    def __init__(self, item_list, items_to_craft, mcrecipes):
+    def __init__(self, item_list, items_to_craft, mcrecipes, items_to_mine, blockdrops):
         self.log_names = []
         self.planks_names = []
         self.leaves_names = []
@@ -12,159 +14,44 @@ class Minelogy():
         self.log_names_t = []
         self.planks_names_t = []
         self.fuel_priority = {}
-        self.mines = [({'blocks': [{'type': 'log'}],
-                   'tools': ['stone_axe', 'wooden_axe', None]},
-                  {'type': 'log'}
-                  ),
-                 ({'blocks': [{'type': 'grass'}, {'type': 'dirt'}],
-                   'tools': ['stone_shovel', 'wooden_shovel', None]},
-                  {'type': 'dirt'}
-                  ),
-                 ({'blocks': [{'type': 'sand'}],
-                   'tools': ['stone_shovel', 'wooden_shovel', None]},
-                  {'type': 'sand'}
-                  ),
-                 ({'blocks': [{'type': 'diorite'}],
-                   'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
-                  {'type': 'diorite'}
-                  ),
-                  ({'blocks': [{'type': 'granite'}],
-                    'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
-                   {'type': 'granite'}
-                   ),
-                 ({'blocks': [{'type': 'clay'}],
-                   'tools': ['stone_shovel', 'wooden_shovel', None]},
-                  {'type': 'clay_ball'}
-                  ),
-                 ({'blocks': [{'type': 'gravel'}],
-                   'tools': [None]},
-                  {'type': 'gravel'}
-                  ),
-                 ({'blocks': [{'type': 'sandstone'}],
-                   'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
-                  {'type': 'sandstone'}
-                  ),
-                 ({'blocks': [{'type': 'stone'}],
-                   'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
-                  {'type': 'stone'}
-                  ),
-                 ({'blocks': [{'type': 'deepslate'}],
-                   'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
-                  {'type': 'deepslate'}
-                  ),
-                 ({'blocks': [{'type': 'stone', 'variant': 'stone'}],
-                   'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
-                  {'type': 'cobblestone'}
-                  ),
-                 ({'blocks': [{'type': 'cobblestone'}],
-                   'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
-                  {'type': 'cobblestone'}
-                  ),
-                 ({'blocks': [{'type': 'coal_ore'}],
-                   'tools': ['iron_pickaxe', 'stone_pickaxe', 'wooden_pickaxe']},
-                  {'type': 'coal'}
-                  ),
-                 ({'blocks': [{'type': 'diamond_ore', 'depthmin': 5}],
-                   'tools': ['iron_pickaxe']},
-                  {'type': 'diamond'}
-                  ),
-                 ({'blocks': [{'type': 'copper_ore'}],
-                   'tools': ['iron_pickaxe', 'stone_pickaxe']},
-                  {'type': 'raw_copper'}
-                  ),
-                 ({'blocks': [{'type': 'iron_ore', 'depthmin': 25}],
-                   'tools': ['iron_pickaxe', 'stone_pickaxe']},
-                  {'type': 'raw_iron'}
-                  ),
-                 ({'blocks': [{'type': 'pumpkin'}],
-                   'tools': [None]},
-                  {'type': 'pumpkin'}
-                  ),
-                 ({'blocks': [{'type': 'leaves', 'variant': 'oak'}],
-                   'tools': [None]},
-                  {'type': 'apple'}
-                  ),
-                 ({'blocks': [{'type': 'leaves'}],
-                   'tools': [None]},
-                  {'type': 'sapling'}
-                  ),
-                 ({'blocks': [{'type': 'tallgrass'}],
-                   'tools': [None]},
-                  {'type': 'wheat_seeds'}
-                  ),
-                 ({'blocks': [{'type': 'deadbush'}],
-                   'tools': [None]},
-                  {'type': 'stick'}
-                  ),
-                 ({'blocks': [{'type': 'tallgrass'}],
-                   'tools': [None]},
-                  {'type': 'wheat_seeds'}
-                  ),
-                 ]
+        self.mines = []
+        # self.mines = [({'blocks': [{'type': 'diamond_ore', 'depthmin': 5}],
+        #            'tools': ['iron_pickaxe']},
+        #           {'type': 'diamond'})]
         self.crafts = []
-        # self.crafts = [([{'type': 'log', 'quantity': 1}],
-        #            {'type': 'planks', 'quantity': 4}),
-        #           ([{'type': 'planks', 'quantity': 2}],
-        #            {'type': 'stick', 'quantity': 4}),
-        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'planks', 'quantity': 3}],
-        #            {'type': 'wooden_axe'}),
-        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'planks', 'quantity': 3}],
-        #            {'type': 'wooden_pickaxe'}),
-        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'planks', 'quantity': 1}],
-        #            {'type': 'wooden_shovel'}),
-        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 3}],
-        #            {'type': 'stone_axe'}),
-        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 3}],
-        #            {'type': 'stone_pickaxe'}),
-        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'cobblestone', 'quantity': 1}],
-        #            {'type': 'stone_shovel'}),
-        #           ([{'type': 'raw_iron', 'quantity': 1}, {'type': 'furnace', 'quantity': 1},
+        # self.crafts = [([{'type': 'sand', 'quantity': 1}, {'type': 'furnace', 'quantity': 1},
         #             {'type': 'fuel', 'quantity': 1}],
-        #            {'type': 'iron_ingot'}),
-        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
-        #            {'type': 'iron_axe'}),
-        #           ([{'type': 'cobblestone', 'quantity': 8}],
-        #            {'type': 'furnace'}),
-        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 3}],
-        #            {'type': 'iron_pickaxe'}),
-        #           ([{'type': 'stick', 'quantity': 2}, {'type': 'iron_ingot', 'quantity': 1}],
-        #            {'type': 'iron_shovel'}),
-        #           ([{'type': 'stick', 'quantity': 1}, {'type': 'coal', 'quantity': 1}],
-        #            {'type': 'torch', 'quantity': 4}),
-        #           ([{'type': 'planks', 'quantity': 2}],
-        #            {'type': 'pressure_plate'}),
-        #           ([{'type': 'planks', 'quantity': 3}],
-        #            {'type': 'slab', 'quantity': 6}),
-        #           ([{'type': 'planks', 'quantity': 1}],
-        #            {'type': 'button'}),
-        #           ([{'type': 'planks', 'variant': 'spruce', 'quantity': 6}],
-        #            {'type': 'spruce_door', 'quantity': 3}),
-        #           ([{'type': 'planks', 'variant': 'birch', 'quantity': 6}],
-        #            {'type': 'birch_door', 'quantity': 3}),
-        #           ([{'type': 'planks', 'variant': 'oak', 'quantity': 6}],
-        #            {'type': 'wooden_door', 'quantity': 3}),
-        #           ([{'type': 'planks', 'quantity': 6}],
-        #            {'type': 'trapdoor', 'quantity': 2}),
-        #           ([{'type': 'cobblestone', 'quantity': 3}],
-        #            {'type': 'stone_slab', 'quantity': 6}),
-        #           ([{'type': 'cobblestone', 'quantity': 3}],
-        #            {'type': 'cobblestone_wall', 'quantity': 6}),
-        #           ([{'type': 'stick', 'quantity': 1}, {'type': 'cobblestone', 'quantity': 1}],
-        #            {'type': 'lever'}),
-        #           ([{'type': 'pumpkin', 'quantity': 1}],
-        #            {'type': 'pumpkin_seeds'}),
-        #           ([{'type': 'sand', 'quantity': 1}, {'type': 'furnace', 'quantity': 1},
-        #             {'type': 'fuel', 'quantity': 1}],
-        #            {'type': 'glass'}),
-        #           ([{"type": "stick", "quantity": 4}, {"type": "planks", "quantity": 2}],
-        #            {"type": "fence_gate", "quantity": 1}),
-        #           ([{"type": "planks", "quantity": 6}, {"type": "stick", "quantity": 1}],
-        #            {"type": "sign", "quantity": 3}),
-        #           ([{"type": "planks", "quantity": 5}],
-        #            {"type": "boat", "quantity": 1})
-        #           ]
+        #            {'type': 'glass'})]
         self.initialize_minelogy(item_list)
         self.set_recipes_for_items(items_to_craft, mcrecipes)
+        self.set_mines(items_to_mine, blockdrops)
+
+    def set_mines(self, items_to_mine, blockdrops):
+        possible_tool_qualities = ['wooden', 'stone', 'iron', 'golden', 'diamond', 'netherite']
+        for blockdrop in blockdrops:
+            item_name = blockdrop['item_name']
+            if item_name not in items_to_mine and item_name not in self.fuel_priority:
+                continue
+            block_name = blockdrop['block_name']
+            tool = blockdrop['tool']
+            tool_list = []
+            tool_split = tool.split("_")
+            if "AnyTool" in tool:
+                tool = tool.replace("AnyTool", "pickaxe")
+            if tool == "" or tool == "None":
+                tool_list.append(None)
+            elif tool_split[0] in possible_tool_qualities:
+                tool_prefxs = possible_tool_qualities[possible_tool_qualities.index(tool_split[0]):]
+                tool_list = [tool_prefx + "_" + tool_split[1] for tool_prefx in reversed(tool_prefxs)]
+            elif "silkt" in tool:
+                continue #currently we are not using silktouch enchantment for agent
+            elif tool == "shears":
+                tool_list = ['shears']
+            elif tool == "pickaxe":
+                tool_list = [tool_prefx + "_" + tool for tool_prefx in reversed(possible_tool_qualities)]
+            self.mines.append(({'blocks': [{'type': block_name}],
+                                'tools': tool_list},
+                               {'type': item_name}))
 
     def add_craft_tool(self, craft_tool):
         ingredient = None
@@ -274,7 +161,6 @@ class Minelogy():
 
         self.fuel_priority['stick'] = 3
         self.fuel_priority['coal'] = 4
-        self.fuel_priority['bamboo'] = -1
 
     def get_otype(self, obj):
         t = None
@@ -415,13 +301,14 @@ class Minelogy():
     def find_fuel(self, invent):
         return list(filter(lambda item: item is not None, list(self.findInInventory(invent, fl) for fl in self.fuel_priority)))
 
-    def select_minetool(self, invent, mine_entry):
+    def select_minetool(self, invent, mine_entry, result=None):
         if mine_entry is None:
             return None
-        result = None
         for tool in reversed(mine_entry[0]['tools']):
+            if tool == None and isinstance(result, str):
+                return None
             for item in invent:
-                if tool is None and (result is None or result['quantity'] < item['quantity']):
+                if tool is None and (result is None or isinstance(result, str) or result['quantity'] < item['quantity']):
                     result = item
                 elif tool == item['type']:
                     return item

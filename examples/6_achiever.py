@@ -6,6 +6,7 @@ from examples.skills import *
 from mcdemoaux.agenttools.agent import TAgent
 from examples.minelogy import Minelogy
 from examples.item_list_to_craft import items_to_craft
+from examples.item_list_to_mine import items_to_mine
 
 SCALE = 3
 
@@ -59,7 +60,7 @@ if __name__ == '__main__':
     # item_list, recipes = agent.rob.mc.getItemAndRecipeList()
     item_list, recipes = agent.rob.getItemsAndRecipesLists()
     blockdrops = agent.rob.getBlocksDropsList()
-    mlogy = Minelogy(item_list, items_to_craft, recipes)
+    mlogy = Minelogy(item_list, items_to_craft, recipes, items_to_mine, blockdrops)
     '''
     Currently we don't use all recipes from the game since there are some issues with
     agent not be able to work properly with all recipes available

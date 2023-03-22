@@ -9,7 +9,7 @@ from tagilmo.utils.mathutils import normAngle, degree2rad
 import numpy as np
 from minelogy import Minelogy
 
-from examples.item_list_to_craft import items_to_craft
+from examples.knowledge_lists import *
 
 
 # This script shows a relatively complex behavior of gathering resources
@@ -54,10 +54,11 @@ def runStraight(rob, dist, keepHeight=False):
             rob.sendCommand("attack 0")
             bJump = False
         los = rob.getCachedObserve('getLineOfSights')
-        if los is not None and los['distance'] < 0.5 and \
-               not los['type'] in RobustObserver.passableBlocks and\
-               not bJump:
-            break
+        if los['hitType'] != 'MISS':
+            if los is not None and los['distance'] < 0.5 and \
+                   not los['type'] in RobustObserver.passableBlocks and\
+                   not bJump:
+                break
     rob.sendCommand("move 0")
 
 
@@ -146,7 +147,7 @@ def mineAtSight(rob):
     sleep(0.1)
     rob.observeProcCached()
     los = rob.getCachedObserve('getLineOfSights')
-    if los is None or los['type'] is None or not los['inRange']:
+    if los['hitType'] == 'MISS' or los is None or los['type'] is None or not los['inRange']:
         return False
     dist = los['distance']
     obj = los['type']
@@ -315,7 +316,8 @@ if __name__ == '__main__':
     # initialize minelogy
     sleep(2)
     item_list, recipes = rob.getItemsAndRecipesLists()
-    mlogy = Minelogy(item_list, items_to_craft, recipes)
+    blockdrops = rob.getBlocksDropsList()
+    mlogy = Minelogy(item_list, items_to_craft, recipes, items_to_mine, blockdrops, ore_depths)
 
     logging.info("The first search for sticks")
     getSticks(rob, mlogy)

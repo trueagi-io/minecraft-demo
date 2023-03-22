@@ -195,3 +195,31 @@ items_to_craft = ["oak_planks",
                  "polished_blackstone_slab",
                  "polished_blackstone_brick_slab"
                  ]
+
+items_to_mine = ["log",
+                  "dirt",
+                  "sand",
+                  "diorite",
+                  "granite",
+                  "clay_ball",
+                  "gravel",
+                  "sandstone",
+                  "cobbled_deepslate",
+                  "cobblestone",
+                  "coal",
+                  "diamond",
+                  "raw_copper",
+                  "raw_iron",
+                  "pumpkin",
+                  "apple",
+                  "sapling",
+                  "wheat_seeds",
+                  "stick"
+                 ]
+
+#block depths contains (min_depth, max_depth, most_common_depth) where certain ore can be generated. Most common
+# depth means that in this depth chances to meet specific ore are highest.
+ore_depths = {"diamond" : (14, -63, 5), #actually, i havent found any info about most_common_depth, so it's just an assumption
+                "raw_iron" : (54, -24, 15),
+                "raw_copper" : (112, -16, 47)
+              }

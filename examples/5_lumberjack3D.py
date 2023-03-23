@@ -11,7 +11,7 @@ from mcdemoaux.vision.vis import Visualizer
 
 from tagilmo.utils.mathutils import *
 
-from examples.item_list_to_craft import items_to_craft
+from examples.knowledge_lists import *
 
 SCALE = 4
 
@@ -254,12 +254,11 @@ class ApproachXZPos:
             return self.move.stop()
         los = self.rob.cached['getLineOfSights'][0]
         acts = []
-        if los is not None:
-            if los['hitType'] != 'MISS':
-                if los['inRange']:
-                    acts = [['attack', '1']]
-                else:
-                    acts = [['attack', '0']]
+        if los is not None and los['hitType'] != 'MISS':
+            if los['inRange']:
+                acts = [['attack', '1']]
+            else:
+                acts = [['attack', '0']]
         if self.perturb.precond():
             acts += self.perturb.act()
             print("Got stucked. Need perturbation.")
@@ -389,9 +388,7 @@ class MineAtSight:
 
     def _get_dist(self):
         los = self.rob.cached['getLineOfSights'][0]
-        if los['hitType'] == 'MISS':
-            return None
-        return None if (los is None or los['type'] is None or not los['inRange']) else los['distance']
+        return None if (los is None or los['hitType'] == 'MISS' or los['type'] is None or not los['inRange']) else los['distance']
 
     def precond(self):
         return self.dist is not None
@@ -478,7 +475,7 @@ class LJAgent(TAgent):
         #     target = targ
         for targ in target:
             t = self.mlogy.get_otype(targ)
-            t_list = [var['type'] for var in self.mlogy.get_target_variants(targ)]
+            t_list = [var['type'] for var in self.mlogy.get_target_variants(targ, True)]
             ray = self.rob.cached['getLineOfSights'][0]
             if (ray['hitType'] != 'MISS'):
                 if self.mlogy.matchEntity(ray, targ):
@@ -655,7 +652,7 @@ class LJAgent(TAgent):
                 target = 'terminate'
                 continue
             if howto[-1][0] == 'search':
-                blocks = [block['type'] for block in self.mlogy.get_target_variants(howto[-1][1][0])]
+                blocks = [block['type'] for block in self.mlogy.get_target_variants(howto[-1][1][0], True)]
                 self.skill = NeuralSearch(self.rob, self.blockMem, blocks)
                 continue
             if howto[-1][0] == 'craft':
@@ -707,7 +704,8 @@ if __name__ == '__main__':
 
     # initialize minelogy
     item_list, recipes = agent.rob.getItemsAndRecipesLists()
-    mlogy = Minelogy(item_list, items_to_craft, recipes)
+    blockdrops = agent.rob.getBlocksDropsList()
+    mlogy = Minelogy(item_list, items_to_craft, recipes, items_to_mine, blockdrops, ore_depths)
     agent.set_mlogy(mlogy)
 
     agent.rob.sendCommand("chat /difficulty peaceful")

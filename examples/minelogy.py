@@ -4,7 +4,7 @@ import time
 
 
 class Minelogy():
-    def __init__(self, item_list, items_to_craft, mcrecipes, items_to_mine, blockdrops):
+    def __init__(self, item_list, items_to_craft, mcrecipes, items_to_mine, blockdrops, oredepth={}):
         self.log_names = []
         self.planks_names = []
         self.leaves_names = []
@@ -24,9 +24,9 @@ class Minelogy():
         #            {'type': 'glass'})]
         self.initialize_minelogy(item_list)
         self.set_recipes_for_items(items_to_craft, mcrecipes)
-        self.set_mines(items_to_mine, blockdrops)
+        self.set_mines(items_to_mine, blockdrops, oredepth)
 
-    def set_mines(self, items_to_mine, blockdrops):
+    def set_mines(self, items_to_mine, blockdrops, oredepth={}):
         possible_tool_qualities = ['wooden', 'stone', 'iron', 'golden', 'diamond', 'netherite']
         for blockdrop in blockdrops:
             item_name = blockdrop['item_name']
@@ -49,9 +49,14 @@ class Minelogy():
                 tool_list = ['shears']
             elif tool == "pickaxe":
                 tool_list = [tool_prefx + "_" + tool for tool_prefx in reversed(possible_tool_qualities)]
-            self.mines.append(({'blocks': [{'type': block_name}],
+            if item_name in oredepth:
+                self.mines.append(({'blocks': [{'type': block_name, 'depthmin': oredepth[item_name][2]}],
                                 'tools': tool_list},
                                {'type': item_name}))
+            else:
+                self.mines.append(({'blocks': [{'type': block_name}],
+                                    'tools': tool_list},
+                                   {'type': item_name}))
 
     def add_craft_tool(self, craft_tool):
         ingredient = None
@@ -199,7 +204,7 @@ class Minelogy():
             res.append(var_target)
         return res
 
-    def get_target_variants(self, target):
+    def get_target_variants(self, target, return_list=False):
         if target['type'] == "planks":
             res = []
             for p_name in self.planks_names:
@@ -213,7 +218,10 @@ class Minelogy():
             return self.mimic_target(target, self.log_names_t)
         elif hasattr(self, target['type']+"_types"):
             return self.mimic_target(target, getattr(self, "{}_types".format(target['type'])))
-        return target
+        if not isinstance(target, list) and return_list:
+            return [target]
+        else:
+            return target
 
     def get_log_names(self):
         return self.log_names

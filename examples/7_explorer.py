@@ -9,7 +9,7 @@ from examples.minelogy import Minelogy
 from examples.skills import *
 from mcdemoaux.agenttools.agent import TAgent
 
-from examples.item_list_to_craft import items_to_craft
+from examples.knowledge_lists import *
 
 class StaticKnowledge:
 
@@ -190,7 +190,8 @@ if __name__ == '__main__':
 
     # initialize minelogy
     item_list, recipes = agent.rob.getItemsAndRecipesLists()
-    mlogy = Minelogy(item_list, items_to_craft, recipes)
+    blockdrops = agent.rob.getBlocksDropsList()
+    mlogy = Minelogy(item_list, items_to_craft, recipes, items_to_mine, blockdrops, ore_depths)
     agent.set_mlogy(mlogy)
     agent.run()
 

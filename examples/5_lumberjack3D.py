@@ -254,12 +254,11 @@ class ApproachXZPos:
             return self.move.stop()
         los = self.rob.cached['getLineOfSights'][0]
         acts = []
-        if los is not None:
-            if los['hitType'] != 'MISS':
-                if los['inRange']:
-                    acts = [['attack', '1']]
-                else:
-                    acts = [['attack', '0']]
+        if los is not None and los['hitType'] != 'MISS':
+            if los['inRange']:
+                acts = [['attack', '1']]
+            else:
+                acts = [['attack', '0']]
         if self.perturb.precond():
             acts += self.perturb.act()
             print("Got stucked. Need perturbation.")
@@ -389,9 +388,7 @@ class MineAtSight:
 
     def _get_dist(self):
         los = self.rob.cached['getLineOfSights'][0]
-        if los['hitType'] == 'MISS':
-            return None
-        return None if (los is None or los['type'] is None or not los['inRange']) else los['distance']
+        return None if (los is None or los['hitType'] == 'MISS' or los['type'] is None or not los['inRange']) else los['distance']
 
     def precond(self):
         return self.dist is not None

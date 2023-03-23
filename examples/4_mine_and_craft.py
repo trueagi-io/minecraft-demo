@@ -54,11 +54,10 @@ def runStraight(rob, dist, keepHeight=False):
             rob.sendCommand("attack 0")
             bJump = False
         los = rob.getCachedObserve('getLineOfSights')
-        if los['hitType'] != 'MISS':
-            if los is not None and los['distance'] < 0.5 and \
-                   not los['type'] in RobustObserver.passableBlocks and\
-                   not bJump:
-                break
+        if los is not None and los['hitType'] != 'MISS' and los['distance'] < 0.5 and \
+               not los['type'] in RobustObserver.passableBlocks and\
+               not bJump:
+            break
     rob.sendCommand("move 0")
 
 
@@ -147,16 +146,14 @@ def mineAtSight(rob):
     sleep(0.1)
     rob.observeProcCached()
     los = rob.getCachedObserve('getLineOfSights')
-    if los['hitType'] == 'MISS' or los is None or los['type'] is None or not los['inRange']:
+    if los is None or los['hitType'] == 'MISS' or los['type'] is None or not los['inRange']:
         return False
     dist = los['distance']
     obj = los['type']
     rob.sendCommand('attack 1')
     for t in range(100):
         los = rob.getCachedObserve('getLineOfSights')
-        if los['hitType'] == 'MISS':
-            continue
-        if los is None or los['type'] is None or \
+        if los is None or los['hitType'] == 'MISS' or los['type'] is None or \
            abs(dist - los['distance']) > 0.01 or obj != los['type']:
             rob.sendCommand('attack 0')
             return True

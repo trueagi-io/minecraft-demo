@@ -79,6 +79,10 @@ class TestMotion(BaseTest):
         self.obs.stopMove()
         super().setUp()
 
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        cls.mc.stop()
+
 
 if __name__ == '__main__':
     VereyaPython.setupLogger()

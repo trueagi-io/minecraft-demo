@@ -26,7 +26,9 @@ def run_tests(test_files):
 
 def main():
     VereyaPython.setupLogger()
-    test_files = ['test_craft', 'test_inventory', 'test_quit', 'test_observation', 'test_placement' ]
+    test_files = ['test_motion_vereya', 'test_craft', 
+                  'test_inventory', 'test_quit', 
+                  'test_observation', 'test_placement' ]
     res = run_tests(test_files)
     if not res.wasSuccessful():
         sys.exit(1)

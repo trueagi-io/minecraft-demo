@@ -14,7 +14,7 @@ def init_mission(mc, start_x, start_y, seed, forceReset="false", forceReuse="fal
                                       height=240 * 4, want_depth=want_depth)
 
     obs = mb.Observations()
-    obs.gridNear = [[-1, 1], [-2, 1], [-1, 1]]
+    obs.gridNear = [[-2, 2], [-2, 2], [-2, 2]]
 
 
     agent_handlers = mb.AgentHandlers(observations=obs, video_producer=video_producer)

@@ -7,51 +7,7 @@ import time
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from base_test import BaseTest
-
-
-def init_mission(mc, start_x=None, start_y=None):
-    want_depth = False
-    video_producer = mb.VideoProducer(width=320 * 4,
-                                      height=240 * 4, want_depth=want_depth)
-
-    obs = mb.Observations()
-    obs.gridNear = [[-1, 1], [-2, 1], [-1, 1]]
-
-
-    agent_handlers = mb.AgentHandlers(observations=obs, video_producer=video_producer)
-
-    print('starting at ({0}, {1})'.format(start_x, start_y))
-
-    miss = mb.MissionXML(
-                         agentSections=[mb.AgentSection(name='Cristina',
-             agenthandlers=agent_handlers,
-                                      #    depth
-             agentstart=mb.AgentStart([start_x, 78.0, start_y, 1]))])
-    flat_json = {"biome":"minecraft:plains",
-                 "layers":[{"block":"minecraft:diamond_block","height":1}],
-                 "structures":{"structures": {"village":{}}}}
-
-    flat_param = "3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake"
-    flat_json = json.dumps(flat_json).replace('"', "%ESC")
-    world = mb.defaultworld(
-        seed='4',
-        forceReset="false",
-        forceReuse="false")
-    miss.setWorld(world)
-    miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
-    # uncomment to disable passage of time:
-    miss.serverSection.initial_conditions.time_pass = 'false'
-    miss.serverSection.initial_conditions.time_start = "1000"
-
-    if mc is None:
-        mc = MCConnector(miss)
-        mc.mission_record.is_recording_observations = True
-        os.makedirs('test_observation', exist_ok=True)
-        mc.mission_record.setDestination("test_observation")
-        obs = RobustObserver(mc)
-    else:
-        mc.setMissionXML(miss)
-    return mc, obs
+from common import init_mission
 
 
 logger = logging.getLogger(__name__)
@@ -64,7 +20,7 @@ class TestData(BaseTest):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         start = (-125.0, 73.0)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
+        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], seed='4')
         cls.mc = mc
         cls.rob = obs
         mc.safeStart()
@@ -115,8 +71,11 @@ class TestData(BaseTest):
     def getDist(self):
         mc = self.mc
         c = 0
+        prev_pitch = None
         while True:
             mc.observeProc()
+            pos = mc.getAgentPos()
+            pitch = pos[3]
             visible = mc.getFullStat('LineOfSight')
             if visible and 'distance' in visible :
                 dist = visible['distance']
@@ -126,7 +85,13 @@ class TestData(BaseTest):
                 c += 1
                 if c > 4:
                     return 0
-                mc.sendCommand('pitch 0.1')
+                if pitch > 80:
+                    prev_pitch = -0.05
+                if pitch < -80:
+                    prev_pitch = 0.05
+                if prev_pitch is None:
+                    prev_pitch = 0.05
+                mc.sendCommand('pitch ' + str(prev_pitch))
                 time.sleep(0.5)
                 mc.sendCommand('pitch 0')
                 continue 
@@ -137,4 +102,3 @@ def main():
         
 if __name__ == '__main__':
    main()
-

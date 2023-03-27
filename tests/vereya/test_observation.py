@@ -104,6 +104,7 @@ class TestData(BaseTest):
                 continue 
         
 def main():
+    VereyaPython.setupLogger()
     unittest.main()
 
         

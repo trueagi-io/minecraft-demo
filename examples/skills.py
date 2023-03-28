@@ -621,9 +621,9 @@ class Obtain(Switcher):
             # to consider, although update other branches checking if they become more
             # achievable (also, it would be nice to associate costs with plans) -- TODO
             self.stopDelegate = new_items != self.items
-        if isinstance(self.delegate, FindAndMine):
-            if not self.delegate.checkToolAvailability():
-                self.delegate = None
+        # if isinstance(self.delegate, FindAndMine):
+        #     if not self.delegate.checkToolAvailability():
+        #         self.delegate = None
         if self.delegate is None:
             for item in new_items:
                 name = self.rob.mlogy.get_otype(item)

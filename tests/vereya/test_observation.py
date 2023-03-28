@@ -101,16 +101,45 @@ class TestData(BaseTest):
     def test_observation_from_item(self):
         item_list, recipes = self.rob.getItemsAndRecipesLists()
         self.assertGreater(len(item_list), 0, "item_list len")
+        self.assertTrue("diamond" in item_list)
+        self.assertTrue("iron_ore" in item_list)
+        self.assertTrue("stone_pickaxe" in item_list)
         self.assertGreater(len(recipes), 0, "recipes len")
+        for recipe in recipes:
+            if "iron_pickaxe" in recipe['name']:
+                self.assertGreater(len(recipe['ingredients']), 0)
+                for ingr in recipe['ingredients']:
+                    if len(ingr) > 0:
+                        self.assertTrue('iron_ingot' in ingr[0]['type'] or 'stick' in ingr[0]['type'])
+            if "wooden_pickaxe" in recipe['name']:
+                self.assertGreater(len(recipe['ingredients']), 0)
+                for ingr in recipe['ingredients']:
+                    if len(ingr) > 0:
+                        self.assertTrue('stick' in ingr[0]['type'] or 'planks' in ingr[0]['type'])
+            if recipe['name'] == "item.minecraft.stick":
+                self.assertGreater(len(recipe['ingredients']), 0)
+                for ingr in recipe['ingredients']:
+                    if len(ingr) > 0:
+                        self.assertTrue('planks' in ingr[0]['type'] or 'bamboo' in ingr[0]['type'])
+            if recipe['name'] == "block.minecraft.furnace":
+                self.assertGreater(len(recipe['ingredients']), 0)
+                for ingr in recipe['ingredients']:
+                    if len(ingr) > 0:
+                        self.assertTrue('cobblestone' in ingr[0]['type'])
+
 
     def test_observation_from_triples(self):
         blockdrops = self.rob.getBlocksDropsList()
         self.assertGreater(len(blockdrops), 0, "blockdrops len")
         for blockdrop in blockdrops:
-            if blockdrop['block_name'] == 'diamond_ore' and blockdrop['item_name'] == 'diamond_ore':
-                self.assertEqual(blockdrop['tool'], 'silkt_iron_pickaxe', "check diamond_ore tool")
-            if blockdrop['block_name'] == 'iron_ore' and blockdrop['tool'] == 'stone_pickaxe':
-                self.assertEqual(blockdrop['item_name'], 'raw_iron', "check iron")
+            if blockdrop['block_name'] == 'diamond_ore':
+                tool, item = blockdrop['tool'], blockdrop['item_name']
+                self.assertTrue((tool == 'iron_pickaxe' and item == "diamond") or
+                                (item == 'diamond_ore' and tool == 'silkt_iron_pickaxe'))
+            if blockdrop['block_name'] == 'iron_ore':
+                tool, item = blockdrop['tool'], blockdrop['item_name']
+                self.assertTrue((tool == 'stone_pickaxe' and item == "raw_iron") or
+                                (item == 'iron_ore' and tool == 'silkt_stone_pickaxe'))
             if blockdrop['block_name'] == 'birch_leaves' and blockdrop['tool'] == 'shears':
                 self.assertEqual(blockdrop['item_name'], 'birch_leaves', "check leaves")
 

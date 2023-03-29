@@ -351,7 +351,7 @@ class MCConnector:
 
 class RobustObserver:
 
-    passableBlocks = ['air', 'water', 'flowing_water', 'lava', 'double_plant', 'tallgrass', 'snow_layer',
+    passableBlocks = ['air', 'cave_air', 'void_air', 'water', 'flowing_water', 'double_plant', 'tallgrass', 'snow_layer',
                       'deadbush', 'reeds', 'red_flower', 'yellow_flower', 'vine', 'red_mushroom', 'brown_mushroom',
                       'carrots', 'weat', 'beetroots', 'torch']
     deadlyBlocks = ['lava', 'cactus']

@@ -1,7 +1,7 @@
 from collections import deque
 import threading
 import cv2
-
+import matplotlib.pyplot as plt
 
 class Visualizer(threading.Thread):
     def __init__(self):
@@ -18,6 +18,8 @@ class Visualizer(threading.Thread):
         self._stop = True
     
     def run(self):
+        tmp_dict = {}
+        cnt = -1
         while not self._stop:
             while self.queue:
                 with self._lock:
@@ -26,7 +28,16 @@ class Visualizer(threading.Thread):
                         image = cv2.cvtColor(data[1], cv2.COLOR_BGR2RGB)
                     else:
                         image = data[1]
-                cv2.imshow(data[0], image)
-            cv2.waitKey(300)
+                    if data[0] not in tmp_dict:
+                        cnt += 1
+                        tmp_dict.update({data[0]:cnt})
+                    plt.figure(tmp_dict[data[0]])
+                    plt.clf()
+                    plt.imshow(image)
+                    plt.title(data[0])
+                    # plt.axis("off")
+                    # plt.close()
+            plt.pause(0.3)
+            # cv2.waitKey(300)
 
 

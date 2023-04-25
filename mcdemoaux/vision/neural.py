@@ -9,8 +9,10 @@ model_cache = dict()
 
 
 def process_pixel_data(pixels, resize, scale):
-    img_data = numpy.frombuffer(pixels, dtype=numpy.uint8)
-    img_data = img_data.reshape((240 * scale, 320 * scale, 3))
+    # img_data = numpy.frombuffer(pixels, dtype=numpy.uint8)
+    img_data = cv2.resize(pixels, dsize=(320 * scale, 240 * scale), interpolation=cv2.INTER_CUBIC)
+    # img_data = numpy.resize(pixels, (240 * scale, 320 * scale, 4))
+    # img_data = pixels
     if resize != 1:
         height, width, _ = img_data.shape
         img_data = cv2.resize(img_data, (int(width * resize), int(height * resize)),

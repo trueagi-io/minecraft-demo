@@ -2,6 +2,8 @@ from collections import deque
 import threading
 import cv2
 import matplotlib.pyplot as plt
+import psutil
+from PIL import Image
 
 class Visualizer(threading.Thread):
     def __init__(self):
@@ -16,7 +18,7 @@ class Visualizer(threading.Thread):
 
     def stop(self):
         self._stop = True
-    
+
     def run(self):
         tmp_dict = {}
         cnt = -1
@@ -31,13 +33,12 @@ class Visualizer(threading.Thread):
                     if data[0] not in tmp_dict:
                         cnt += 1
                         tmp_dict.update({data[0]:cnt})
-                    plt.figure(tmp_dict[data[0]])
-                    plt.clf()
-                    plt.imshow(image)
-                    plt.title(data[0])
-                    # plt.axis("off")
-                    # plt.close()
-            plt.pause(0.3)
-            # cv2.waitKey(300)
+                    pilimg = Image.fromarray(image)
+                    pilimg.show()
+            cv2.waitKey(300)
+            for proc in psutil.process_iter():
+                if proc.name() == "display":
+                    proc.kill()
+
 
 

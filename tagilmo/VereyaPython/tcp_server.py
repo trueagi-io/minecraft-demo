@@ -62,7 +62,6 @@ class TCPServer:
                 err = 'reading size in bytes'
                 data = await reader.readexactly(4)
                 expected = int.from_bytes(data, byteorder='big', signed=False)
-                print("expected: "+ str(expected) + "\n")
                 err = 'reading bytes'
                 data = await reader.readexactly(expected)
                 result = TimestampedUnsignedCharVector(data=data, timestamp=time.time())

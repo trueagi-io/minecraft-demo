@@ -13,15 +13,10 @@ logger = logging.getLogger()
 class VideoServer:
     def __init__(self, loop: AbstractEventLoop,
                  port: int,
-                 width: int, height: int,
                  channels: int, frametype: FrameType,
                  handle_frame: Callable[[TimestampedVideoFrame], None]):
         self.io_service = loop
         self.handle_frame = handle_frame
-        self.width = width
-        self.height = height
-        # self.width = 854
-        # self.height = 480
         self.channels = channels
         self.frametype = frametype
         self.received_frames = 0
@@ -50,12 +45,7 @@ class VideoServer:
         #     # one when the same port has been reassigned. Could throw here but chose to silently ignore since very rare.
         #     raise RuntimeError("message size {0}, but expected {1}".format(len(message.data),
         #                 TimestampedVideoFrame.FRAME_HEADER_SIZE + self.width * self.height * self.channels))
-
-        # frame = TimestampedVideoFrame(numpy.uint16(self.width),
-        #                               numpy.uint16(self.height),
-        #                               numpy.uint8(self.channels),
-        #                               message, self.transform, self.frametype)
-        frame = TimestampedVideoFrame(message, self.transform, self.frametype)
+        frame = TimestampedVideoFrame(message, self.frametype)
         self.received_frames += 1
         self.handle_frame(frame)
 

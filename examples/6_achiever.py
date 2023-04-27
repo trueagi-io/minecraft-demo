@@ -7,7 +7,6 @@ from mcdemoaux.agenttools.agent import TAgent
 from examples.minelogy import Minelogy
 from examples.knowledge_lists import *
 
-
 SCALE = 3
 
 class Achiever(TAgent):
@@ -34,6 +33,7 @@ class Achiever(TAgent):
 
 
 if __name__ == '__main__':
+
     setup_logger()
     visualizer = Visualizer()
     visualizer.start()
@@ -57,7 +57,6 @@ if __name__ == '__main__':
     agent.rob.sendCommand("jump 0")
 
     #initialize_minelogy
-    # item_list, recipes = agent.rob.mc.getItemAndRecipeList()
     item_list, recipes = agent.rob.getItemsAndRecipesLists()
     blockdrops = agent.rob.getBlocksDropsList()
     mlogy = Minelogy(item_list, items_to_craft, recipes, items_to_mine, blockdrops, ore_depths)
@@ -65,10 +64,6 @@ if __name__ == '__main__':
     Currently we don't use all recipes from the game since there are some issues with
     agent not be able to work properly with all recipes available
     '''
-    # agent.rob.sendCommand('recipes')
-    # sleep(2)
-    # recipes = agent.rob.mc.observe[0]['recipes']
-    # mlogy.set_recipes(recipes)
     agent.set_mlogy(mlogy)
 
     agent.run()

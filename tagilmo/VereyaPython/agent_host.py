@@ -402,7 +402,7 @@ class AgentHost(ArgumentParser):
                 video_server.close()
 
             # Can't use the server passed in - create a new one.
-            ret_server = VideoServer(self.io_service, port, width, height, channels, frametype, self.onVideo)
+            ret_server = VideoServer(self.io_service, port, channels, frametype, self.onVideo)
 
             if (self.current_mission_record.isRecordingMP4(frametype)):
                 ret_server.recordMP4(path,

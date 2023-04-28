@@ -81,5 +81,5 @@ class TimestampedVideoFrame:
 
         self.calibrationMatrix = np.reshape(np.asarray(loadedjson['projectionMatrix'], dtype=np.dtype(numpy.float32)), (4,4))
         jo_len = jo_len + 4
-        received_png_bytes = message.data[jo_len:]
-        self.pixels = cv2.cvtColor(cv2.imdecode(np.asarray(bytearray(received_png_bytes), dtype="uint8"), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+        received_img_bytes = message.data[jo_len:]
+        self.pixels = cv2.cvtColor(cv2.imdecode(np.asarray(bytearray(received_img_bytes), dtype="uint8"), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)

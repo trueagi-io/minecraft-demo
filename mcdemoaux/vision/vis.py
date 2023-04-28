@@ -1,9 +1,7 @@
 from collections import deque
 import threading
 import cv2
-import matplotlib.pyplot as plt
-import psutil
-from PIL import Image
+
 
 class Visualizer(threading.Thread):
     def __init__(self):
@@ -20,8 +18,6 @@ class Visualizer(threading.Thread):
         self._stop = True
 
     def run(self):
-        tmp_dict = {}
-        cnt = -1
         while not self._stop:
             while self.queue:
                 with self._lock:
@@ -30,15 +26,6 @@ class Visualizer(threading.Thread):
                         image = cv2.cvtColor(data[1], cv2.COLOR_BGR2RGB)
                     else:
                         image = data[1]
-                    if data[0] not in tmp_dict:
-                        cnt += 1
-                        tmp_dict.update({data[0]:cnt})
-                    pilimg = Image.fromarray(image)
-                    pilimg.show()
+                cv2.imshow(data[0], image)
             cv2.waitKey(300)
-            for proc in psutil.process_iter():
-                if proc.name() == "display":
-                    proc.kill()
-
-
 

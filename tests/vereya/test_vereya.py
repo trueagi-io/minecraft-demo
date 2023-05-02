@@ -85,8 +85,7 @@ def get_distance(mc):
 
 
 def extract(data):
-    img_data = numpy.frombuffer(data, dtype=numpy.uint8)
-    img_data = img_data.reshape((HEIGHT, WIDTH, 3))
+    img_data = cv2.resize(data, (WIDTH, HEIGHT))
     return img_data
 
 

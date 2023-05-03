@@ -19,7 +19,7 @@ class TestData(BaseTest):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = (-125.0, 73.0)
+        start = (-126, 73.0)
         mc, obs = init_mission(None, start_x=start[0], start_y=start[1], seed='4')
         cls.mc = mc
         cls.rob = obs
@@ -36,7 +36,7 @@ class TestData(BaseTest):
 
     def test_observation_from_ray(self):
         dist = self.getDist()
-        self.assertGreater(dist, 0)
+        self.assertGreater(dist, 10)
 
     def test_observation_from_chat(self):
         logger.info("send chat")

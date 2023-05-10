@@ -35,11 +35,21 @@ class TestData(BaseTest):
         time.sleep(2)
 
     def test_observation_from_ray(self):
-        dist = self.getDist()
+        visible = self.getDist()
+        print(visible)
+        dist = visible['distance']
         self.assertGreater(dist, 10)
+        self.assertFalse(visible['inRange'])
+        self.mc.sendCommand('chat /tp @p -123 72 73')  
+        time.sleep(1)
+        visible = self.getDist()
+        dist = visible['distance']
+        self.assertLess(dist, 4)
+        self.assertTrue(visible['inRange'])
+        print(visible)
 
     def test_observation_from_chat(self):
-        logger.info("send chat")
+        logger.info("send chat ")
         self.mc.sendCommand("chat get wooden_axe")
         logger.info("wait chat")
         start = time.time()
@@ -114,9 +124,8 @@ class TestData(BaseTest):
             pitch = pos[3]
             visible = mc.getFullStat('LineOfSight')
             if visible and 'distance' in visible :
-                dist = visible['distance']
                 print(visible)
-                return dist
+                return visible 
             else:
                 c += 1
                 if c > 4:

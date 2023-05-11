@@ -96,6 +96,7 @@ class TestConsistency(BaseTest):
         inv = mc.getInventory()
         oak_log_inventory_name = inv[0]['type']
         grid = mc.getNearGrid()
+        oak_log_world_block_name = ""
         for grid_item in grid:
             if "oak" in grid_item:
                 oak_log_world_block_name = grid_item

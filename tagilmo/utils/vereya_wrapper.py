@@ -183,6 +183,10 @@ class MCConnector:
             self.isAlive[n] = self.worldStates[n].is_mission_running
             obs = self.worldStates[n].observations
             self.observe[n] = json.loads(obs[-1].text.replace("minecraft:", "").replace("block.minecraft.", "").replace("item.minecraft.", "")) if len(obs) > 0 else None
+            if self.observe[n] is not None and 'ents_near' in self.observe[n]:
+                for i in range(len(self.observe[n]['ents_near'])):
+                    ent_name = self.observe[n]['ents_near'][i]['name'].lower().replace(" ", "_")
+                    self.observe[n]['ents_near'][i]['name'] = ent_name
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
             segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None

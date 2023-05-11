@@ -36,6 +36,7 @@ class TAgent:
         self.visualizer('leaves', (heatmaps[0, 2].cpu().detach().numpy() * 255).astype(numpy.uint8))
         self.visualizer('log', (heatmaps[0, 1].cpu().detach().numpy() * 255).astype(numpy.uint8))
         self.visualizer('coal_ore', (heatmaps[0, 3].cpu().detach().numpy() * 255).astype(numpy.uint8))
+        self.visualizer.run()
 
     def nearestBlock(self, blocks, return_target_block=False):
         bc = self.rob.blockCenterFromRay()

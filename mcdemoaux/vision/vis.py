@@ -16,17 +16,12 @@ class Visualizer(threading.Thread):
 
     def stop(self):
         self._stop = True
-    
+
     def run(self):
         while not self._stop:
             while self.queue:
                 with self._lock:
                     data = self.queue.pop()
-                    if len(data[1].shape) == 3:
-                        image = cv2.cvtColor(data[1], cv2.COLOR_BGR2RGB)
-                    else:
-                        image = data[1]
-                cv2.imshow(data[0], image)
+                cv2.imshow(data[0], data[1])
             cv2.waitKey(300)
-
 

@@ -3,6 +3,7 @@ import logging
 from tagilmo import VereyaPython
 import json
 import time
+import os
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from base_test import BaseTest
@@ -42,9 +43,13 @@ def init_mission(mc, start_x, start_y, seed, forceReset="false", forceReuse="fal
     # uncomment to disable passage of time:
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
+    if not os.path.exists('./observations'):
+        os.mkdir('./observations')
 
     if mc is None:
         mc = MCConnector(miss)
+        mc.mission_record.setDestination('./observations/')
+        mc.mission_record.is_recording_observations = True
         obs = RobustObserver(mc)
     else:
         mc.setMissionXML(miss)

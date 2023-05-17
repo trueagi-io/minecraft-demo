@@ -58,13 +58,13 @@ class VisualizerBlank():
     def run(self):
         pass
 
-def Visualizer(blankvis=False):
+def Visualizer(blankvis=None):
     ostype = platform.system()
-    if blankvis:
+    if (blankvis is None and ostype == 'Darwin') or blankvis == True:
         return VisualizerBlank()
-    elif (ostype == 'Darwin'):
+    elif blankvis == False and ostype == 'Darwin':
         return VisualizerMac()
-    elif (ostype == 'Linux' or ostype == 'Windows'):
+    elif (blankvis is None or blankvis == False) and (ostype == 'Linux' or ostype == 'Windows'):
         return VisualizerThreaded()
     else:
         print("unknown OS type, initializing blank Visualizer\n")

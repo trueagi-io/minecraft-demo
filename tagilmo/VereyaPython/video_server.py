@@ -39,12 +39,6 @@ class VideoServer:
             logger.warn('failed to start video server on port %d', self.getPort())
 
     def __cb(self, message: TimestampedUnsignedCharVector) -> None:
-        # if len(message.data) != (TimestampedVideoFrame.FRAME_HEADER_SIZE + self.width * self.height * self.channels):
-        #     # comment from c++ code
-        #     # Have seen this happen during stress testing when a reward packet from (I think) a previous mission arrives during the next
-        #     # one when the same port has been reassigned. Could throw here but chose to silently ignore since very rare.
-        #     raise RuntimeError("message size {0}, but expected {1}".format(len(message.data),
-        #                 TimestampedVideoFrame.FRAME_HEADER_SIZE + self.width * self.height * self.channels))
         frame = TimestampedVideoFrame(message, self.frametype)
         self.received_frames += 1
         self.handle_frame(frame)

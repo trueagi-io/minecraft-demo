@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     setup_logger()
     visualizer = Visualizer()
-    # visualizer.start()
+    visualizer.start()
     video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
     agent_handlers = mb.AgentHandlers(video_producer=video_producer)
     miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Robbo',
@@ -67,4 +67,4 @@ if __name__ == '__main__':
     agent.set_mlogy(mlogy)
 
     agent.run()
-    # visualizer.stop()
+    visualizer.stop()

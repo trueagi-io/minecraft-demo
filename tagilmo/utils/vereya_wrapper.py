@@ -246,6 +246,10 @@ class MCConnector:
 
     def getNearEntities(self, nAgent=0):
         if (self.observe[nAgent] is not None) and ('ents_near' in self.observe[nAgent]):
+            for e in self.observe[nAgent]['ents_near']:
+                if 'name' in e:
+                    name = e['name']
+                    e['name'] = name.lower().replace(' ', '_')
             return self.observe[nAgent]['ents_near']
         else:
             return None

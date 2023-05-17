@@ -60,7 +60,6 @@ class VisualizerBlank():
 
 def Visualizer(blankvis=False):
     ostype = platform.system()
-    return VisualizerMac()
     if blankvis:
         return VisualizerBlank()
     elif (ostype == 'Darwin'):

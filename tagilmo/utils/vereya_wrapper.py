@@ -237,7 +237,12 @@ class MCConnector:
         return not self.observe[nAgent] is None and 'LineOfSight' in self.observe[nAgent]
 
     def getLineOfSights(self, nAgent=0):
-        return self.observe[nAgent]['LineOfSight'] if self.isLineOfSightAvailable(nAgent) else None
+        if self.isLineOfSightAvailable(nAgent):
+            los = self.observe[nAgent]['LineOfSight']
+            los['type'] = los['type'].replace("minecraft:", "")
+            return los
+        return None
+        # return self.observe[nAgent]['LineOfSight'] if self.isLineOfSightAvailable(nAgent) else None
 
     def getLineOfSight(self, key, nAgent=0):
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
@@ -301,8 +306,7 @@ class MCConnector:
         return self.getParticularObservation('block_item_tool_triple', nAgent)
 
     def getRecipeList(self, nAgent=0):
-        recipes = self.getParticularObservation('recipes', nAgent)
-        return recipes
+        return self.getParticularObservation('recipes', nAgent)
 
     def isInventoryAvailable(self, nAgent=0):
         return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]

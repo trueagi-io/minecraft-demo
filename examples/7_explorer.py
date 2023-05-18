@@ -1,4 +1,5 @@
 from examples.log import setup_logger
+from tagilmo import VereyaPython
 
 from time import sleep
 from tagilmo.utils.mathutils import *
@@ -158,7 +159,6 @@ class Explorer(TAgent):
         running = True
         while running:
             sleep(0.05)
-            self.rob.observeProcCached()
             self.blockMem.updateBlocks(self.rob)
             self.kb.update()
             self.visualize()
@@ -181,6 +181,7 @@ if __name__ == '__main__':
 
     # initialize minelogy
     item_list, recipes = agent.rob.getItemsAndRecipesLists()
+    sleep(15)
     blockdrops = agent.rob.getBlocksDropsList()
     mlogy = Minelogy(item_list, items_to_craft, recipes, items_to_mine, blockdrops, ore_depths)
     agent.set_mlogy(mlogy)

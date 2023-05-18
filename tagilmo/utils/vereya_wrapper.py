@@ -182,7 +182,7 @@ class MCConnector:
             self.worldStates[n] = self.agent_hosts[n].getWorldState()
             self.isAlive[n] = self.worldStates[n].is_mission_running
             obs = self.worldStates[n].observations
-            self.observe[n] = json.loads(obs[-1].text.replace("minecraft:", "")) if len(obs) > 0 else None
+            self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
             segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None
@@ -301,7 +301,8 @@ class MCConnector:
         return self.getParticularObservation('block_item_tool_triple', nAgent)
 
     def getRecipeList(self, nAgent=0):
-        return self.getParticularObservation('recipes', nAgent)
+        recipes = self.getParticularObservation('recipes', nAgent)
+        return recipes
 
     def isInventoryAvailable(self, nAgent=0):
         return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]
@@ -436,11 +437,22 @@ class RobustObserver:
     def changed(self, name):
         pass
 
+    def cleanRecipes(self, recipes):
+        if recipes is not None:
+            for i in range(len(recipes)):
+                recipes[i]['name'] = recipes[i]['name'].replace("block.minecraft.", "").replace("item.minecraft.", "")
+                recipes[i]['ingredients'] = list(filter(None, recipes[i]['ingredients']))
+                for j in range(len(recipes[i]['ingredients'])):
+                    if len(recipes[i]['ingredients'][j][0]) <= 0:
+                        continue
+                    recipes[i]['ingredients'][j][0]['type'] = recipes[i]['ingredients'][j][0]['type'].replace("block.minecraft.", "").replace("item.minecraft.", "")
+        return recipes
+
     def getItemsAndRecipesLists(self):
         self.sendCommand('recipes')
         self.sendCommand('item_list')
         item_list = self.waitNotNoneObserve('getItemList', False)
-        recipes = self.waitNotNoneObserve('getRecipeList', False)
+        recipes = self.cleanRecipes(self.waitNotNoneObserve('getRecipeList', False))
         self.sendCommand('recipes off')
         self.sendCommand('item_list off')
         return item_list, recipes

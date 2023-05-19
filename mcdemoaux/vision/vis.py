@@ -40,11 +40,11 @@ class VisualizerMac():
         pass
 
     def run(self):
-        if len(self.queue) >= 3:
+        if len(self.queue) >= 8:
             while self.queue:
                 data = self.queue.pop()
                 cv2.imshow(data[0], data[1])
-            cv2.waitKey(50)
+            cv2.waitKey(20)
 
 class VisualizerBlank():
     def __init__(self):

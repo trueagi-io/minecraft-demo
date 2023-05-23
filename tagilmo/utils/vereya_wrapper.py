@@ -239,7 +239,8 @@ class MCConnector:
     def getLineOfSights(self, nAgent=0):
         if self.isLineOfSightAvailable(nAgent):
             los = self.observe[nAgent]['LineOfSight']
-            los['type'] = los['type'].replace("minecraft:", "")
+            if los['hitType'] != 'MISS':
+                los['type'] = los['type'].replace("minecraft:", "")
             return los
         return None
         # return self.observe[nAgent]['LineOfSight'] if self.isLineOfSightAvailable(nAgent) else None
@@ -441,22 +442,23 @@ class RobustObserver:
     def changed(self, name):
         pass
 
-    def cleanRecipes(self, recipes):
-        if recipes is not None:
-            for i in range(len(recipes)):
-                recipes[i]['name'] = recipes[i]['name'].replace("block.minecraft.", "").replace("item.minecraft.", "")
-                recipes[i]['ingredients'] = list(filter(None, recipes[i]['ingredients']))
-                for j in range(len(recipes[i]['ingredients'])):
-                    if len(recipes[i]['ingredients'][j][0]) <= 0:
-                        continue
-                    recipes[i]['ingredients'][j][0]['type'] = recipes[i]['ingredients'][j][0]['type'].replace("block.minecraft.", "").replace("item.minecraft.", "")
-        return recipes
+    def remove_mcprefix_rec(self, data):
+        if isinstance(data, str):
+            return data.split('.')[-1] if 'minecraft' in data else data
+        if isinstance(data, dict):
+            r = {}
+            for k in data.keys():
+                r[self.remove_mcprefix_rec(k)] = self.remove_mcprefix_rec(data[k])
+            return r
+        if isinstance(data, list):
+            return [self.remove_mcprefix_rec(l) for l in data]
+        return data
 
     def getItemsAndRecipesLists(self):
         self.sendCommand('recipes')
         self.sendCommand('item_list')
         item_list = self.waitNotNoneObserve('getItemList', False)
-        recipes = self.cleanRecipes(self.waitNotNoneObserve('getRecipeList', False))
+        recipes = self.remove_mcprefix_rec(self.waitNotNoneObserve('getRecipeList', False))
         self.sendCommand('recipes off')
         self.sendCommand('item_list off')
         return item_list, recipes

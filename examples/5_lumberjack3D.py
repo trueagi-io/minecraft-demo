@@ -3,6 +3,7 @@ import random
 import numpy
 from time import sleep, time
 import tagilmo.utils.mission_builder as mb
+from tagilmo.utils.vereya_wrapper import MCConnector
 from examples.minelogy import Minelogy
 from mcdemoaux.agenttools.agent import TAgent
 import logging
@@ -12,8 +13,6 @@ from mcdemoaux.vision.vis import Visualizer
 from tagilmo.utils.mathutils import *
 
 from examples.knowledge_lists import *
-
-SCALE = 4
 
 class MoveForward:
 
@@ -456,8 +455,8 @@ class MineAround:
 
 
 class LJAgent(TAgent):
-    def __init__(self, miss, visualizer=None):
-        super().__init__(miss, visualizer)
+    def __init__(self, mc, visualizer=None):
+        super().__init__(mc, visualizer)
         self.mlogy = None
 
     def set_mlogy(self, mlogy):
@@ -688,19 +687,16 @@ if __name__ == '__main__':
     setup_logger()
     visualizer = Visualizer()
     visualizer.start()
-    video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
-    agent_handlers = mb.AgentHandlers(video_producer=video_producer)
+    agent_handlers = mb.AgentHandlers(video_producer=mb.VideoProducer())
     miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Cristina',
              agenthandlers=agent_handlers,)])
-
 
     # world = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake", seed='43', forceReset="false")
     miss.serverSection.initial_conditions.time_pass = 'false'
     miss.serverSection.initial_conditions.time_start = "1000"
-    world1 = mb.defaultworld(forceReset="true")
-    miss.setWorld(world1)
+    miss.setWorld(mb.defaultworld(forceReset="true"))
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
-    agent = LJAgent(miss, visualizer=visualizer)
+    agent = LJAgent(MCConnector(miss), visualizer=visualizer)
 
     # initialize minelogy
     item_list, recipes = agent.rob.getItemsAndRecipesLists()

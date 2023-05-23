@@ -1,25 +1,22 @@
 import logging
 import numpy
 
-from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserverWithCallbacks
+from tagilmo.utils.vereya_wrapper import RobustObserverWithCallbacks
 from mcdemoaux.vision.neural import NeuralWrapper
 from tagilmo.utils.mathutils import *
 
 class TAgent:
 
-    def __init__(self, miss, visualizer=None):
-        mc = MCConnector(miss)
-        mc.safeStart()
+    def __init__(self, mc, visualizer=None):
+        if not mc.is_mission_running():
+            mc.safeStart()
         self.rob = RobustObserverWithCallbacks(mc)
-        vp = miss.agentSections[0].agenthandlers.video_producer
-        if vp is not None:
-            if vp.width == 0:
-                #it is probably shouldn't be there. Currently a stub
-                SCALE = 3
-                width = 320 * SCALE
-                callback = NeuralWrapper(self.rob, 320 / width, width // 320)
+        if mc.mission.isVideoRequested(0):
+            w = mc.mission.getVideoWidth(0)
+            if w == 0:
+                callback = NeuralWrapper(self.rob, 1, 1)
             else:
-                callback = NeuralWrapper(self.rob, 320/vp.width, vp.width//320)
+                callback = NeuralWrapper(self.rob, 320/w, w//320)
                                     # cb_name, on_change event, callback
             self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
         self.blockMem = NoticeBlocks()

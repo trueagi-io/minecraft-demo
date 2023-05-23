@@ -171,7 +171,7 @@ class MCConnector:
         return True
 
     @staticmethod
-    def connect(name=None, video=False):
+    def connect(name=None, video=False, seed=None):
         if video:
             video_producer = mb.VideoProducer(want_depth=False)
             agent_handlers = mb.AgentHandlers(video_producer=video_producer)
@@ -183,7 +183,7 @@ class MCConnector:
         else:
             agent_section = mb.AgentSection(agenthandlers=agent_handlers)
         miss = mb.MissionXML(agentSections=[agent_section])
-        world = mb.defaultworld(forceReset="false", forceReuse="true")
+        world = mb.defaultworld(forceReset="false", forceReuse="true", seed=seed)
         miss.setWorld(world)
         mc = MCConnector(miss)
         mc.safeStart()

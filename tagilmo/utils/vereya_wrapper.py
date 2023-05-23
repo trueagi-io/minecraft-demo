@@ -6,13 +6,14 @@ import sys
 import concurrent.futures
 import threading
 import logging
-import collections
 import re
+import os
+import errno
 
 from tagilmo import VereyaPython as VP
 
 import numpy
-from tagilmo.utils.mission_builder import MissionXML
+import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
 
 logger = logging.getLogger('malmo')
@@ -168,6 +169,25 @@ class MCConnector:
                 print("Timed out while waiting for mission to start - quiting.")
                 return False
         return True
+
+    @staticmethod
+    def connect(name=None, video=False):
+        if video:
+            video_producer = mb.VideoProducer(want_depth=False)
+            agent_handlers = mb.AgentHandlers(video_producer=video_producer)
+        else:
+            agent_handlers = mb.AgentHandlers()
+        if name is not None:
+            agent_section = mb.AgentSection(name=name,
+                agenthandlers=agent_handlers)
+        else:
+            agent_section = mb.AgentSection(agenthandlers=agent_handlers)
+        miss = mb.MissionXML(agentSections=[agent_section])
+        world = mb.defaultworld(forceReset="false", forceReuse="true")
+        miss.setWorld(world)
+        mc = MCConnector(miss)
+        mc.safeStart()
+        return mc
 
     def is_mission_running(self, nAgent=0):
         world_state = self.agent_hosts[nAgent].getWorldState()

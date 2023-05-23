@@ -243,7 +243,6 @@ class MCConnector:
                 los['type'] = los['type'].replace("minecraft:", "")
             return los
         return None
-        # return self.observe[nAgent]['LineOfSight'] if self.isLineOfSightAvailable(nAgent) else None
 
     def getLineOfSight(self, key, nAgent=0):
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'

@@ -61,7 +61,8 @@ class AgentHost(ArgumentParser):
         self.current_mission_record: Optional[MissionRecord] = None
         self.rewards_policy = RewardsPolicy.SUM_REWARDS
         self.version: Optional[str] = None
-        self._onObservationCallback: Callable[[List[TimestampedString]], None] = None
+        self._onObservationCallback: Callable[[TimestampedString], None] = None
+        self._onNewFrameCallback: Callable[[TimestampedVideoFrame], None] = None
 
     def startMission(self, mission: MissionSpec, client_pool: List[ClientInfo],
                      mission_record: MissionRecordSpec, role: int,
@@ -569,7 +570,6 @@ class AgentHost(ArgumentParser):
                 return
         self.world_state.mission_control_messages.append(xml)
 
-
     def onVideo(self, message: TimestampedVideoFrame) -> None:
         with self.world_state_mutex:
             if self.video_policy == VideoPolicy.LATEST_FRAME_ONLY:
@@ -584,6 +584,9 @@ class AgentHost(ArgumentParser):
             else:
                 self.world_state.video_frames.append(message)
             self.world_state.number_of_video_frames_since_last_state += 1
+
+        if self._onNewFrameCallback is not None:
+            self._onNewFrameCallback(message)
 
     def listenForRewards(self, port: int) -> None:
         if not self.rewards_server or ( port != 0 and self.rewards_server.getPort() != port ):
@@ -633,11 +636,9 @@ class AgentHost(ArgumentParser):
                 raise RuntimeError('unexpected observation policy ' + str(self.observations_policy))
 
             self.world_state.number_of_observations_since_last_state += 1
-            # this is to call callback outside of mutex
-            observations = self.world_state.observations[-1]
 
         if self._onObservationCallback is not None:
-            self._onObservationCallback(observations)
+            self._onObservationCallback(message)
 
     def closeRecording(self):
         pass
@@ -674,5 +675,9 @@ class AgentHost(ArgumentParser):
             self.world_state.rewards.append(reward)
         self.world_state.number_of_rewards_since_last_state += 1
 
-    def setOnObservationCallback(self, callback: Callable[[List[TimestampedString]], None]):
+    def setOnObservationCallback(self, callback: Callable[[TimestampedString], None]):
         self._onObservationCallback = callback
+
+    def setOnNewFrameCallback(self, callback: Callable[[TimestampedVideoFrame], None]):
+        self._onNewFrameCallback = callback
+

@@ -5,6 +5,7 @@ from .client_info import ClientInfo
 from .mission_exception import MissionException
 from .mission_exception import MissionErrorCode
 from .timestamped_string import TimestampedString
+from .timestamped_video_frame import TimestampedVideoFrame, FrameType
 import logging
 import logging.handlers
 

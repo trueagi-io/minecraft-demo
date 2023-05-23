@@ -42,10 +42,10 @@ class ClientConnection:
             logger.exception('error writing command', exc_info=e)
 
     async def __send(self, message: str) -> None:
-        logger.info(f'writing command {message}')
+        logger.debug(f'writing command {message}')
         self.writer.write(message.encode())
         await asyncio.wait_for(self.writer.drain(), self.timeout)
-        logger.info(f'done writing command {message}')
+        logger.debug(f'done writing command {message}')
 
     def close(self) -> None:
         self.writer.close()

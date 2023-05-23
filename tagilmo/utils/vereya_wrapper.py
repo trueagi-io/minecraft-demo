@@ -16,7 +16,7 @@ from tagilmo import VereyaPython as VP
 import numpy
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
-from tagilmo.VereyaPython import TimestampedString
+from tagilmo.VereyaPython import TimestampedString, TimestampedVideoFrame, FrameType
 
 logger = logging.getLogger('malmo')
 
@@ -212,13 +212,19 @@ class MCConnector:
             frames = self.worldStates[n].video_frames
             segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None
             if frames:
-                self.frames[n] = frames[0]
+                self.updateFrame(frames[0], n)
             else:
-                self.frames[n] = None
+                self.updateFrame(None, n)
             if segments:
-                self.segmentation_frames[n] = segments[0]
+                self.updateSegmentation(segments[0], n)
             else:
-                self.segmentation_frames[n] = None
+                self.updateSegmentation(None, n)
+
+    def updateFrame(self, frame: TimestampedVideoFrame, n: int) -> None:
+        self.frames[n] = frame
+
+    def updateSegmentation(self, segmentation_frame: TimestampedVideoFrame, n: int) -> None:
+        self.segmentation_frames[n] = segmentation_frame
 
 <<<<<<< HEAD
     def updateObservations(self, obs: Optional[TimestampedString], n: int) -> None:
@@ -429,10 +435,19 @@ class RobustObserver:
         self.lock = threading.RLock()
         self._time_sleep = 0.05
         self.mc.agent_hosts[self.nAgent].setOnObservationCallback(self.onObservationChanged)
+        self.mc.agent_hosts[self.nAgent].setOnNewFrameCallback(self.onNewFrameCallback)
 
     def onObservationChanged(self, obs: TimestampedString) -> None:
         self.mc.updateObservations(obs, self.nAgent)
         self._observeProcCached()
+
+    def onNewFrameCallback(self, frame: TimestampedVideoFrame) -> None:
+        if frame.frametype == FrameType.COLOUR_MAP:
+            self.mc.updateSegmentation(frame, self.nAgent)
+            self._update_cache('getSegmentationFrame')
+        else:
+            self.mc.updateFrame(frame, self.nAgent)
+            self._update_cache('getImageFrame')
 
     def getVersion(self):
         return self.mc.getVersion()
@@ -463,23 +478,20 @@ class RobustObserver:
         self._observeProcCached()
 
     def _observeProcCached(self):
-        t_new = time.time()
-        updated = False
         for method in self.methods:
-            v_new = getattr(self.mc, method)(self.nAgent)
+            self._update_cache(method)
+
+    def _update_cache(self, method):
+        t_new = time.time()
+        v_new = getattr(self.mc, method)(self.nAgent)
+        with self.lock:
+            v, t = self.cached[method]
+        outdated = t_new - t > self.max_dt
+        if v_new is not None or outdated: # or v is None
             with self.lock:
-                v, t = self.cached[method]
-            outdated = t_new - t > self.max_dt
-            if v_new is not None or outdated: # or v is None
-                with self.lock:
-                    self.cached_buffer[method] = self.cached[method]
-                    self.cached[method] = (v_new, t_new)
-                self.changed(method)
-                updated = True
-        if updated:
-            with self.lock:
-                self.cached_buffer_list.append(self.cached_buffer.copy())
-                self.cached_buffer_list = self.cached_buffer_list[-self.cbuff_history_len:]
+                self.cached_buffer[method] = self.cached[method]
+                self.cached[method] = (v_new, t_new)
+            self.changed(method)
 
     def changed(self, name):
         pass
@@ -533,9 +545,19 @@ class RobustObserver:
     def updateAllObservations(self):
         # we don't require observations to be updated in fact, but we try to do an update
         self.observeProcCached()
+        start = time.time()
         while not all([self.cached[method][0] is not None or method in self.canBeNone for method in self.methods]):
+            nones = []
             time.sleep(self.tick)
             self.observeProcCached()
+            now = time.time()
+            delta = now - start
+            if 2 < delta:
+                for method in self.methods:
+                    if self.cached[method][0] is None:
+                        if method not in self.canBeNone:
+                            nones.append(method)
+                logger.warning("can't update cache for these methods %s", str(nones))
 
     def addCommandsToBuffer(self, commanList):
         self.commandBuffer.append(commanList)

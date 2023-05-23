@@ -182,7 +182,7 @@ class MCConnector:
             self.worldStates[n] = self.agent_hosts[n].getWorldState()
             self.isAlive[n] = self.worldStates[n].is_mission_running
             obs = self.worldStates[n].observations
-            self.observe[n] = json.loads(obs[-1].text.replace("minecraft:", "")) if len(obs) > 0 else None
+            self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
             segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None
@@ -237,7 +237,12 @@ class MCConnector:
         return not self.observe[nAgent] is None and 'LineOfSight' in self.observe[nAgent]
 
     def getLineOfSights(self, nAgent=0):
-        return self.observe[nAgent]['LineOfSight'] if self.isLineOfSightAvailable(nAgent) else None
+        if self.isLineOfSightAvailable(nAgent):
+            los = self.observe[nAgent]['LineOfSight']
+            if los['hitType'] != 'MISS':
+                los['type'] = los['type'].replace("minecraft:", "")
+            return los
+        return None
 
     def getLineOfSight(self, key, nAgent=0):
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
@@ -436,11 +441,23 @@ class RobustObserver:
     def changed(self, name):
         pass
 
+    def remove_mcprefix_rec(self, data):
+        if isinstance(data, str):
+            return data.split('.')[-1] if 'minecraft' in data else data
+        if isinstance(data, dict):
+            r = {}
+            for k in data.keys():
+                r[self.remove_mcprefix_rec(k)] = self.remove_mcprefix_rec(data[k])
+            return r
+        if isinstance(data, list):
+            return [self.remove_mcprefix_rec(l) for l in data]
+        return data
+
     def getItemsAndRecipesLists(self):
         self.sendCommand('recipes')
         self.sendCommand('item_list')
         item_list = self.waitNotNoneObserve('getItemList', False)
-        recipes = self.waitNotNoneObserve('getRecipeList', False)
+        recipes = self.remove_mcprefix_rec(self.waitNotNoneObserve('getRecipeList', False))
         self.sendCommand('recipes off')
         self.sendCommand('item_list off')
         return item_list, recipes

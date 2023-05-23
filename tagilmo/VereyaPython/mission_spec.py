@@ -50,16 +50,16 @@ class MissionSpec:
 
     def _getVideoHW(self, role: int, hw) -> int:
         w = self.getRoleValue(role, "AgentHandlers.VideoProducer", hw)
-        if w:
+        if w is not None:
             return w
         w = self.getRoleValue(role, "AgentHandlers.DepthProducer", hw)
-        if w:
+        if w is not None:
             return w
         w = self.getRoleValue(role, "AgentHandlers.LuminanceProducer", hw)
-        if w:
+        if w is not None:
             return w
         w = self.getRoleValue(role, "AgentHandlers.ColourMapProducer", hw)
-        if w:
+        if w is not None:
             return w
         raise RuntimeError("MissionInitSpec::getVideoWidth : video has not been requested for this role")
 

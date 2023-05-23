@@ -226,16 +226,11 @@ class MCConnector:
     def updateSegmentation(self, segmentation_frame: TimestampedVideoFrame, n: int) -> None:
         self.segmentation_frames[n] = segmentation_frame
 
-<<<<<<< HEAD
     def updateObservations(self, obs: Optional[TimestampedString], n: int) -> None:
         if obs is None:
             self.observe[n] = None
             return
         self.observe[n] = json.loads(obs.text)
-=======
-    def updateObservations(self, obs: TimestampedString, n: int) -> None:
-        self.observe[n] = json.loads(obs.text.replace("minecraft:", ""))
->>>>>>> cf2a10d (refactor examples)
 
     def getImageFrame(self, nAgent=0):
         return self.frames[nAgent]

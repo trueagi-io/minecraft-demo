@@ -222,7 +222,7 @@ class Observations:
 
 
 class VideoProducer:
-    def __init__(self, height, width, want_depth=False):
+    def __init__(self, height=0, width=0, want_depth=False):
         self.height = height
         self.width = width
         self.want_depth = want_depth

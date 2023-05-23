@@ -13,7 +13,13 @@ class TAgent:
         self.rob = RobustObserverWithCallbacks(mc)
         vp = miss.agentSections[0].agenthandlers.video_producer
         if vp is not None:
-            callback = NeuralWrapper(self.rob, 320/vp.width, vp.width//320)
+            if vp.width == 0:
+                #it is probably shouldn't be there. Currently a stub
+                SCALE = 3
+                width = 320 * SCALE
+                callback = NeuralWrapper(self.rob, 320 / width, width // 320)
+            else:
+                callback = NeuralWrapper(self.rob, 320/vp.width, vp.width//320)
                                     # cb_name, on_change event, callback
             self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
         self.blockMem = NoticeBlocks()

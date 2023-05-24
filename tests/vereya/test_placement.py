@@ -21,7 +21,6 @@ class TestPlacement(BaseTest):
         """ test block placement api"""
         mc = self.mc
         rob = self.rob
-        rob.update_in_background()
         time.sleep(1)
         grid = rob.getCachedObserve('getNearGrid')
         pos = rob.getCachedObserve('getAgentPos')

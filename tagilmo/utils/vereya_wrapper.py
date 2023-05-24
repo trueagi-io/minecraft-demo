@@ -9,12 +9,14 @@ import logging
 import re
 import os
 import errno
+from typing import Optional
 
 from tagilmo import VereyaPython as VP
 
 import numpy
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
+from tagilmo.VereyaPython import TimestampedString
 
 logger = logging.getLogger('malmo')
 
@@ -202,7 +204,10 @@ class MCConnector:
             self.worldStates[n] = self.agent_hosts[n].getWorldState()
             self.isAlive[n] = self.worldStates[n].is_mission_running
             obs = self.worldStates[n].observations
-            self.observe[n] = json.loads(obs[-1].text) if len(obs) > 0 else None
+            if obs:
+                self.updateObservations(obs[-1], n)
+            else:
+                self.updateObservations(None, n)
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
             segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None
@@ -214,6 +219,12 @@ class MCConnector:
                 self.segmentation_frames[n] = segments[0]
             else:
                 self.segmentation_frames[n] = None
+
+    def updateObservations(self, obs: Optional[TimestampedString], n: int) -> None:
+        if obs is None:
+            self.observe[n] = None
+            return
+        self.observe[n] = json.loads(obs.text)
 
     def getImageFrame(self, nAgent=0):
         return self.frames[nAgent]
@@ -412,6 +423,11 @@ class RobustObserver:
         self.thread = None
         self.lock = threading.RLock()
         self._time_sleep = 0.05
+        self.mc.agent_hosts[self.nAgent].setOnObservationCallback(self.onObservationChanged)
+
+    def onObservationChanged(self, obs: TimestampedString) -> None:
+        self.mc.updateObservations(obs, self.nAgent)
+        self._observeProcCached()
 
     def getVersion(self):
         return self.mc.getVersion()
@@ -439,7 +455,9 @@ class RobustObserver:
             return val[key] if val is not None and key in val else None
 
     def observeProcCached(self):
-        self.mc.observeProc()
+        self._observeProcCached()
+
+    def _observeProcCached(self):
         t_new = time.time()
         updated = False
         for method in self.methods:

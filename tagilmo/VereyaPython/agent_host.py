@@ -5,7 +5,7 @@ import copy
 import logging
 import asyncio
 from asyncio import AbstractEventLoop
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Callable
 import xml.etree.ElementTree as ET
 from io import TextIOWrapper
 
@@ -61,6 +61,7 @@ class AgentHost(ArgumentParser):
         self.current_mission_record: Optional[MissionRecord] = None
         self.rewards_policy = RewardsPolicy.SUM_REWARDS
         self.version: Optional[str] = None
+        self._onObservationCallback: Callable[[List[TimestampedString]], None] = None
 
     def startMission(self, mission: MissionSpec, client_pool: List[ClientInfo],
                      mission_record: MissionRecordSpec, role: int,
@@ -632,6 +633,11 @@ class AgentHost(ArgumentParser):
                 raise RuntimeError('unexpected observation policy ' + str(self.observations_policy))
 
             self.world_state.number_of_observations_since_last_state += 1
+            # this is to call callback outside of mutex
+            observations = self.world_state.observations[-1]
+
+        if self._onObservationCallback is not None:
+            self._onObservationCallback(observations)
 
     def closeRecording(self):
         pass
@@ -667,3 +673,6 @@ class AgentHost(ArgumentParser):
         elif self.rewards_policy == RewardsPolicy.KEEP_ALL_REWARDS:
             self.world_state.rewards.append(reward)
         self.world_state.number_of_rewards_since_last_state += 1
+
+    def setOnObservationCallback(self, callback: Callable[[List[TimestampedString]], None]):
+        self._onObservationCallback = callback

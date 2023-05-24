@@ -100,7 +100,7 @@ def main():
         obs.clear()
         pos1, img = get_img(obs)
         if img is not None:
-            img = extract(img.pixels)
+            img = extract(img.pixels())
             # print(mc.getNearEntities())
             if mc.observe[0] is not None and 'recipes' in mc.observe[0]:
                 print("got recipes")

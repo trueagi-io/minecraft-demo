@@ -99,6 +99,7 @@ class TestConsistency(BaseTest):
                 for grid_item in grid:
                     if blockdrop['block_name'] == grid_item:
                         equalityFlag = True
+                        break
                 self.assertEqual(equalityFlag, True)
                 break
 

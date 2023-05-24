@@ -27,8 +27,14 @@ def init_mission(mc, start_x=None, start_y=None, start_z=None):
              agenthandlers=agent_handlers,
                                       #    depth
              agentstart=mb.AgentStart([start_x, start_y, start_z, 1]))])
+    flat_json = {"biome":"minecraft:plains",
+                 "layers":[{"block":"minecraft:diamond_block","height":1}],
+                 "structures":{"structures": {"village":{}}}}
+
+    flat_param = "3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake"
+    flat_json = json.dumps(flat_json).replace('"', "%ESC")
     world = mb.defaultworld(
-        seed='96351635',
+        seed='2',
         forceReset="false",
         forceReuse="false")
     miss.setWorld(world)
@@ -62,7 +68,7 @@ class TestConsistency(BaseTest):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        cls.start = (-72, 64, 28)
+        cls.start = (-121.0, 67.0, 79.0)
         mc, obs = init_mission(None, start_x=cls.start[0], start_y=cls.start[1], start_z=cls.start[2])
         cls.mc = mc
         cls.rob = obs
@@ -83,8 +89,6 @@ class TestConsistency(BaseTest):
         rob = self.rob
         blockdrops = rob.getBlocksDropsList()
         item_list, recipes = rob.getItemsAndRecipesLists()
-        mc.sendCommand(f"chat /setblock -71 64 28 minecraft:oak_log")
-        time.sleep(1)
         mc.sendCommand("chat /give @p oak_log 1")
         time.sleep(1)
         mc.observeProc()
@@ -92,15 +96,15 @@ class TestConsistency(BaseTest):
         inv = mc.getInventory()
         oak_log_inventory_name = inv[0]['type']
         grid = mc.getNearGrid()
-        equalityFlag = False
+        oak_log_world_block_name = ""
+        for grid_item in grid:
+            if "oak" in grid_item:
+                oak_log_world_block_name = grid_item
+                break
         for blockdrop in blockdrops:
             if blockdrop['block_name'] == "oak_log":
                 self.assertEqual(blockdrop['item_name'], oak_log_inventory_name)
-                for grid_item in grid:
-                    if blockdrop['block_name'] == grid_item:
-                        equalityFlag = True
-                        break
-                self.assertEqual(equalityFlag, True)
+                self.assertEqual(blockdrop['block_name'], oak_log_world_block_name)
                 break
 
         oaklog_in_itemlist = False

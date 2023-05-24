@@ -393,13 +393,8 @@ class AgentHost(ArgumentParser):
         else:
             path = self.current_mission_record.getMP4Path()
 
-        if( video_server is None or
-            (port != 0 and video_server.getPort() != port ) or
-            video_server.getWidth() != width or
-            video_server.getHeight() != height or
-            video_server.getChannels() != channels or
-            video_server.getFrameType() != frametype):
-
+        if video_server is None or \
+            (port != 0 and video_server.getPort() != port ):
             if video_server is not None:
                 video_server.close()
 
@@ -679,5 +674,6 @@ class AgentHost(ArgumentParser):
         self._onObservationCallback = callback
 
     def setOnNewFrameCallback(self, callback: Callable[[TimestampedVideoFrame], None]):
+        logger.debug('setting new frame callback to %s', str(callback))
         self._onNewFrameCallback = callback
 

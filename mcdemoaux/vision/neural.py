@@ -23,7 +23,7 @@ def process_pixel_data(pixels, resize, scale):
 
 def get_image(img_frame, resize, scale):
     if img_frame is not None:
-        return process_pixel_data(img_frame.pixels, resize, scale)
+        return process_pixel_data(img_frame.pixels(), resize, scale)
     return None
 
 

@@ -1,7 +1,6 @@
 from examples.log import setup_logger
 
 from time import sleep
-import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
 
 from mcdemoaux.vision.vis import Visualizer
@@ -149,8 +148,8 @@ class Explore(Switcher):
 
 class Explorer(TAgent):
 
-    def __init__(self, miss, visualizer=None, goal=None):
-        super().__init__(miss, visualizer)
+    def __init__(self, mc, visualizer=None, goal=None):
+        super().__init__(mc, visualizer)
         self.goal = ListenAndDo(self)
         self.goal.delegate = Explore(self)
         self.kb = StaticKnowledge(self.rob)
@@ -172,20 +171,12 @@ class Explorer(TAgent):
 
 
 if __name__ == '__main__':
-    SCALE = 3
     setup_logger()
     visualizer = Visualizer()
     visualizer.start()
-    video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
-    agent_handlers = mb.AgentHandlers(video_producer=video_producer)
-    miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Robo',
-                agenthandlers=agent_handlers,)])
-
-    world = mb.defaultworld(forceReset="true", seed="151")
-    #113 122 127? 128 129+? 130+? 131+?
-    miss.setWorld(world)
-
-    agent = Explorer(miss, visualizer=visualizer)
+    #seed 113 122 127? 128 129+? 130+? 131+?
+    mc = MCConnector.connect(name='Robo', video=True, seed="151")
+    agent = Explorer(mc, visualizer=visualizer)
     sleep(4)
 
     # initialize minelogy

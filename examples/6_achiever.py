@@ -7,12 +7,10 @@ from mcdemoaux.agenttools.agent import TAgent
 from examples.minelogy import Minelogy
 from examples.knowledge_lists import *
 
-SCALE = 3
-
 class Achiever(TAgent):
 
-    def __init__(self, miss, visualizer=None, goal=None):
-        super().__init__(miss, visualizer)
+    def __init__(self, mc, visualizer=None, goal=None):
+        super().__init__(mc, visualizer)
         self.set_goal(goal)
 
     def set_goal(self, goal=None):
@@ -37,17 +35,8 @@ if __name__ == '__main__':
     setup_logger()
     visualizer = Visualizer()
     visualizer.start()
-    video_producer = mb.VideoProducer(width=320 * SCALE, height=240 * SCALE, want_depth=False)
-    agent_handlers = mb.AgentHandlers(video_producer=video_producer)
-    miss = mb.MissionXML(agentSections=[mb.AgentSection(name='Robbo',
-                                                        agenthandlers=agent_handlers)])
-
-    world0 = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake")
-    world1 = mb.defaultworld(forceReset="false", forceReuse="true")
-    miss.setWorld(world1)
-    miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
-
-    agent = Achiever(miss, visualizer=visualizer)
+    mc = MCConnector.connect(name='Robbo', video=True)
+    agent = Achiever(mc, visualizer=visualizer)
     logging.info("Initializing the starting position")
     #those commands needed if we are reusing same world
     sleep(2)

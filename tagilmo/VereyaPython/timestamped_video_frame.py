@@ -82,4 +82,4 @@ class TimestampedVideoFrame:
         self._pixels = received_img_bytes
 
     def pixels(self):
-        return cv2.cvtColor(cv2.imdecode(np.asarray(bytearray(self._pixels), dtype="uint8"), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+        return cv2.cvtColor(cv2.imdecode(np.frombuffer(received_img_bytes, dtype="uint8"), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)

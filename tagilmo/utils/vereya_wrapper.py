@@ -442,7 +442,9 @@ class RobustObserver:
             self._update_cache('getSegmentationFrame')
         else:
             self.mc.updateFrame(frame, self.nAgent)
+            assert self.mc.getImageFrame() is not None
             self._update_cache('getImageFrame')
+            logger.debug("got image frame %s", str(self))
 
     def getVersion(self):
         return self.mc.getVersion()
@@ -506,6 +508,7 @@ class RobustObserver:
     def getItemsAndRecipesLists(self):
         self.sendCommand('recipes')
         self.sendCommand('item_list')
+        time.sleep(1)
         item_list = self.waitNotNoneObserve('getItemList', False)
         recipes = self.remove_mcprefix_rec(self.waitNotNoneObserve('getRecipeList', False))
         self.sendCommand('recipes off')
@@ -514,6 +517,7 @@ class RobustObserver:
 
     def getBlocksDropsList(self):
         self.sendCommand('blockdrops')
+        time.sleep(1)
         triples = self.waitNotNoneObserve('getBlocksDropsList', False)
         self.sendCommand('blockdrops off')
         return triples

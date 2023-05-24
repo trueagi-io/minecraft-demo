@@ -51,11 +51,9 @@ def init_mission(mc, start_x=None, start_y=None):
     return mc, obs
 
 
-def getInvSafe(mc, item):
-    while True:
-        time.sleep(0.3)
-        mc.observeProc()
-        if mc.isInventoryAvailable(): return RobustObserver(mc).filterInventoryItem(item)
+def getInvSafe(obs, item_type):
+    inventory = obs.waitNotNoneObserve('getInventory', observeReq=False)
+    return [item for item in inventory if item['type'] == item_type]
 
 
 class TestCraft(unittest.TestCase):
@@ -67,6 +65,7 @@ class TestCraft(unittest.TestCase):
         start = (-108.0, -187.0)
         mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
         cls.mc = mc
+        cls.obs = obs
         assert mc.safeStart()
         time.sleep(4)
 
@@ -81,18 +80,20 @@ class TestCraft(unittest.TestCase):
 
     def test_swap_inventory(self):
         mc = self.mc
+        obs = self.obs
         mc.sendCommand("chat /give @p minecraft:oak_planks 1")
         time.sleep(2)
         mc.sendCommand("chat /give @p wooden_pickaxe 1")
-        time.sleep(1)
+        time.sleep(2)
         
-        pickaxe = getInvSafe(mc, 'wooden_pickaxe')
+        pickaxe = getInvSafe(obs, 'wooden_pickaxe')
+        print(pickaxe)
 
         mc.observeProc()
         inv1 = mc.getInventory()
         mc.sendCommand('swapInventoryItems 0 ' + str(pickaxe[0]['index']))
-        time.sleep(1)
-        pickaxe = getInvSafe(mc, 'wooden_pickaxe')
+        time.sleep(2)
+        pickaxe = getInvSafe(obs, 'wooden_pickaxe')
         self.assertEquals(pickaxe[0]['index'], 0)
 
         

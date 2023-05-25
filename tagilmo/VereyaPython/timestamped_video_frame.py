@@ -11,6 +11,7 @@ import numpy.typing as npt
 import cv2
 import io
 import os
+import platform
 
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
 logger = logging.getLogger()
@@ -29,6 +30,8 @@ class FrameType(IntEnum):
     LUMINANCE=2                 # !< 8bpp greyscale bitmap
     COLOUR_MAP=3                # !< 24bpp colour map
     _MAX_FRAME_TYPE=4
+
+
 
 # should be frozen but init will be too ugly
 @dataclass(slots=True, frozen=False, init=False)
@@ -81,5 +84,10 @@ class TimestampedVideoFrame:
         received_img_bytes = message.data[jo_len:]
         self._pixels = received_img_bytes
 
+    @property
     def pixels(self):
-        return cv2.cvtColor(cv2.imdecode(np.frombuffer(self._pixels, dtype="uint8"), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+        ostype = platform.system()
+        if ostype == 'Darwin':
+            return cv2.imdecode(np.frombuffer(self._pixels, dtype="uint8"), cv2.IMREAD_COLOR)
+        else:
+            return cv2.cvtColor(cv2.imdecode(np.frombuffer(self._pixels, dtype="uint8"), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)

@@ -80,6 +80,6 @@ class TimestampedVideoFrame:
         jo_len = jo_len + 4
         received_img_bytes = message.data[jo_len:]
         self._pixels = received_img_bytes
-
+    @property
     def pixels(self):
         return cv2.cvtColor(cv2.imdecode(np.frombuffer(self._pixels, dtype="uint8"), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)

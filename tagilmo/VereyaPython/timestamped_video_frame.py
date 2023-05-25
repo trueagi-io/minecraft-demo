@@ -31,7 +31,13 @@ class FrameType(IntEnum):
     COLOUR_MAP=3                # !< 24bpp colour map
     _MAX_FRAME_TYPE=4
 
+def emptyFunc(img, arg): return img
 
+ostype = platform.system()
+if ostype == 'Darwin':
+    conversion = emptyFunc
+else:
+    conversion = cv2.cvtColor
 
 # should be frozen but init will be too ugly
 @dataclass(slots=True, frozen=False, init=False)
@@ -83,11 +89,7 @@ class TimestampedVideoFrame:
         jo_len = jo_len + 4
         received_img_bytes = message.data[jo_len:]
         self._pixels = received_img_bytes
-        
+
     @property
     def pixels(self):
-        ostype = platform.system()
-        if ostype == 'Darwin':
-            return cv2.imdecode(np.frombuffer(self._pixels, dtype="uint8"), cv2.IMREAD_COLOR)
-        else:
-            return cv2.cvtColor(cv2.imdecode(np.frombuffer(self._pixels, dtype="uint8"), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+        return conversion(cv2.imdecode(np.frombuffer(self._pixels, dtype="uint8"), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)

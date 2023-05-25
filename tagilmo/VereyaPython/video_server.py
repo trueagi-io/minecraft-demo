@@ -56,12 +56,6 @@ class VideoServer:
     def getPort(self) -> int:
         return self.server.getPort()
 
-    def getWidth(self) -> int:
-        return self.width
-
-    def getHeight(self) -> int:
-        return self.height
-
     def getChannels(self) -> int:
         return self.channels
 

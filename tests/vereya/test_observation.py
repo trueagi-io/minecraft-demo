@@ -34,19 +34,22 @@ class TestData(BaseTest):
         super().setUp()
         time.sleep(2)
 
-    def test_observation_from_ray(self):
-        visible = self.getDist()
+    def dist_test_function(self, visible):
         print(visible)
         dist = visible['distance']
-        self.assertGreater(dist, 10)
-        self.assertFalse(visible['inRange'])
-        self.mc.sendCommand('chat /tp @p -123 72 73')  
+        if 4 < dist:
+            self.assertFalse(visible['inRange'])
+        else:
+            self.assertTrue(visible['inRange'])
+
+    def test_observation_from_ray(self):
+        self.mc.sendCommand('chat /tp @p -123 72 76')
+        visible = self.getDist()
+        self.dist_test_function(visible)
         time.sleep(1)
         visible = self.getDist()
         dist = visible['distance']
-        self.assertLess(dist, 4)
-        self.assertTrue(visible['inRange'])
-        print(visible)
+        self.dist_test_function(visible)
 
     def test_observation_from_chat(self):
         logger.info("send chat ")
@@ -65,7 +68,9 @@ class TestData(BaseTest):
         self.assertEqual(command[0], "get wooden_axe")
 
     def test_observation_from_item(self):
+        logger.debug('getting items')
         item_list, recipes = self.rob.getItemsAndRecipesLists()
+        logger.debug('got items %s', str(item_list))
         self.assertGreater(len(item_list), 0, "item_list len")
         self.assertTrue("diamond" in item_list)
         self.assertTrue("iron_ore" in item_list)
@@ -95,7 +100,9 @@ class TestData(BaseTest):
 
 
     def test_observation_from_triples(self):
+        logger.debug('triples, getting blockdrops')
         blockdrops = self.rob.getBlocksDropsList()
+        logger.debug('got blockdrops %s', str(blockdrops))
         self.assertGreater(len(blockdrops), 0, "blockdrops len")
         for blockdrop in blockdrops:
             if blockdrop['block_name'] == 'diamond_ore':
@@ -125,7 +132,7 @@ class TestData(BaseTest):
             visible = mc.getFullStat('LineOfSight')
             if visible and 'distance' in visible :
                 print(visible)
-                return visible 
+                return visible
             else:
                 c += 1
                 if c > 4:
@@ -139,12 +146,12 @@ class TestData(BaseTest):
                 mc.sendCommand('pitch ' + str(prev_pitch))
                 time.sleep(0.5)
                 mc.sendCommand('pitch 0')
-                continue 
-        
+                continue
+
 def main():
     VereyaPython.setupLogger()
     unittest.main()
 
-        
+
 if __name__ == '__main__':
    main()

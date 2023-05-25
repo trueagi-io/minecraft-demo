@@ -17,11 +17,14 @@ class TestPlacement(BaseTest):
         mc.safeStart()
         time.sleep(1)
 
+    @classmethod
+    def tearDownClass(cls, *args, **kwargs):
+        cls.mc.stop()
+
     def test_placement(self):
         """ test block placement api"""
         mc = self.mc
         rob = self.rob
-        rob.update_in_background()
         time.sleep(1)
         grid = rob.getCachedObserve('getNearGrid')
         pos = rob.getCachedObserve('getAgentPos')

@@ -5,7 +5,7 @@ import copy
 import logging
 import asyncio
 from asyncio import AbstractEventLoop
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Callable
 import xml.etree.ElementTree as ET
 from io import TextIOWrapper
 
@@ -61,6 +61,8 @@ class AgentHost(ArgumentParser):
         self.current_mission_record: Optional[MissionRecord] = None
         self.rewards_policy = RewardsPolicy.SUM_REWARDS
         self.version: Optional[str] = None
+        self._onObservationCallback: Callable[[TimestampedString], None] = None
+        self._onNewFrameCallback: Callable[[TimestampedVideoFrame], None] = None
 
     def startMission(self, mission: MissionSpec, client_pool: List[ClientInfo],
                      mission_record: MissionRecordSpec, role: int,
@@ -391,13 +393,8 @@ class AgentHost(ArgumentParser):
         else:
             path = self.current_mission_record.getMP4Path()
 
-        if( video_server is None or
-            (port != 0 and video_server.getPort() != port ) or
-            video_server.getWidth() != width or
-            video_server.getHeight() != height or
-            video_server.getChannels() != channels or
-            video_server.getFrameType() != frametype):
-
+        if video_server is None or \
+            (port != 0 and video_server.getPort() != port ):
             if video_server is not None:
                 video_server.close()
 
@@ -568,7 +565,6 @@ class AgentHost(ArgumentParser):
                 return
         self.world_state.mission_control_messages.append(xml)
 
-
     def onVideo(self, message: TimestampedVideoFrame) -> None:
         with self.world_state_mutex:
             if self.video_policy == VideoPolicy.LATEST_FRAME_ONLY:
@@ -583,6 +579,9 @@ class AgentHost(ArgumentParser):
             else:
                 self.world_state.video_frames.append(message)
             self.world_state.number_of_video_frames_since_last_state += 1
+
+        if self._onNewFrameCallback is not None:
+            self._onNewFrameCallback(message)
 
     def listenForRewards(self, port: int) -> None:
         if not self.rewards_server or ( port != 0 and self.rewards_server.getPort() != port ):
@@ -633,6 +632,9 @@ class AgentHost(ArgumentParser):
 
             self.world_state.number_of_observations_since_last_state += 1
 
+        if self._onObservationCallback is not None:
+            self._onObservationCallback(message)
+
     def closeRecording(self):
         pass
 
@@ -667,3 +669,11 @@ class AgentHost(ArgumentParser):
         elif self.rewards_policy == RewardsPolicy.KEEP_ALL_REWARDS:
             self.world_state.rewards.append(reward)
         self.world_state.number_of_rewards_since_last_state += 1
+
+    def setOnObservationCallback(self, callback: Callable[[TimestampedString], None]):
+        self._onObservationCallback = callback
+
+    def setOnNewFrameCallback(self, callback: Callable[[TimestampedVideoFrame], None]):
+        logger.debug('setting new frame callback to %s', str(callback))
+        self._onNewFrameCallback = callback
+

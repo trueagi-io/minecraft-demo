@@ -22,7 +22,6 @@ class TestMotion(BaseTest):
         mc, obs = init_mission(None, start_x=start[0], start_y=start[1], forceReset='true', seed='43')
         cls.mc = mc
         cls.obs = obs
-        obs.update_in_background()
         assert mc.safeStart()
         time.sleep(4)
 

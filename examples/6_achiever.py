@@ -41,7 +41,6 @@ if __name__ == '__main__':
     #those commands needed if we are reusing same world
     sleep(2)
     agent.rob.sendCommand("jump 1")
-    agent.rob.update_in_background()
     sleep(0.1)
     agent.rob.sendCommand("jump 0")
 

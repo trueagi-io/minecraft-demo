@@ -10,7 +10,6 @@ import numpy as np
 import numpy.typing as npt
 import cv2
 import io
-import PIL.Image as Image
 import os
 
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
@@ -31,8 +30,6 @@ class FrameType(IntEnum):
     COLOUR_MAP=3                # !< 24bpp colour map
     _MAX_FRAME_TYPE=4
 
-
-
 # should be frozen but init will be too ugly
 @dataclass(slots=True, frozen=False, init=False)
 class TimestampedVideoFrame:
@@ -45,6 +42,9 @@ class TimestampedVideoFrame:
 
     # The type of video data - eg 24bpp RGB, or 32bpp float depth
     frametype: FrameType
+
+    # BMP image stored in bytes received by TCP from Vereya
+    _pixels: bytes
 
     # The pitch of the player at render time
     pitch: float = 0
@@ -60,9 +60,6 @@ class TimestampedVideoFrame:
 
     # The z pos of the player at render time
     zPos: float = 0
-
-    # The pixels, stored as channels then columns then rows. Length should be width*height*channels.
-    pixels: npt.NDArray[np.uint8] = numpy.array(0, dtype=numpy.uint8)
 
     def __init__(self, message: TimestampedUnsignedCharVector,
                  frametype: FrameType = FrameType.VIDEO):
@@ -82,4 +79,8 @@ class TimestampedVideoFrame:
         self.calibrationMatrix = np.reshape(np.asarray(loadedjson['projectionMatrix'], dtype=np.dtype(numpy.float32)), (4,4))
         jo_len = jo_len + 4
         received_img_bytes = message.data[jo_len:]
-        self.pixels = cv2.cvtColor(cv2.imdecode(np.asarray(bytearray(received_img_bytes), dtype="uint8"), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+        self._pixels = received_img_bytes
+
+    @property
+    def pixels(self):
+        return cv2.imdecode(np.frombuffer(self._pixels, dtype="uint8"), cv2.IMREAD_COLOR)

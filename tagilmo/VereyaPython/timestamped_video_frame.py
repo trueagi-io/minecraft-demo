@@ -11,7 +11,6 @@ import numpy.typing as npt
 import cv2
 import io
 import os
-import platform
 
 from .timestamped_unsigned_char_vector import TimestampedUnsignedCharVector
 logger = logging.getLogger()

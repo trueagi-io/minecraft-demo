@@ -83,7 +83,7 @@ class TimestampedVideoFrame:
         jo_len = jo_len + 4
         received_img_bytes = message.data[jo_len:]
         self._pixels = received_img_bytes
-
+        
     @property
     def pixels(self):
         ostype = platform.system()

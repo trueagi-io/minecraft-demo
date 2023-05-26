@@ -8,9 +8,23 @@ import cv2
 model_cache = dict()
 
 
-def process_pixel_data(pixels):
+def process_pixel_data(pixels, keep_aspect_ratio=False, maximum_area=None):
     # img_data = numpy.frombuffer(pixels, dtype=numpy.uint8)
-    img_data = cv2.resize(pixels, dsize=(320, 240), interpolation=cv2.INTER_CUBIC)
+    height, width, _ = pixels.shape
+    wscale = width / 320
+    if not keep_aspect_ratio:
+        hscale = height / 240
+    else:
+        hscale = wscale
+
+    scaled_width = int(320*wscale)
+    scaled_height = int(240*hscale)
+
+    #to make width and height divisible by 8
+    scaled_width -= scaled_width % 8
+    scaled_height -= scaled_height % 8
+
+    img_data = cv2.resize(pixels, dsize=(scaled_width, scaled_height), interpolation=cv2.INTER_CUBIC)
     # img_data = numpy.resize(pixels, (240 * scale, 320 * scale, 4))
     # img_data = pixels
     # if resize != 1:
@@ -21,20 +35,22 @@ def process_pixel_data(pixels):
     return img_data
 
 
-def get_image(img_frame):
+def get_image(img_frame, keep_aspect_ratio=False, maximum_area=None):
     if img_frame is not None:
-        return process_pixel_data(img_frame.pixels)
+        return process_pixel_data(img_frame.pixels, keep_aspect_ratio, maximum_area)
     return None
 
 
 class NeuralWrapper:
-    def __init__(self, rob):
+    def __init__(self, rob, keep_aspect_ratio=False, maximum_area=None):
         self.net = self.load_model()
         self.rob = rob
+        self.keep_aspect_ratio = keep_aspect_ratio
+        self.maximum_area = maximum_area
 
     def _get_image(self):
         img_name = 'getImageFrame'
-        img_data = get_image(self.rob.getCachedObserve(img_name))
+        img_data = get_image(self.rob.getCachedObserve(img_name), self.keep_aspect_ratio, self.maximum_area)
         # img_data = self.rob.getCachedObserve(img_name).pixels
         if img_data is not None:
             img_data = torch.as_tensor(img_data).permute(2,0,1)

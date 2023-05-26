@@ -12,7 +12,7 @@ def process_pixel_data(pixels, keep_aspect_ratio=False, maximum_area=None):
     # img_data = numpy.frombuffer(pixels, dtype=numpy.uint8)
     height, width, _ = pixels.shape
     wscale = width / 320
-    if not keep_aspect_ratio:
+    if keep_aspect_ratio:
         hscale = height / 240
     else:
         hscale = wscale

@@ -13,10 +13,11 @@ class TAgent:
         self.rob = RobustObserverWithCallbacks(mc)
         if mc.mission.isVideoRequested(0):
             w = mc.mission.getVideoWidth(0)
-            if w == 0:
-                callback = NeuralWrapper(self.rob, 1, 1)
-            else:
-                callback = NeuralWrapper(self.rob, 320/w, w//320)
+            callback = NeuralWrapper(self.rob)
+            # if w == 0:
+            #     callback = NeuralWrapper(self.rob, 1, 1)
+            # else:
+            #     callback = NeuralWrapper(self.rob, 320/w, w//320)
                                     # cb_name, on_change event, callback
             self.rob.addCallback('getNeuralSegmentation', 'getImageFrame', callback)
         self.blockMem = NoticeBlocks()

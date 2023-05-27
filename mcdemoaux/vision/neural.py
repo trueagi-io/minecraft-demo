@@ -16,10 +16,10 @@ def process_pixel_data(pixels, keep_aspect_ratio, maximum_size):
     scaled_height = int(int(keep_aspect_ratio) * (scaled_width / aspect_ratio_org) + (1 - int(keep_aspect_ratio)) * int(240*wscale))
     if maximum_size is not None and maximum_size:
         scaled_width = maximum_size[0] if scaled_width > maximum_size[0] else scaled_width
-        if not keep_aspect_ratio:
-            scaled_height = maximum_size[1] if scaled_height > maximum_size[1] else scaled_height
-        else:
+        if keep_aspect_ratio:
             scaled_height = int(scaled_width / aspect_ratio_org)
+        else:
+            scaled_height = maximum_size[1] if scaled_height > maximum_size[1] else scaled_height
 
     # to make width and height divisible by 8
     scaled_width -= scaled_width % 8
@@ -37,7 +37,7 @@ def get_image(img_frame, keep_aspect_ratio, maximum_size):
 
 
 class NeuralWrapper:
-    def __init__(self, rob, keep_aspect_ratio=False, maximum_size=(320, 240)):
+    def __init__(self, rob, keep_aspect_ratio=True, maximum_size=(320, 240)):
         self.net = self.load_model()
         self.rob = rob
         self.keep_aspect_ratio = keep_aspect_ratio

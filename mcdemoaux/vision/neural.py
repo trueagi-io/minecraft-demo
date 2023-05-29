@@ -33,11 +33,11 @@ def process_pixel_data(pixels, keep_aspect_ratio, maximum_size):
     height, width, _ = pixels.shape
     aspect_ratio_org = width / height
     if maximum_size is not None and maximum_size:
-        width = maximum_size[0] if width > maximum_size[0] else width
+        height = maximum_size[1] if height > maximum_size[1] else height
         if keep_aspect_ratio:
-            height = int(height / aspect_ratio_org)
+            width = int(height * aspect_ratio_org)
         else:
-            height = maximum_size[1] if height > maximum_size[1] else height
+            width = maximum_size[0] if width > maximum_size[0] else width
 
     # to make width and height divisible by 8
     width -= width % 8

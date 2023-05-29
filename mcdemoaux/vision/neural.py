@@ -8,24 +8,42 @@ import cv2
 model_cache = dict()
 
 
+# def process_pixel_data(pixels, keep_aspect_ratio, maximum_size):
+#     height, width, _ = pixels.shape
+#     aspect_ratio_org = width / height
+#     wscale = width // 320
+#     scaled_width = int(320*wscale)
+#     scaled_height = int(int(keep_aspect_ratio) * (scaled_width / aspect_ratio_org) + (1 - int(keep_aspect_ratio)) * int(240*wscale))
+#     if maximum_size is not None and maximum_size:
+#         scaled_width = maximum_size[0] if scaled_width > maximum_size[0] else scaled_width
+#         if keep_aspect_ratio:
+#             scaled_height = int(scaled_width / aspect_ratio_org)
+#         else:
+#             scaled_height = maximum_size[1] if scaled_height > maximum_size[1] else scaled_height
+#
+#     # to make width and height divisible by 8
+#     scaled_width -= scaled_width % 8
+#     scaled_height -= scaled_height % 8
+#
+#     img_data = cv2.resize(pixels, dsize=(scaled_width, scaled_height), interpolation=cv2.INTER_CUBIC)
+#
+#     return img_data
+
 def process_pixel_data(pixels, keep_aspect_ratio, maximum_size):
     height, width, _ = pixels.shape
     aspect_ratio_org = width / height
-    wscale = width // 320
-    scaled_width = int(320*wscale)
-    scaled_height = int(int(keep_aspect_ratio) * (scaled_width / aspect_ratio_org) + (1 - int(keep_aspect_ratio)) * int(240*wscale))
     if maximum_size is not None and maximum_size:
-        scaled_width = maximum_size[0] if scaled_width > maximum_size[0] else scaled_width
+        width = maximum_size[0] if width > maximum_size[0] else width
         if keep_aspect_ratio:
-            scaled_height = int(scaled_width / aspect_ratio_org)
+            height = int(height / aspect_ratio_org)
         else:
-            scaled_height = maximum_size[1] if scaled_height > maximum_size[1] else scaled_height
+            height = maximum_size[1] if height > maximum_size[1] else height
 
     # to make width and height divisible by 8
-    scaled_width -= scaled_width % 8
-    scaled_height -= scaled_height % 8
+    width -= width % 8
+    height -= height % 8
 
-    img_data = cv2.resize(pixels, dsize=(scaled_width, scaled_height), interpolation=cv2.INTER_CUBIC)
+    img_data = cv2.resize(pixels, dsize=(width, height), interpolation=cv2.INTER_CUBIC)
 
     return img_data
 

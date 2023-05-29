@@ -264,6 +264,7 @@ class MCConnector:
                 keys (status)  : 'Life', 'Food', 'Air', 'IsAlive'
                 keys (more)    : 'XP', 'Score', 'Name', 'WorldTime', 'TotalTime', 'DistanceTravelled', 'TimeAlive',
                                  'MobsKilled', 'PlayersKilled', 'DamageTaken', 'DamageDealt'
+                keys (new)     : 'input_type', 'isPaused'
         """
         if (self.observe[nAgent] is not None) and (key in self.observe[nAgent]):
             return self.observe[nAgent][key]

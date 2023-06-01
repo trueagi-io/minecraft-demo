@@ -416,6 +416,10 @@ class RobustObserver:
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
                           'getNearPickableEntities', 'getBlocksDropsList']
 
+        self.events = ['getChat', 'getHumanInputs']
+
+        self.readEvents = {event : False for event in self.events}
+
         if not self.mc.supportsVideo():
             self.canBeNone.append('getImageFrame')
         if not self.mc.supportsSegmentation():
@@ -467,6 +471,9 @@ class RobustObserver:
     def getCachedObserve(self, method, key = None):
         with self.lock:
             val = self.cached[method][0]
+        if method in self.events and val is not None:
+            self.readEvents[method] = True
+            self.cached[method] = (None, 0)
         if key is None:
             return val
         else:
@@ -482,6 +489,8 @@ class RobustObserver:
     def _update_cache(self, method):
         t_new = time.time()
         v_new = getattr(self.mc, method)(self.nAgent)
+        if v_new is None and method in self.events and not self.readEvents[method]:
+            return
         with self.lock:
             v, t = self.cached[method]
         outdated = t_new - t > self.max_dt
@@ -490,6 +499,8 @@ class RobustObserver:
                 self.cached_buffer[method] = self.cached[method]
                 self.cached[method] = (v_new, t_new)
             self.changed(method)
+            if method in self.events:
+                self.readEvents[method] = False
 
     def changed(self, name):
         pass

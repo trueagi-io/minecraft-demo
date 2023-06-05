@@ -426,6 +426,8 @@ class RobustObserver:
             self.canBeNone.append('getSegmentationFrame')
         self.max_dt = 1.0
         self.cached = {method : (None, 0) for method in self.methods}
+        for event in self.events:
+            self.cached[event] = [(None, 0)]
         self.cbuff_history_len = 10
         self.cached_buffer = {method: (None, 0) for method in self.methods}
         self.cached_buffer_list = [self.cached_buffer]
@@ -470,10 +472,12 @@ class RobustObserver:
 
     def getCachedObserve(self, method, key = None):
         with self.lock:
-            val = self.cached[method][0]
+            val = self.cached[method]
         if method in self.events and val is not None:
             self.readEvents[method] = True
-            self.cached[method] = (None, 0)
+            self.cached[method] = [(None, 0)]
+        else:
+            val = val[0]
         if key is None:
             return val
         else:
@@ -491,16 +495,20 @@ class RobustObserver:
         v_new = getattr(self.mc, method)(self.nAgent)
         if v_new is None and method in self.events and not self.readEvents[method]:
             return
+        outdated = False
         with self.lock:
-            v, t = self.cached[method]
-        outdated = t_new - t > self.max_dt
+            if method not in self.events:
+                v, t = self.cached[method]
+                outdated = t_new - t > self.max_dt
         if v_new is not None or outdated: # or v is None
             with self.lock:
                 self.cached_buffer[method] = self.cached[method]
-                self.cached[method] = (v_new, t_new)
+                if method in self.events:
+                    self.cached[method].append((v_new, t_new))
+                    self.readEvents[method] = False
+                else:
+                    self.cached[method] = (v_new, t_new)
             self.changed(method)
-            if method in self.events:
-                self.readEvents[method] = False
 
     def changed(self, name):
         pass

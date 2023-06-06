@@ -473,7 +473,7 @@ class RobustObserver:
     def getCachedObserve(self, method, key = None):
         with self.lock:
             val = self.cached[method]
-        if method in self.events and val is not None:
+        if method in self.events:
             self.readEvents[method] = True
             self.cached[method] = [(None, 0)]
         else:

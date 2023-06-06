@@ -834,21 +834,24 @@ class ListenAndDo(Switcher):
         self.terminate = False
 
     def update(self):
-        command = self.rob.getCachedObserve('getChat')[-1][0]
-        if self.next_goal is not None:
-            self.delegate = self.next_goal
-            self.next_goal = None
-        elif command is not None:
-            words = command[0].split(' ')
-            if words[-1] == 'terminate':
-                self.terminate = True
-            if len(words) > 1:
-                if words[-2] == 'get':
-                    self.next_goal = Obtain(self.agent, [{'type': words[-1]}])
+        commands = self.rob.getCachedObserve('getChat')
+        for command in reversed(commands):
+            command = command[0]
             if self.next_goal is not None:
-                print("Received command: ", command)
-                if self.delegate is not None:
-                    self.stopDelegate = True
+                self.delegate = self.next_goal
+                self.next_goal = None
+            elif command is not None:
+                words = command[0].split(' ')
+                if words[-1] == 'terminate':
+                    self.terminate = True
+                if len(words) > 1:
+                    if words[-2] == 'get':
+                        self.next_goal = Obtain(self.agent, [{'type': words[-1]}])
+                if self.next_goal is not None:
+                    print("Received command: ", command)
+                    if self.delegate is not None:
+                        self.stopDelegate = True
+                break
         super().update()
 
     def finished(self):

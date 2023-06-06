@@ -493,8 +493,6 @@ class RobustObserver:
     def _update_cache(self, method):
         t_new = time.time()
         v_new = getattr(self.mc, method)(self.nAgent)
-        if v_new is None and method in self.events and not self.readEvents[method]:
-            return
         outdated = False
         with self.lock:
             if method not in self.events:

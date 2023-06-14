@@ -185,6 +185,7 @@ class MCConnector:
         else:
             agent_section = mb.AgentSection(agenthandlers=agent_handlers)
         miss = mb.MissionXML(agentSections=[agent_section])
+        miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
         world = mb.defaultworld(forceReset="false", forceReuse="true", seed=seed)
         miss.setWorld(world)
         mc = MCConnector(miss)

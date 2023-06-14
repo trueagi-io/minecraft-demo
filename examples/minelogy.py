@@ -88,12 +88,12 @@ class Minelogy():
         if clear_recipes:
             self.crafts = []
         for mcrecipe in mcrecipes:
-            craft_name = mcrecipe['name'].split('.')[-1]
+            craft_name = mcrecipe['name']
             if (craft_name in items_to_add) or (not strict_matching and craft_name.split("_")[-1] in items_to_add):
                 self.__set_one_recipe(mcrecipe, craft_name)
 
     def __match_materials(self, materials):
-        materials = [material['type'].split(".")[-1] for material in materials]
+        materials = [material['type'] for material in materials]
         name1 = materials[0]
         materials_list=[name1]
         if "log" in name1:
@@ -268,13 +268,9 @@ class Minelogy():
     def __matchEntity(self, source_type, target_type):
         if target_type == 'fuel' and source_type in self.fuel_priority:
             return True
-        if (source_type != target_type) and (source_type != target_type.split("_")[-1]) and (target_type != source_type.split("_")[-1]):
-            return False
-        # target_v = self.get_ovariant(target)
-        # if target_v is not None:
-        #     if target_v != self.get_ovariant(source) and target_v[0] != '$':
-        #         return False
-        return True
+        if (source_type == target_type):
+            return True
+        return False
 
     def matchEntity(self, source, target):
         if source is None:
@@ -290,6 +286,16 @@ class Minelogy():
             target_types = getattr(self, "{}_types".format(target_type))
             for t_type in target_types:
                 if self.__matchEntity(source_type, t_type):
+                    return True
+        elif hasattr(self, source_type+"_names"):
+            source_names = getattr(self, "{}_names".format(source_type))
+            for s_name in source_names:
+                if self.__matchEntity(s_name, target_type):
+                    return True
+        elif hasattr(self, target_type+"_names"):
+            target_names = getattr(self, "{}_names".format(target_type))
+            for t_name in target_names:
+                if self.__matchEntity(source_type, t_name):
                     return True
         return self.__matchEntity(source_type, target_type)
 

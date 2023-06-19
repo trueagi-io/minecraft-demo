@@ -58,6 +58,7 @@ class TestData(BaseTest):
         start = time.time()
         while True:
             command = self.rob.waitNotNoneObserve('getChat', observeReq=False)
+            command = next(x[0] for x in command if x[0] is not None)
             if command is not None:
                 break
             time.sleep(0.05)

@@ -471,18 +471,26 @@ class RobustObserver:
         with self.lock:
             self.cached = {k: (None, 0) for k in self.cached}
 
-    def getCachedObserve(self, method, key = None):
+    def getCachedObserve(self, method, key=None, readEvent=True):
         with self.lock:
             val = self.cached[method]
         if method in self.events:
-            self.readEvents[method] = True
-            self.cached[method] = [(None, 0)]
+            if readEvent:
+                self.readEvents[method] = True
+                self.cached[method] = [(None, 0)]
         else:
             val = val[0]
         if key is None:
             return val
         else:
             return val[key] if val is not None and key in val else None
+
+    def __peekCache(self, method):
+        with self.lock:
+            val = self.cached[method]
+        if method in self.events:
+            return [x[0] for x in val]
+        return [val[0]]
 
     def observeProcCached(self):
         self._observeProcCached()
@@ -541,21 +549,30 @@ class RobustObserver:
         self.sendCommand('blockdrops off')
         return triples
 
+    
+    def __get_cached_time(self, method):
+        if method in self.events:
+            tm = self.cached[method][-1][1]
+        else:
+            tm = self.cached[method][1]
+        return tm
+
     def waitNotNoneObserve(self, method, updateReq=False, observeReq=True):
         # REM: do not use with 'getLineOfSights'
-        tm = self.cached[method][1]
+
+        tm = self.__get_cached_time(method)
         # Do not force observeProcCached if the value was updated less than tick ago
         if time.time() - tm > self.tick and observeReq:
             self.observeProcCached()
-            tm = self.cached[method][1]
+            tm = self.__get_cached_time(method)
 
         # if updated observation is required, observation time should be changed
         # (is not recommended while moving)
-        while self.getCachedObserve(method) is None or\
-              (self.cached[method][1] == tm and updateReq):
+        while all(x is None for x in self.__peekCache(method)) or\
+              (self.__get_cached_time(method)  == tm and updateReq):
             time.sleep(self.tick)
             self.observeProcCached()
-            if self.cached[method][1] - tm > self.max_dt:
+            if self.__get_cached_time(method) - tm > self.max_dt:
                 # It's better to return None rather than hanging too long
                 break
         return self.getCachedObserve(method)
@@ -564,7 +581,7 @@ class RobustObserver:
         # we don't require observations to be updated in fact, but we try to do an update
         self.observeProcCached()
         start = time.time()
-        while not all([self.cached[method][0] is not None or method in self.canBeNone for method in self.methods]):
+        while not all([self.cached[method][0] is not None or (method in self.canBeNone or method in self.events) for method in self.methods]):
             nones = []
             time.sleep(self.tick)
             self.observeProcCached()

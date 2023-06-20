@@ -344,6 +344,9 @@ class MCConnector:
     def getBlocksDropsList(self, nAgent=0):
         return self.getParticularObservation('block_item_tool_triple', nAgent)
 
+    def getNonSolidBlocks(self, nAgent=0):
+        return self.getParticularObservation('nonsolid_blocks', nAgent)
+
     def getRecipeList(self, nAgent=0):
         return self.getParticularObservation('recipes', nAgent)
 
@@ -401,7 +404,7 @@ class RobustObserver:
 
     passableBlocks = ['air', 'cave_air', 'void_air', 'water', 'flowing_water', 'double_plant', 'tallgrass', 'snow_layer',
                       'deadbush', 'reeds', 'red_flower', 'yellow_flower', 'vine', 'red_mushroom', 'brown_mushroom',
-                      'carrots', 'weat', 'beetroots', 'torch']
+                      'carrots', 'weat', 'beetroots', 'torch', 'snow']
     deadlyBlocks = ['lava', 'cactus']
     # Should we merge these types of commands in one list?
     explicitlyPoseChangingCommands = ['move', 'jump', 'pitch', 'turn']
@@ -413,9 +416,9 @@ class RobustObserver:
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
-                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList']
+                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks']
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
-                          'getNearPickableEntities', 'getBlocksDropsList']
+                          'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks']
 
         self.events = ['getChat', 'getHumanInputs']
 
@@ -540,6 +543,13 @@ class RobustObserver:
         triples = self.waitNotNoneObserve('getBlocksDropsList', False)
         self.sendCommand('blockdrops off')
         return triples
+
+    def getNonSolidBlocks(self):
+        self.sendCommand('solid')
+        time.sleep(1)
+        nonsolid_blocks = self.remove_mcprefix_rec(self.waitNotNoneObserve('getNonSolidBlocks', False))
+        self.sendCommand('solid off')
+        return nonsolid_blocks
 
     def waitNotNoneObserve(self, method, updateReq=False, observeReq=True):
         # REM: do not use with 'getLineOfSights'

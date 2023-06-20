@@ -25,7 +25,7 @@ jobs:
           path: Vereya
           clean: false
       - name: install vereya
-        run: rm /home/tester/.minecraft/mods/* ; ls && cp $GITHUB_WORKSPACE/Vereya/jars/* /home/tester/.minecraft/mods/
+        run: rm /home/tester/.minecraft/mods/* ; ls && cp $GITHUB_WORKSPACE/Vereya/jars/* /home/tester/.minecraft/mods/ && cp $GITHUB_WORKSPACE/Vereya/fabric/* /home/tester/.minecraft/mods/
       - name: install fabric
         run: rsync -v $GITHUB_WORKSPACE/Vereya/fabric/* /home/tester/.minecraft/mods/
       - name: checkout tagilmo

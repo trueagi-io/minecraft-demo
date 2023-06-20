@@ -33,12 +33,8 @@ jobs:
           repository: trueagi-io/minecraft-demo
       - name: install tagilmo
         run: pwd && conda activate py31 && pip install .
-  test:
-    needs: build
-    runs-on: self-hosted
-    steps:
       - name: start minecraft
-        working-directory: ./Vereya
+        working-directory: $GITHUB_WORKSPACE/Vereya
         run: ./launch.sh &
         env:
           DISPLAY: :99

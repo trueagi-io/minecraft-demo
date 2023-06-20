@@ -22,9 +22,8 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: trueagi-io/Vereya
-          path: Vereya
       - name: install vereya
-        run: rm /home/tester/.minecraft/mods/* && cp $GITHUB_WORKSPACE/Vereya/jars/* /home/tester/.minecraft/mods/
+        run: rm /home/tester/.minecraft/mods/* && && ls && cp $GITHUB_WORKSPACE/Vereya/jars/* /home/tester/.minecraft/mods/
       - name: install fabric
         run: rsync -v $GITHUB_WORKSPACE/Vereya/fabric/* /home/tester/.minecraft/mods/
       - name: checkout tagilmo
@@ -34,8 +33,7 @@ jobs:
       - name: install tagilmo
         run: pwd && conda activate py31 && pip install .
       - name: start minecraft
-        working-directory: $GITHUB_WORKSPACE/Vereya
-        run: ./launch.sh &
+        run: cd Vereya && ./launch.sh &
         env:
           DISPLAY: :99
           GITHUB_WORKSPACE: $GITHUB_WORKSPACE

@@ -452,7 +452,6 @@ class RobustObserver:
             self.mc.updateFrame(frame, self.nAgent)
             assert self.mc.getImageFrame() is not None
             self._update_cache('getImageFrame')
-            logger.debug("got image frame %s", str(self))
 
     def getVersion(self):
         return self.mc.getVersion()

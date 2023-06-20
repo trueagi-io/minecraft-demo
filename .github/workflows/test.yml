@@ -31,7 +31,8 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: trueagi-io/minecraft-demo
-          path: $GITHUB_WORKSPACE
+      - name: install tagilmo
+        run: pwd && conda activate py31 && pip install .
   test:
     needs: build
     runs-on: self-hosted
@@ -42,8 +43,6 @@ jobs:
         env:
           DISPLAY: :99
           GITHUB_WORKSPACE: $GITHUB_WORKSPACE
-      - name: install tagilmo
-        run: conda activate py31 && pip install .
       - name: run test
         run: |
           ps a|grep [j]ava &&

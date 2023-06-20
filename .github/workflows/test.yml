@@ -23,6 +23,7 @@ jobs:
         with:
           repository: trueagi-io/Vereya
           path: Vereya
+          clean: false
       - name: install vereya
         run: rm /home/tester/.minecraft/mods/* ; ls && cp $GITHUB_WORKSPACE/Vereya/jars/* /home/tester/.minecraft/mods/
       - name: install fabric
@@ -31,6 +32,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: trueagi-io/minecraft-demo
+          clean: false
       - name: install tagilmo
         run: pwd && conda activate py31 && pip install .
       - name: start minecraft

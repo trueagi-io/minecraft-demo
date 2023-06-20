@@ -402,9 +402,6 @@ class MCConnector:
 
 class RobustObserver:
 
-    passableBlocks = ['air', 'cave_air', 'void_air', 'water', 'flowing_water', 'double_plant', 'tallgrass', 'snow_layer',
-                      'deadbush', 'reeds', 'red_flower', 'yellow_flower', 'vine', 'red_mushroom', 'brown_mushroom',
-                      'carrots', 'weat', 'beetroots', 'torch', 'snow']
     deadlyBlocks = ['lava', 'cactus']
     # Should we merge these types of commands in one list?
     explicitlyPoseChangingCommands = ['move', 'jump', 'pitch', 'turn']
@@ -412,6 +409,7 @@ class RobustObserver:
 
     def __init__(self, mc, nAgent = 0):
         self.mc = mc
+        self.passableBlocks = []
         self.nAgent = nAgent
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
@@ -442,6 +440,10 @@ class RobustObserver:
         self._time_sleep = 0.05
         self.mc.agent_hosts[self.nAgent].setOnObservationCallback(self.onObservationChanged)
         self.mc.agent_hosts[self.nAgent].setOnNewFrameCallback(self.onNewFrameCallback)
+
+    def updatePassableBlocks(self):
+        nonsolidblocks = self.__getNonSolidBlocks()
+        self.passableBlocks = nonsolidblocks
 
     def onObservationChanged(self, obs: TimestampedString) -> None:
         self.mc.updateObservations(obs, self.nAgent)
@@ -552,7 +554,7 @@ class RobustObserver:
         self.sendCommand('blockdrops off')
         return triples
 
-    def getNonSolidBlocks(self):
+    def __getNonSolidBlocks(self):
         self.sendCommand('solid')
         time.sleep(1)
         nonsolid_blocks = self.remove_mcprefix_rec(self.waitNotNoneObserve('getNonSolidBlocks', False))
@@ -701,7 +703,7 @@ class RobustObserver:
         return objs
 
     def analyzeGridInYaw(self, observeReq=True):
-        passableBlocks = RobustObserver.passableBlocks
+        passableBlocks = self.passableBlocks
         deadlyBlocks = RobustObserver.deadlyBlocks
         gridSlice = self.gridInYaw(observeReq)
         underground = gridSlice[(len(gridSlice) - 1) // 2 - 2]

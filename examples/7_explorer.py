@@ -183,6 +183,7 @@ if __name__ == '__main__':
     item_list, recipes = agent.rob.getItemsAndRecipesLists()
     sleep(15)
     blockdrops = agent.rob.getBlocksDropsList()
+    agent.rob.updatePassableBlocks()
     mlogy = Minelogy(item_list, items_to_craft, recipes, items_to_mine, blockdrops, ore_depths)
     agent.set_mlogy(mlogy)
     agent.run()

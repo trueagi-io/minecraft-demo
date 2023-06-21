@@ -55,7 +55,7 @@ def runStraight(rob, dist, keepHeight=False):
             bJump = False
         los = rob.getCachedObserve('getLineOfSights')
         if los is not None and los['hitType'] != 'MISS' and los['distance'] < 0.5 and \
-               not los['type'] in RobustObserver.passableBlocks and\
+               not los['type'] in rob.passableBlocks and\
                not bJump:
             break
     rob.sendCommand("move 0")
@@ -314,6 +314,7 @@ if __name__ == '__main__':
     sleep(2)
     item_list, recipes = rob.getItemsAndRecipesLists()
     blockdrops = rob.getBlocksDropsList()
+    rob.updatePassableBlocks()
     mlogy = Minelogy(item_list, items_to_craft, recipes, items_to_mine, blockdrops, ore_depths)
 
     logging.info("The first search for sticks")

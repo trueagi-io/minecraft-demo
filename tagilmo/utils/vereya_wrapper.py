@@ -344,6 +344,9 @@ class MCConnector:
     def getBlocksDropsList(self, nAgent=0):
         return self.getParticularObservation('block_item_tool_triple', nAgent)
 
+    def getNonSolidBlocks(self, nAgent=0):
+        return self.getParticularObservation('nonsolid_blocks', nAgent)
+
     def getRecipeList(self, nAgent=0):
         return self.getParticularObservation('recipes', nAgent)
 
@@ -399,9 +402,6 @@ class MCConnector:
 
 class RobustObserver:
 
-    passableBlocks = ['air', 'cave_air', 'void_air', 'water', 'flowing_water', 'double_plant', 'tallgrass', 'snow_layer',
-                      'deadbush', 'reeds', 'red_flower', 'yellow_flower', 'vine', 'red_mushroom', 'brown_mushroom',
-                      'carrots', 'weat', 'beetroots', 'torch']
     deadlyBlocks = ['lava', 'cactus']
     # Should we merge these types of commands in one list?
     explicitlyPoseChangingCommands = ['move', 'jump', 'pitch', 'turn']
@@ -409,13 +409,14 @@ class RobustObserver:
 
     def __init__(self, mc, nAgent = 0):
         self.mc = mc
+        self.passableBlocks = []
         self.nAgent = nAgent
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
-                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList']
+                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks']
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
-                          'getNearPickableEntities', 'getBlocksDropsList']
+                          'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks']
 
         self.events = ['getChat', 'getHumanInputs']
 
@@ -439,6 +440,10 @@ class RobustObserver:
         self._time_sleep = 0.05
         self.mc.agent_hosts[self.nAgent].setOnObservationCallback(self.onObservationChanged)
         self.mc.agent_hosts[self.nAgent].setOnNewFrameCallback(self.onNewFrameCallback)
+
+    def updatePassableBlocks(self):
+        nonsolidblocks = self.__getNonSolidBlocks()
+        self.passableBlocks = nonsolidblocks
 
     def onObservationChanged(self, obs: TimestampedString) -> None:
         self.mc.updateObservations(obs, self.nAgent)
@@ -548,6 +553,12 @@ class RobustObserver:
         self.sendCommand('blockdrops off')
         return triples
 
+    def __getNonSolidBlocks(self):
+        self.sendCommand('solid')
+        time.sleep(1)
+        nonsolid_blocks = self.remove_mcprefix_rec(self.waitNotNoneObserve('getNonSolidBlocks', False))
+        self.sendCommand('solid off')
+        return nonsolid_blocks
     
     def __get_cached_time(self, method):
         if method in self.events:
@@ -691,7 +702,7 @@ class RobustObserver:
         return objs
 
     def analyzeGridInYaw(self, observeReq=True):
-        passableBlocks = RobustObserver.passableBlocks
+        passableBlocks = self.passableBlocks
         deadlyBlocks = RobustObserver.deadlyBlocks
         gridSlice = self.gridInYaw(observeReq)
         underground = gridSlice[(len(gridSlice) - 1) // 2 - 2]

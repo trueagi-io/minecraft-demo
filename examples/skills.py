@@ -702,6 +702,7 @@ class GridAnalyzer:
         self.dimX = len(self.grid3D[0][0])
         self.dimZ = len(self.grid3D[0])
         self.dimY = len(self.grid3D)
+        self.rob = rob
         # we need this to know coordinates of the grid
         self.pa = rob.getCachedObserve('getAgentPos')
         self.p0 = [math.floor(p) for p in self.pa[0:3]]
@@ -736,8 +737,8 @@ class GridAnalyzer:
             block = self.grid3D[self.dimY//2+level][z][x]
             if block in RobustObserver.deadlyBlocks:
                 return {'d': t, 'status': 'deadly'}
-            if block not in RobustObserver.passableBlocks and level >= 0 or \
-               block in RobustObserver.passableBlocks and block != 'water' and level < 0:
+            if block not in self.rob.passableBlocks and level >= 0 or \
+               block in self.rob.passableBlocks and block != 'water' and level < 0:
                 return {'d': t, 'status': 'obstacle', 'o': [xf, pos[1]+level+0.5, zf]}
         return {'d': MAX_CNT, 'status': 'clean'}
         # + return obstacle?
@@ -764,7 +765,7 @@ class GridAnalyzer:
         if rd < self.dist_thresh or (self.dist < self.dist_thresh and dy < 2.66 and dy > -0.99):
             return ['done', 0]
         if self.target[1] - self.pa[1] > 1.5+self.dist_thresh and self.dist < self.dist_thresh:
-            if self.grid3D[self.dimY-1][self.dimZ//2][self.dimX//2] in RobustObserver.passableBlocks:
+            if self.grid3D[self.dimY-1][self.dimZ//2][self.dimX//2] in self.rob.passableBlocks:
                 #TODO: and not self.inWater()
                 return ['fly', 0]
             else:

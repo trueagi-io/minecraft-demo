@@ -8,6 +8,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from base_test import BaseTest
 from common import init_mission
+import random
 
 
 logger = logging.getLogger(__name__)
@@ -54,11 +55,12 @@ class TestData(BaseTest):
     def test_observation_from_chat(self):
         logger.info("send chat ")
         self.mc.sendCommand("chat get wooden_axe")
+        time.sleep(1)
         logger.info("wait chat")
         start = time.time()
         while True:
             command = self.rob.waitNotNoneObserve('getChat', observeReq=False)
-            command = next(x[0] for x in command if x[0] is not None)
+            command = next(x[0] for x in reversed(command) if x[0] is not None)
             if command is not None:
                 break
             time.sleep(0.05)
@@ -116,6 +118,19 @@ class TestData(BaseTest):
                                 (item == 'iron_ore' and tool == 'silkt_stone_pickaxe'))
             if blockdrop['block_name'] == 'birch_leaves' and blockdrop['tool'] == 'shears':
                 self.assertEqual(blockdrop['item_name'], 'birch_leaves', "check leaves")
+
+    def test_observation_from_big_grid(self):
+        logger.debug('getting info from big grid')
+        agentpos = self.rob.getCachedObserve('getAgentPos')
+        diamond_x = int(agentpos[0] + random.randint(1, 10))
+        diamond_y = int(agentpos[1] + random.randint(1, 10))
+        diamond_z = int(agentpos[2] + random.randint(1, 10))
+        self.mc.sendCommand("chat /setblock {} {} {} minecraft:diamond_ore".format(diamond_x, diamond_y, diamond_z))
+        time.sleep(1)
+        diamond_ore_loc = self.rob.getBigGrid("diamond_ore")
+        self.assertEqual(diamond_ore_loc[0], diamond_x)
+        self.assertEqual(diamond_ore_loc[1], diamond_y)
+        self.assertEqual(diamond_ore_loc[2], diamond_z)
 
     def test_game_state(self):
         self.mc.observeProc()

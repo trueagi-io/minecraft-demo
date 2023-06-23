@@ -553,8 +553,8 @@ class RobustObserver:
         triples = self.waitNotNoneObserve('getBlocksDropsList', False)
         return triples
 
-    def getBigGrid(self):
-        self.sendCommand('big_grid')
+    def getBigGrid(self, block_name):
+        self.sendCommand(f'big_grid {block_name}')
         time.sleep(1)
         biggrid = self.waitNotNoneObserve('getBigGrid', False)
         return biggrid

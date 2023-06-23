@@ -48,6 +48,7 @@ if __name__ == '__main__':
     item_list, recipes = agent.rob.getItemsAndRecipesLists()
     blockdrops = agent.rob.getBlocksDropsList()
     agent.rob.updatePassableBlocks()
+    biggrid = agent.rob.getBigGrid("stone")
     mlogy = Minelogy(item_list, items_to_craft, recipes, items_to_mine, blockdrops, ore_depths)
     '''
     Currently we don't use all recipes from the game since there are some issues with

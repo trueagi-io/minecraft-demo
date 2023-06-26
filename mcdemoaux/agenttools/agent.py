@@ -1,5 +1,8 @@
 import logging
+import time
+
 import numpy
+import random
 
 from tagilmo.utils.vereya_wrapper import RobustObserverWithCallbacks
 from mcdemoaux.vision.neural import NeuralWrapper
@@ -59,6 +62,8 @@ class NoticeBlocks:
         self.ignore_blocks = ['air', 'grass', 'tallgrass', 'double_plant', 'dirt', 'stone']
         self.dx = 4
         self.focus_blocks = set()
+        self.block_probs_for_biggrid = {'diamond_ore' : 0.0015, 'deepslate_diamond_ore' : 0.0015,
+                                        'iron_ore' : 0.0015, 'deepslate_iron_ore' : 0.0015}
 
     def updateBlock(self, block, pos):
         if block not in self.blocks:
@@ -85,6 +90,17 @@ class NoticeBlocks:
     def del_focus_blocks(self, blocks):
         self.focus_blocks -= set(blocks)
 
+    def updateBlocksFromBigGrid(self, rob, intersection):
+        indexes = [i for i, e in enumerate(intersection) if e == True]
+        for index in indexes:
+            block_name = list(self.block_probs_for_biggrid.keys())[index]
+            probability = list(self.block_probs_for_biggrid.values())[index]
+            if random.random() < probability:
+                block_pos = rob.getBigGrid(block_name)
+                if block_pos != "Empty":
+                    pos = int_coords(block_pos)
+                    self.updateBlock(block_name, pos)
+
     def updateBlocks(self, rob):
         grid = rob.cached['getNearGrid'][0]
         if grid is None:
@@ -104,6 +120,9 @@ class NoticeBlocks:
                 self.removeIfMissing(grid[i], self.focus_blocks, pos)
             if bUpdate:
                 self.updateBlock(grid[i], pos)
+        intersection = [i in self.focus_blocks for i in self.block_probs_for_biggrid]
+        if True in intersection:
+            self.updateBlocksFromBigGrid(rob, intersection)
 
     def recallNearest(self, targets, aPos=None, return_target_block=False):
         if aPos is None: aPos = [0,0,0]

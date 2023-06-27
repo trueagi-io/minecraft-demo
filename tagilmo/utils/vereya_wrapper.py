@@ -555,8 +555,7 @@ class RobustObserver:
 
     def getBigGrid(self, block_name):
         self.sendCommand(f'big_grid {block_name}')
-        time.sleep(1)
-        biggrid = self.waitNotNoneObserve('getBigGrid', False)
+        biggrid = self.waitNotNoneObserve('getBigGrid', True)
         return biggrid
 
     def __getNonSolidBlocks(self):

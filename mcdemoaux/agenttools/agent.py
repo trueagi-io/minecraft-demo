@@ -95,11 +95,12 @@ class NoticeBlocks:
         for index in indexes:
             block_name = list(self.block_probs_for_biggrid.keys())[index]
             probability = list(self.block_probs_for_biggrid.values())[index]
-            if random.random() < probability:
-                block_pos = rob.getBigGrid(block_name)
-                if block_pos != "Empty":
-                    pos = int_coords(block_pos)
-                    self.updateBlock(block_name, pos)
+            if block_name not in self.blocks:
+                if random.random() < probability:
+                    block_pos = rob.getBigGrid(block_name)
+                    if block_pos is not None and block_pos != "Empty":
+                        pos = int_coords(block_pos)
+                        self.updateBlock(block_name, pos)
 
     def updateBlocks(self, rob):
         grid = rob.cached['getNearGrid'][0]

@@ -62,7 +62,7 @@ class NoticeBlocks:
         self.ignore_blocks = ['air', 'grass', 'tallgrass', 'double_plant', 'dirt', 'stone']
         self.dx = 4
         self.focus_blocks = set()
-        self.block_probs_for_biggrid = {'diamond_ore' : 0.0015, 'deepslate_diamond_ore' : 0.0015,
+        self.block_probs = {'diamond_ore' : 0.0015, 'deepslate_diamond_ore' : 0.0015,
                                         'iron_ore' : 0.0015, 'deepslate_iron_ore' : 0.0015}
 
     def updateBlock(self, block, pos):
@@ -93,11 +93,11 @@ class NoticeBlocks:
     def updateBlocksFromBigGrid(self, rob, intersection):
         indexes = [i for i, e in enumerate(intersection) if e == True]
         for index in indexes:
-            block_name = list(self.block_probs_for_biggrid.keys())[index]
-            probability = list(self.block_probs_for_biggrid.values())[index]
+            block_name = list(self.block_probs.keys())[index]
+            probability = list(self.block_probs.values())[index]
             if block_name not in self.blocks:
                 if random.random() < probability:
-                    block_pos = rob.getBigGrid(block_name)
+                    block_pos = rob.getBlockFromBigGrid(block_name)
                     if block_pos is not None and block_pos != "Empty":
                         pos = int_coords(block_pos)
                         self.updateBlock(block_name, pos)
@@ -121,7 +121,7 @@ class NoticeBlocks:
                 self.removeIfMissing(grid[i], self.focus_blocks, pos)
             if bUpdate:
                 self.updateBlock(grid[i], pos)
-        intersection = [i in self.focus_blocks for i in self.block_probs_for_biggrid]
+        intersection = [i in self.focus_blocks for i in self.block_probs]
         if True in intersection:
             self.updateBlocksFromBigGrid(rob, intersection)
 

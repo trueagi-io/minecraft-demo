@@ -119,18 +119,19 @@ class TestData(BaseTest):
             if blockdrop['block_name'] == 'birch_leaves' and blockdrop['tool'] == 'shears':
                 self.assertEqual(blockdrop['item_name'], 'birch_leaves', "check leaves")
 
-    def test_observation_from_big_grid(self):
-        logger.debug('getting info from big grid')
+    def test_observation_from_find_block(self):
+        logger.debug('finding block in big grid')
         agentpos = self.rob.getCachedObserve('getAgentPos')
         diamond_x = int(agentpos[0] + random.randint(1, 10))
         diamond_y = int(agentpos[1] + random.randint(1, 10))
         diamond_z = int(agentpos[2] + random.randint(1, 10))
         self.mc.sendCommand("chat /setblock {} {} {} minecraft:diamond_ore".format(diamond_x, diamond_y, diamond_z))
         time.sleep(1)
-        diamond_ore_loc = self.rob.getBigGrid("diamond_ore")
+        diamond_ore_loc = self.rob.getBlockFromBigGrid("diamond_ore")
         self.assertEqual(diamond_ore_loc[0], diamond_x)
         self.assertEqual(diamond_ore_loc[1], diamond_y)
         self.assertEqual(diamond_ore_loc[2], diamond_z)
+        self.mc.sendCommand("chat /setblock {} {} {} minecraft:air".format(diamond_x, diamond_y, diamond_z))
 
     def test_game_state(self):
         self.mc.observeProc()

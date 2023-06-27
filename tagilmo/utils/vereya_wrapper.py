@@ -344,8 +344,8 @@ class MCConnector:
     def getBlocksDropsList(self, nAgent=0):
         return self.getParticularObservation('block_item_tool_triple', nAgent)
 
-    def getBigGrid(self, nAgent=0):
-        return self.getParticularObservation('grid_big', nAgent)
+    def getBlockFromBigGrid(self, nAgent=0):
+        return self.getParticularObservation('block_pos_big_grid', nAgent)
 
     def getNonSolidBlocks(self, nAgent=0):
         return self.getParticularObservation('nonsolid_blocks', nAgent)
@@ -417,9 +417,9 @@ class RobustObserver:
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
-                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBigGrid']
+                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid']
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
-                          'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBigGrid']
+                          'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid']
 
         self.events = ['getChat', 'getHumanInputs']
 
@@ -553,10 +553,10 @@ class RobustObserver:
         triples = self.waitNotNoneObserve('getBlocksDropsList', False)
         return triples
 
-    def getBigGrid(self, block_name):
-        self.sendCommand(f'big_grid {block_name}')
-        biggrid = self.waitNotNoneObserve('getBigGrid', True)
-        return biggrid
+    def getBlockFromBigGrid(self, block_name):
+        self.sendCommand(f'find_block {block_name}')
+        blockpos = self.waitNotNoneObserve('getBlockFromBigGrid', True)
+        return blockpos
 
     def __getNonSolidBlocks(self):
         self.sendCommand('solid')

@@ -95,12 +95,13 @@ class NoticeBlocks:
         for index in indexes:
             block_name = list(self.block_probs.keys())[index]
             probability = list(self.block_probs.values())[index]
-            if block_name not in self.blocks:
-                if random.random() < probability:
-                    block_pos = rob.getBlockFromBigGrid(block_name)
-                    if block_pos is not None and block_pos != "Empty":
-                        pos = int_coords(block_pos)
-                        self.updateBlock(block_name, pos)
+            if (block_name not in self.blocks or len(self.blocks[block_name]) == 0) and random.random() < probability:
+                rob.sendCommandToFindBlock(block_name)
+            block_pos = rob.getBlockFromBigGrid()
+            if block_pos is not None and block_pos != "Empty":
+                block_pos, block_name = block_pos[:3], block_pos[3]
+                pos = int_coords(block_pos)
+                self.updateBlock(block_name, pos)
 
     def updateBlocks(self, rob):
         grid = rob.cached['getNearGrid'][0]

@@ -553,9 +553,11 @@ class RobustObserver:
         triples = self.waitNotNoneObserve('getBlocksDropsList', False)
         return triples
 
-    def getBlockFromBigGrid(self, block_name):
+    def sendCommandToFindBlock(self, block_name):
         self.sendCommand(f'find_block {block_name}')
-        blockpos = self.waitNotNoneObserve('getBlockFromBigGrid', True)
+
+    def getBlockFromBigGrid(self):
+        blockpos = self.cached['getBlockFromBigGrid'][0]
         return blockpos
 
     def __getNonSolidBlocks(self):

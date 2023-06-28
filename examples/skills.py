@@ -9,8 +9,6 @@ from tagilmo.utils.mathutils import *
 
 from examples.goal import *
 
-
-
 class LookPitch(RobGoal):
 
     def __init__(self, rob, pitch, speed = 0.4):

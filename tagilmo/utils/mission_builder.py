@@ -158,7 +158,7 @@ class Commands:
 class Observations:
 
     def __init__(self, bAll=True, bRay=None, bFullStats=None,
-            bInvent=None, bNearby=None, bGrid=None, bChat=None, bRecipes=False, bItems=False,
+            bInvent=None, bNearby=None, bGrid=None, bFindBlock=None, bChat=None, bRecipes=False, bItems=False,
             bHuman=None, bBlocksDrops=False, bSolidness=False):
         self.bAll = bAll
         self.bRay = bRay
@@ -166,7 +166,9 @@ class Observations:
         self.bInvent = bInvent
         self.bNearby = bNearby
         self.bGrid = bGrid
+        self.bFindBlock = bFindBlock
         self.gridNear = [[-5, 5], [-2, 2], [-5, 5]]
+        self.gridBig = [[-25, 25], [-25, 25], [-25, 25]]
         self.bChat = bChat
         self.bRecipes = bRecipes
         self.bItems = bItems
@@ -212,8 +214,17 @@ class Observations:
         <min x="'''+str(self.gridNear[0][0])+'" y="'+str(self.gridNear[1][0])+'" z="'+str(self.gridNear[2][0])+'''"/>
         <max x="'''+str(self.gridNear[0][1])+'" y="'+str(self.gridNear[1][1])+'" z="'+str(self.gridNear[2][1])+'''"/>
     </Grid>
-</ObservationFromGrid>
-'''
+</ObservationFromGrid>'''
+        if (self.bAll or self.bFindBlock) and not (self.bFindBlock == False):
+            _xml += '''
+<ObservationFromFindBlock>
+    <Grid name="grid_big" absoluteCoords="false">
+        <min x="''' + str(self.gridBig[0][0]) + '" y="' + str(self.gridBig[1][0]) + '" z="' + str(
+        self.gridBig[2][0]) + '''"/>
+        <max x="''' + str(self.gridBig[0][1]) + '" y="' + str(self.gridBig[1][1]) + '" z="' + str(
+        self.gridBig[2][1]) + '''"/>
+    </Grid>
+</ObservationFromFindBlock>'''
         if (self.bAll or self.bChat) and not (self.bChat == False):
             _xml += "<ObservationFromChat />\n"
         #<ObservationFromRecentCommands/>

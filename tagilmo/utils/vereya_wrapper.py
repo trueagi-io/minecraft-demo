@@ -344,6 +344,9 @@ class MCConnector:
     def getBlocksDropsList(self, nAgent=0):
         return self.getParticularObservation('block_item_tool_triple', nAgent)
 
+    def getBlockFromBigGrid(self, nAgent=0):
+        return self.getParticularObservation('block_pos_big_grid', nAgent)
+
     def getNonSolidBlocks(self, nAgent=0):
         return self.getParticularObservation('nonsolid_blocks', nAgent)
 
@@ -414,9 +417,9 @@ class RobustObserver:
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
-                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks']
+                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid']
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
-                          'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks']
+                          'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid']
 
         self.events = ['getChat', 'getHumanInputs']
 
@@ -542,22 +545,25 @@ class RobustObserver:
         time.sleep(1)
         item_list = self.waitNotNoneObserve('getItemList', False)
         recipes = self.remove_mcprefix_rec(self.waitNotNoneObserve('getRecipeList', False))
-        self.sendCommand('recipes off')
-        self.sendCommand('item_list off')
         return item_list, recipes
 
     def getBlocksDropsList(self):
         self.sendCommand('blockdrops')
         time.sleep(1)
         triples = self.waitNotNoneObserve('getBlocksDropsList', False)
-        self.sendCommand('blockdrops off')
         return triples
+
+    def sendCommandToFindBlock(self, block_name):
+        self.sendCommand(f'find_block {block_name}')
+
+    def getBlockFromBigGrid(self):
+        blockpos = self.cached['getBlockFromBigGrid'][0]
+        return blockpos
 
     def __getNonSolidBlocks(self):
         self.sendCommand('solid')
         time.sleep(1)
         nonsolid_blocks = self.remove_mcprefix_rec(self.waitNotNoneObserve('getNonSolidBlocks', False))
-        self.sendCommand('solid off')
         return nonsolid_blocks
     
     def __get_cached_time(self, method):

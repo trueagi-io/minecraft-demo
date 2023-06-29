@@ -18,6 +18,8 @@ jobs:
         # Use these Java versions
         java: [ 17, ]  # Current Java LTS & minimum supported by Minecraft
     steps:
+      - name: lock file
+        run: lockfile /tmp/minecraft-test-lock
       - name: checkout vereya
         uses: actions/checkout@v3
         with:
@@ -45,3 +47,7 @@ jobs:
           ps a|grep [j]ava &&
           conda activate py31 && cd $GITHUB_WORKSPACE/tests/vereya &&
           python run_tests.py
+            - name: remove lock
+      - name: remove lock
+        if: always()
+        run: rm -f /tmp/minecraft-test-lock

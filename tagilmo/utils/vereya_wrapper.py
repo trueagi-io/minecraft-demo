@@ -477,6 +477,8 @@ class RobustObserver:
     def clear(self):
         with self.lock:
             self.cached = {k: (None, 0) for k in self.cached}
+            for event in self.events:
+                self.cached[event] = [(None, 0)]
 
     def getCachedObserve(self, method, key=None, readEvent=True):
         with self.lock:

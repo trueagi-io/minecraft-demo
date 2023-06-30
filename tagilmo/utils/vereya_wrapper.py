@@ -556,10 +556,6 @@ class RobustObserver:
     def sendCommandToFindBlock(self, block_name):
         self.sendCommand(f'find_block {block_name}')
 
-    def getBlockFromBigGrid(self):
-        blockpos = self.cached['getBlockFromBigGrid'][0]
-        return blockpos
-
     def __getNonSolidBlocks(self):
         self.sendCommand('solid')
         time.sleep(1)

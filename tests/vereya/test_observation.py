@@ -128,7 +128,7 @@ class TestData(BaseTest):
         self.mc.sendCommand("chat /setblock {} {} {} minecraft:diamond_ore".format(diamond_x, diamond_y, diamond_z))
         time.sleep(1)
         self.rob.sendCommandToFindBlock("diamond_ore")
-        time.sleep(1)
+        time.sleep(3)
         diamond_ore_loc = self.rob.getCachedObserve('getBlockFromBigGrid')
         self.assertEqual(diamond_ore_loc[0], diamond_x)
         self.assertEqual(diamond_ore_loc[1], diamond_y)

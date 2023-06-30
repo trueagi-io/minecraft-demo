@@ -18,27 +18,28 @@ jobs:
         # Use these Java versions
         java: [ 17, ]  # Current Java LTS & minimum supported by Minecraft
     steps:
-      - name: checkout tagilmo
+      - name: checkout vereya
         uses: actions/checkout@v3
         with:
           repository: trueagi-io/Vereya
           path: Vereya
+          clean: false
       - name: install vereya
-        run: rm /home/tester/.minecraft/mods/* && cp $GITHUB_WORKSPACE/Vereya/jars/* /home/tester/.minecraft/mods/
+        run: rm /home/tester/.minecraft/mods/* ; ls && cp $GITHUB_WORKSPACE/Vereya/jars/* /home/tester/.minecraft/mods/ && cp $GITHUB_WORKSPACE/Vereya/fabric/* /home/tester/.minecraft/mods/
       - name: install fabric
         run: rsync -v $GITHUB_WORKSPACE/Vereya/fabric/* /home/tester/.minecraft/mods/
-  test:
-    needs: build
-    runs-on: self-hosted
-    steps:
+      - name: checkout tagilmo
+        uses: actions/checkout@v3
+        with:
+          repository: trueagi-io/minecraft-demo
+          clean: false
+      - name: install tagilmo
+        run: pwd && conda activate py31 && pip install .
       - name: start minecraft
-        working-directory: ./Vereya
-        run: ./launch.sh &
+        run: cd Vereya && ./launch.sh &
         env:
           DISPLAY: :99
           GITHUB_WORKSPACE: $GITHUB_WORKSPACE
-      - name: install tagilmo
-        run: conda activate py31 && pip install .
       - name: run test
         run: |
           ps a|grep [j]ava &&

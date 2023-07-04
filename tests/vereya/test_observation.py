@@ -131,9 +131,10 @@ class TestData(BaseTest):
         time.sleep(1)
         diamond_ore_loc = None
         bigGridObservations = self.rob.waitNotNoneObserve('getBlockFromBigGrid')
-        for obs in bigGridObservations:
+        for obs in reversed(bigGridObservations):
             if obs[0] is not None:
                 diamond_ore_loc = obs[0]
+                break
         self.assertEqual(diamond_ore_loc[0], diamond_x)
         self.assertEqual(diamond_ore_loc[1], diamond_y)
         self.assertEqual(diamond_ore_loc[2], diamond_z)

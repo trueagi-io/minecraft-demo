@@ -97,7 +97,12 @@ class NoticeBlocks:
             probability = list(self.block_probs.values())[index]
             if (block_name not in self.blocks or len(self.blocks[block_name]) == 0) and random.random() < probability:
                 rob.sendCommandToFindBlock(block_name)
-            block_pos = rob.getCachedObserve('getBlockFromBigGrid')
+            block_pos = None
+            find_block_observations = rob.getCachedObserve('getBlockFromBigGrid')
+            for obs in reversed(find_block_observations):
+                if obs[0] is not None:
+                    block_pos = obs[0]
+                    break
             if block_pos is not None and block_pos != "Empty":
                 block_pos, block_name = block_pos[:3], block_pos[3]
                 pos = int_coords(block_pos)

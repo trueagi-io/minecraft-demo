@@ -514,14 +514,16 @@ class RobustObserver:
         outdated = False
         with self.lock:
             if method not in self.events:
-                _, t = self.cached[method]
+                v, t = self.cached[method]
             else:
-                _, t = self.cached[method][-1]
+                v, t = self.cached[method][-1]
             outdated = abs(t_new - t) > self.max_dt
         if v_new is not None or outdated: # or v is None
             with self.lock:
                 self.cached_buffer[method] = self.cached[method]
                 if method in self.events:
+                    if v is None and v_new is None:
+                        self.cached[method].pop()
                     self.cached[method].append((v_new, t_new))
                     self.readEvents[method] = False
                 else:

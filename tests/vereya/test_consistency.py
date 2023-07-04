@@ -64,12 +64,14 @@ class TestConsistency(BaseTest):
             if "oak_log" in grid_item:
                 oak_log_world_block_name = grid_item
                 break
+        check_log_in_blockdrops = False
         for blockdrop in blockdrops:
             if blockdrop['block_name'] == "oak_log":
                 self.assertEqual(blockdrop['item_name'], oak_log_inventory_name)
                 self.assertEqual(blockdrop['block_name'], oak_log_world_block_name)
+                check_log_in_blockdrops = True
                 break
-
+        self.assertEqual(check_log_in_blockdrops, True)
         oaklog_in_itemlist = False
         for item in item_list:
             if item == oak_log_inventory_name:

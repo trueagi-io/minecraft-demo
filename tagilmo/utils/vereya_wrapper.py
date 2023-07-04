@@ -421,7 +421,7 @@ class RobustObserver:
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
                           'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid']
 
-        self.events = ['getChat', 'getHumanInputs']
+        self.events = ['getChat', 'getHumanInputs', 'getBlockFromBigGrid']
 
         self.readEvents = {event : False for event in self.events}
 
@@ -486,7 +486,7 @@ class RobustObserver:
         if method in self.events:
             if readEvent:
                 self.readEvents[method] = True
-                self.cached[method] = [(None, 0)]
+                self.cached[method] = [(None, self.cached[method][-1][1])]
         else:
             val = val[0]
         if key is None:
@@ -514,8 +514,10 @@ class RobustObserver:
         outdated = False
         with self.lock:
             if method not in self.events:
-                v, t = self.cached[method]
-                outdated = t_new - t > self.max_dt
+                _, t = self.cached[method]
+            else:
+                _, t = self.cached[method][-1]
+            outdated = abs(t_new - t) > self.max_dt
         if v_new is not None or outdated: # or v is None
             with self.lock:
                 self.cached_buffer[method] = self.cached[method]

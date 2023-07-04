@@ -21,7 +21,7 @@ class TestData(BaseTest):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         start = (-126, 73.0)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], seed='4')
+        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], seed='4', forceReset=True)
         cls.mc = mc
         cls.rob = obs
         mc.safeStart()
@@ -129,7 +129,11 @@ class TestData(BaseTest):
         time.sleep(1)
         self.rob.sendCommandToFindBlock("diamond_ore")
         time.sleep(1)
-        diamond_ore_loc = self.rob.waitNotNoneObserve('getBlockFromBigGrid')
+        diamond_ore_loc = None
+        bigGridObservations = self.rob.waitNotNoneObserve('getBlockFromBigGrid')
+        for obs in bigGridObservations:
+            if obs[0] is not None:
+                diamond_ore_loc = obs[0]
         self.assertEqual(diamond_ore_loc[0], diamond_x)
         self.assertEqual(diamond_ore_loc[1], diamond_y)
         self.assertEqual(diamond_ore_loc[2], diamond_z)

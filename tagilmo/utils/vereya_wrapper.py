@@ -421,7 +421,7 @@ class RobustObserver:
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
                           'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid']
 
-        self.events = ['getChat', 'getHumanInputs']
+        self.events = ['getChat', 'getHumanInputs', 'getBlockFromBigGrid']
 
         self.readEvents = {event : False for event in self.events}
 
@@ -477,6 +477,8 @@ class RobustObserver:
     def clear(self):
         with self.lock:
             self.cached = {k: (None, 0) for k in self.cached}
+            for event in self.events:
+                self.cached[event] = [(None, 0)]
 
     def getCachedObserve(self, method, key=None, readEvent=True):
         with self.lock:
@@ -484,7 +486,7 @@ class RobustObserver:
         if method in self.events:
             if readEvent:
                 self.readEvents[method] = True
-                self.cached[method] = [(None, 0)]
+                self.cached[method] = [(None, self.cached[method][-1][1])]
         else:
             val = val[0]
         if key is None:
@@ -513,11 +515,15 @@ class RobustObserver:
         with self.lock:
             if method not in self.events:
                 v, t = self.cached[method]
-                outdated = t_new - t > self.max_dt
+            else:
+                v, t = self.cached[method][-1]
+            outdated = abs(t_new - t) > self.max_dt
         if v_new is not None or outdated: # or v is None
             with self.lock:
                 self.cached_buffer[method] = self.cached[method]
                 if method in self.events:
+                    if v is None and v_new is None:
+                        self.cached[method].pop()
                     self.cached[method].append((v_new, t_new))
                     self.readEvents[method] = False
                 else:
@@ -555,10 +561,6 @@ class RobustObserver:
 
     def sendCommandToFindBlock(self, block_name):
         self.sendCommand(f'find_block {block_name}')
-
-    def getBlockFromBigGrid(self):
-        blockpos = self.cached['getBlockFromBigGrid'][0]
-        return blockpos
 
     def __getNonSolidBlocks(self):
         self.sendCommand('solid')

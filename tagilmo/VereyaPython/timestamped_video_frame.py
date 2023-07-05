@@ -61,6 +61,12 @@ class TimestampedVideoFrame:
     # The z pos of the player at render time
     zPos: float = 0
 
+    iheight: int = 0
+
+    iwidth: int = 0
+
+    ich: int = 0
+
     def __init__(self, message: TimestampedUnsignedCharVector,
                  frametype: FrameType = FrameType.VIDEO):
 
@@ -74,6 +80,9 @@ class TimestampedVideoFrame:
         self.zPos = loadedjson['z']
         self.yaw = loadedjson['yaw']
         self.pitch = loadedjson['pitch']
+        self.iheight = loadedjson['img_height'][0]
+        self.iwidth = loadedjson['img_width'][0]
+        self.ich = loadedjson['img_ch'][0]
         self.modelViewMatrix = np.reshape(np.asarray(loadedjson['modelViewMatrix'], dtype=np.dtype(numpy.float32)), (4,4))
 
         self.calibrationMatrix = np.reshape(np.asarray(loadedjson['projectionMatrix'], dtype=np.dtype(numpy.float32)), (4,4))
@@ -83,4 +92,4 @@ class TimestampedVideoFrame:
 
     @property
     def pixels(self):
-        return cv2.imdecode(np.frombuffer(self._pixels, dtype="uint8"), cv2.IMREAD_COLOR)
+        return cv2.flip(np.frombuffer(self._pixels, dtype="uint8").reshape((self.iheight, self.iwidth, self.ich))[:,:,:3],0)

@@ -92,4 +92,4 @@ class TimestampedVideoFrame:
 
     @property
     def pixels(self):
-        return cv2.flip(np.frombuffer(self._pixels, dtype="uint8").reshape((self.iheight, self.iwidth, self.ich))[:,:,:3],0)
+        return cv2.cvtColor(cv2.flip(np.frombuffer(self._pixels, dtype="uint8").reshape((self.iheight, self.iwidth, self.ich))[:,:,:3],0), cv2.COLOR_RGB2BGR)

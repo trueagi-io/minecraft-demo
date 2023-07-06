@@ -1,14 +1,10 @@
-from typing import ClassVar
-import struct
 from enum import IntEnum
 from dataclasses import dataclass
 import logging
 import json
 
-import numpy
 import numpy as np
 import numpy.typing as npt
-import cv2
 import io
 import os
 
@@ -83,13 +79,13 @@ class TimestampedVideoFrame:
         self.iheight = loadedjson['img_height'][0]
         self.iwidth = loadedjson['img_width'][0]
         self.ich = loadedjson['img_ch'][0]
-        self.modelViewMatrix = np.reshape(np.asarray(loadedjson['modelViewMatrix'], dtype=np.dtype(numpy.float32)), (4,4))
+        self.modelViewMatrix = np.reshape(np.asarray(loadedjson['modelViewMatrix'], dtype=np.dtype(np.float32)), (4,4))
 
-        self.calibrationMatrix = np.reshape(np.asarray(loadedjson['projectionMatrix'], dtype=np.dtype(numpy.float32)), (4,4))
+        self.calibrationMatrix = np.reshape(np.asarray(loadedjson['projectionMatrix'], dtype=np.dtype(np.float32)), (4,4))
         jo_len = jo_len + 4
         received_img_bytes = message.data[jo_len:]
         self._pixels = received_img_bytes
 
     @property
     def pixels(self):
-        return cv2.cvtColor(cv2.flip(np.frombuffer(self._pixels, dtype="uint8").reshape((self.iheight, self.iwidth, self.ich))[:,:,:3],0), cv2.COLOR_RGB2BGR)
+        return np.flip(np.frombuffer(self._pixels, dtype="uint8").reshape((self.iheight, self.iwidth, self.ich))[:,:,:3],0)[..., ::-1].copy()

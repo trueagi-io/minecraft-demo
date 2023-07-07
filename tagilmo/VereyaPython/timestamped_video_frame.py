@@ -76,9 +76,9 @@ class TimestampedVideoFrame:
         self.zPos = loadedjson['z']
         self.yaw = loadedjson['yaw']
         self.pitch = loadedjson['pitch']
-        self.iHeight = loadedjson['img_height'][0]
-        self.iWidth = loadedjson['img_width'][0]
-        self.iCh = loadedjson['img_ch'][0]
+        self.iHeight = loadedjson['img_height']
+        self.iWidth = loadedjson['img_width']
+        self.iCh = loadedjson['img_ch']
         self.modelViewMatrix = np.reshape(np.asarray(loadedjson['modelViewMatrix'], dtype=np.dtype(np.float32)), (4,4))
 
         self.calibrationMatrix = np.reshape(np.asarray(loadedjson['projectionMatrix'], dtype=np.dtype(np.float32)), (4,4))

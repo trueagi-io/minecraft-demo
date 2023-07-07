@@ -1,14 +1,10 @@
-from typing import ClassVar
-import struct
 from enum import IntEnum
 from dataclasses import dataclass
 import logging
 import json
 
-import numpy
 import numpy as np
 import numpy.typing as npt
-import cv2
 import io
 import os
 
@@ -61,6 +57,12 @@ class TimestampedVideoFrame:
     # The z pos of the player at render time
     zPos: float = 0
 
+    iHeight: int = 0
+
+    iWidth: int = 0
+
+    iCh: int = 0
+
     def __init__(self, message: TimestampedUnsignedCharVector,
                  frametype: FrameType = FrameType.VIDEO):
 
@@ -74,13 +76,16 @@ class TimestampedVideoFrame:
         self.zPos = loadedjson['z']
         self.yaw = loadedjson['yaw']
         self.pitch = loadedjson['pitch']
-        self.modelViewMatrix = np.reshape(np.asarray(loadedjson['modelViewMatrix'], dtype=np.dtype(numpy.float32)), (4,4))
+        self.iHeight = loadedjson['img_height']
+        self.iWidth = loadedjson['img_width']
+        self.iCh = loadedjson['img_ch']
+        self.modelViewMatrix = np.reshape(np.asarray(loadedjson['modelViewMatrix'], dtype=np.dtype(np.float32)), (4,4))
 
-        self.calibrationMatrix = np.reshape(np.asarray(loadedjson['projectionMatrix'], dtype=np.dtype(numpy.float32)), (4,4))
+        self.calibrationMatrix = np.reshape(np.asarray(loadedjson['projectionMatrix'], dtype=np.dtype(np.float32)), (4,4))
         jo_len = jo_len + 4
         received_img_bytes = message.data[jo_len:]
         self._pixels = received_img_bytes
 
     @property
     def pixels(self):
-        return cv2.imdecode(np.frombuffer(self._pixels, dtype="uint8"), cv2.IMREAD_COLOR)
+        return np.flip(np.frombuffer(self._pixels, dtype="uint8").reshape((self.iHeight, self.iWidth, self.iCh))[:,:,:3],0)[..., ::-1].copy()

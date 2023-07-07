@@ -57,11 +57,11 @@ class TimestampedVideoFrame:
     # The z pos of the player at render time
     zPos: float = 0
 
-    iheight: int = 0
+    iHeight: int = 0
 
-    iwidth: int = 0
+    iWidth: int = 0
 
-    ich: int = 0
+    iCh: int = 0
 
     def __init__(self, message: TimestampedUnsignedCharVector,
                  frametype: FrameType = FrameType.VIDEO):

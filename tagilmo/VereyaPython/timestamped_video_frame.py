@@ -88,4 +88,4 @@ class TimestampedVideoFrame:
 
     @property
     def pixels(self):
-        return np.flip(np.frombuffer(self._pixels, dtype="uint8").reshape((self.iHeight, self.iWidth, self.iCh))[:,:,:3],0)[..., ::-1].copy()
+        return np.flip(np.frombuffer(self._pixels, dtype="uint8").reshape((self.iHeight, self.iWidth, self.iCh))[:,:,:3],0)

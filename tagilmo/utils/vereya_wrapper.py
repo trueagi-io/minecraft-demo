@@ -18,7 +18,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.mathutils import *
 from tagilmo.VereyaPython import TimestampedString, TimestampedVideoFrame, FrameType
 
-logger = logging.getLogger('malmo')
+logger = logging.getLogger('vereya')
 
 
 module = VP
@@ -61,14 +61,16 @@ class MCConnector:
         self.missionDesc = None
         self.mission = None
         self.mission_record = None
+        self.prev_mobs = set()
+        self.nAgent = 0
         self.setUp(VP, missionXML, serverIp=serverIp)
 
     def setUp(self, module, missionXML, serverIp='127.0.0.1'):
         self.serverIp = serverIp
         self.setMissionXML(missionXML, module)
         nAgents = len(missionXML.agentSections)
-        self.agent_hosts = []
-        self.agent_hosts += [module.AgentHost() for n in range(nAgents)]
+        self.agent_hosts = dict()
+        self.agent_hosts.update({n: module.AgentHost() for n in range(nAgents)})
         self.agent_hosts[0].parse( sys.argv )
         if self.receivedArgument('recording_dir'):
             recordingsDirectory = get_recordings_directory(self.agent_hosts[0])
@@ -82,10 +84,10 @@ class MCConnector:
         for x in range(10000, 10000 + nAgents):
             self.client_pool.add( module.ClientInfo(serverIp, x) )
         self.worldStates = [None] * nAgents
-        self.observe = [None] * nAgents
+        self.observe = {k: None for k in range(nAgents)}
         self.isAlive = [True] * nAgents
-        self.frames = [None] * nAgents
-        self.segmentation_frames = [None] * nAgents
+        self.frames = dict({n: None for n in range(nAgents)})
+        self.segmentation_frames = dict({n: None for n in range(nAgents)})
 
     def getVersion(self, num=0) -> str:
         return self.agent_hosts[num].version
@@ -156,7 +158,7 @@ class MCConnector:
         start_time = time.time()
         time_out = 620  # Allow a two minute timeout.
         while not all(start_flags) and time.time() - start_time < time_out:
-            states = [a.peekWorldState() for a in self.agent_hosts]
+            states = [a.peekWorldState() for a in self.agent_hosts.values()]
             start_flags = [w.has_mission_begun for w in states]
             errors = [e for w in states for e in w.errors]
             if len(errors) > 0:
@@ -196,7 +198,9 @@ class MCConnector:
         world_state = self.agent_hosts[nAgent].getWorldState()
         return world_state.is_mission_running
 
-    def sendCommand(self, command, nAgent=0):
+    def sendCommand(self, command, nAgent=None):
+        if nAgent is None:
+            nAgent = self.nAgent
         self.agent_hosts[nAgent].sendCommand(command)
 
     def observeProc(self, nAgent=None):
@@ -231,7 +235,29 @@ class MCConnector:
         if obs is None:
             self.observe[n] = None
             return
-        self.observe[n] = json.loads(obs.text)
+
+        data = json.loads(obs.text)
+        self.observe[n] = data
+        self._process_mobs(data, self.agent_hosts[n])
+
+    def _process_mobs(self, data, host):
+        mobs = set()
+        for key, value in data.get('ControlledMobs', dict()).items():
+            logger.info(f'adding mob {key}')
+            self.observe[key] = value
+            self.agent_hosts[key] = host
+            if key not in self.segmentation_frames:
+                self.segmentation_frames[key] = None
+                self.frames[key] = None
+            mobs.add(key)
+        missing = self.prev_mobs - mobs
+        for m in missing:
+            self.observe.pop(m)
+            self.agent_hosts.pop(m)
+            self.frames.pop(m)
+            self.segmentation_frames.pop(m)
+            self.frames.pop(m)
+        self.prev_mobs = mobs
 
     def getImageFrame(self, nAgent=0):
         return self.frames[nAgent]
@@ -249,13 +275,17 @@ class MCConnector:
             return numpy.frombuffer(self.segmentation_frames[nAgent].pixels, dtype=numpy.uint8)
         return None
 
-    def getAgentPos(self, nAgent=0):
-        if (self.observe[nAgent] is not None) and ('XPos' in self.observe[nAgent]):
-            return [self.observe[nAgent][key] for key in ['XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw']]
-        else:
-            return None
+    def getAgentPos(self, nAgent=None):
+        if nAgent is None: nAgent = self.nAgent
+        data = self.observe.get(nAgent, None)
+        if (data is not None) and ('XPos' in data):
+            return [data[key] for key in ['XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw']]
+        return None
 
-    def getFullStat(self, key, nAgent=0):
+    def getControlledMobs(self, nAgent=None):
+        return self.getParticularObservation('ControlledMobs', nAgent)
+
+    def getFullStat(self, key, nAgent=None):
         """
             Dsc: this function was intended to return observations from full stats.
                  However, full stats don't have a dedicated key, but are placed directly
@@ -267,102 +297,85 @@ class MCConnector:
                                  'MobsKilled', 'PlayersKilled', 'DamageTaken', 'DamageDealt'
                 keys (new)     : 'input_type', 'isPaused'
         """
-        if (self.observe[nAgent] is not None) and (key in self.observe[nAgent]):
-            return self.observe[nAgent][key]
-        else:
+
+        return self.getParticularObservation(key, nAgent)
+
+    def getLineOfSights(self, nAgent=None):
+        data = self.getParticularObservation('LineOfSight', nAgent)
+        if data is None:
             return None
-
-    def isLineOfSightAvailable(self, nAgent=0):
-        return not self.observe[nAgent] is None and 'LineOfSight' in self.observe[nAgent]
-
-    def getLineOfSights(self, nAgent=0):
-        if self.isLineOfSightAvailable(nAgent):
-            los = self.observe[nAgent]['LineOfSight']
-            if los['hitType'] != 'MISS':
-                los['type'] = los['type'].replace("minecraft:", "")
+        los = data.get('LineOfSight', None)
+        if los is not None and los['hitType'] != 'MISS':
+            los['type'] = los['type'].replace("minecraft:", "")
             return los
         return None
 
-    def getLineOfSight(self, key, nAgent=0):
+    def getLineOfSight(self, key, nAgent=None):
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
         los = self.getLineOfSights(nAgent)
         return los[key] if los is not None and key in los else None
 
-    def getNearEntities(self, nAgent=0):
-        if (self.observe[nAgent] is not None) and ('ents_near' in self.observe[nAgent]):
-            for e in self.observe[nAgent]['ents_near']:
-                if 'name' in e:
-                    name = e['name']
-                    e['name'] = name.lower().replace(' ', '_')
-            return self.observe[nAgent]['ents_near']
-        else:
-            return None
+    def getNearEntities(self, nAgent=None):
+        data = self.getParticularObservation('ents_near' , nAgent)
+        if data is None:
+            return
 
-    def getNearPickableEntities(self, nAgent=0):
+        for e in data:
+            if 'name' in e:
+                name = e['name']
+                e['name'] = name.lower().replace(' ', '_')
+        return data
+
+    def getNearPickableEntities(self, nAgent=None):
         entities = self.getNearEntities(nAgent)
         if entities is None:
             return None
-        else:
-            pickableEntities = []
-            for ent in entities:
-                if ent['type'] == 'item':
-                    pickableEntities.append(ent)
-            return pickableEntities
+        pickableEntities = []
+        for ent in entities:
+            if ent['type'] == 'item':
+                pickableEntities.append(ent)
+        return pickableEntities
 
-    def getNearGrid(self, nAgent=0):
-        if (self.observe[nAgent] is not None) and ('grid_near' in self.observe[nAgent]):
-            return self.observe[nAgent]['grid_near']
-        else:
-            return None
+    def getNearGrid(self, nAgent=None):
+        return self.getParticularObservation('grid_near', nAgent)
 
-    def getLife(self, nAgent=0):
-        if (self.observe[nAgent] is not None) and ('Life' in self.observe[nAgent]):
-            return self.observe[nAgent]['Life']
-        else:
-            return None
+    def getLife(self, nAgent=None):
+        return self.getParticularObservation('Life', nAgent)
 
-    def getAir(self, nAgent=0):
-        if (self.observe[nAgent] is not None) and ('Air' in self.observe[nAgent]):
-            return self.observe[nAgent]['Air']
-        else:
-            return None
+    def getAir(self, nAgent=None):
+        return self.getParticularObservation('Air', nAgent)
 
-    def getChat(self, nAgent=0):
-        if (self.observe[nAgent] is not None) and ('Chat' in self.observe[nAgent]):
-            return self.observe[nAgent]['Chat']
-        else:
-            return None
+    def getChat(self, nAgent=None):
+        return self.getParticularObservation('Chat', nAgent)
 
-    def getParticularObservation(self, observation_name, nAgent=0):
-        obs = self.observe[nAgent]
+    def getParticularObservation(self, observation_name, nAgent=None):
+        if nAgent is None: nAgent = self.nAgent
+        obs = self.observe.get(nAgent, None)
         if obs is not None:
             return obs.get(observation_name, None)
 
-    def getItemList(self, nAgent=0):
+    def getItemList(self, nAgent=None):
         return self.getParticularObservation('item_list', nAgent)
 
-    def getBlocksDropsList(self, nAgent=0):
+    def getBlocksDropsList(self, nAgent=None):
         return self.getParticularObservation('block_item_tool_triple', nAgent)
 
-    def getBlockFromBigGrid(self, nAgent=0):
+    def getBlockFromBigGrid(self, nAgent=None):
         return self.getParticularObservation('block_pos_big_grid', nAgent)
 
-    def getNonSolidBlocks(self, nAgent=0):
+    def getNonSolidBlocks(self, nAgent=None):
         return self.getParticularObservation('nonsolid_blocks', nAgent)
 
-    def getRecipeList(self, nAgent=0):
+    def getRecipeList(self, nAgent=None):
         return self.getParticularObservation('recipes', nAgent)
 
-    def isInventoryAvailable(self, nAgent=0):
-        return not self.observe[nAgent] is None and 'inventory' in self.observe[nAgent]
+    def getInventory(self, nAgent=None):
+        return self.getParticularObservation('inventory', nAgent)
 
-    def getInventory(self, nAgent=0):
-        return self.observe[nAgent]['inventory'] if self.isInventoryAvailable(nAgent) else None
-
-    def getGridBox(self, nAgent=0):
+    def getGridBox(self, nAgent=None):
         return self.missionDesc.agentSections[nAgent].agenthandlers.observations.gridNear
 
-    def gridIndexToPos(self, index, nAgent=0):
+    def gridIndexToPos(self, index, nAgent=None):
         gridBox = self.getGridBox(nAgent)
         gridSz = [gridBox[i][1]-gridBox[i][0]+1 for i in range(3)]
         y = index // (gridSz[0] * gridSz[2])
@@ -393,14 +406,33 @@ class MCConnector:
         if idx < len(self.agent_hosts):
             self.agent_hosts[idx].stop()
 
-    def getHumanInputs(self, nAgent=0):
-        if self.observe[nAgent] is not None:
-            data = self.observe[nAgent]
-            if "input_events" in data:
-                return data["input_events"]
+    def getHumanInputs(self, nAgent=None):
+        return self.getParticularObservation('input_events', nAgent)
 
     def placeBlock(self, x: int, y: int, z: int, block_name: str, placement: str, nAgent=0):
         self.agent_hosts[nAgent].sendCommand("placeBlock {} {} {} {} {}".format(x, y, z, block_name, placement))
+
+    def _sendMotionCommand(self, command, value, nAgent=None):
+        if nAgent is None: nAgent = self.nAgent
+        if nAgent in self.prev_mobs:
+            self.sendCommand(f'{command} {nAgent} {value}', nAgent)
+        else:
+            self.sendCommand(f'{command} {value}', nAgent)
+
+    def strafe(self, value, nAgent=None):
+        return self._sendMotionCommand('strafe', value, nAgent)
+
+    def move(self, value, nAgent=None):
+        return self._sendMotionCommand('move', value, nAgent)
+
+    def jump(self, value, nAgent=None):
+        return self._sendMotionCommand('jump', value, nAgent)
+
+    def pitch(self, value, nAgent=None):
+        return self._sendMotionCommand('pitch', value, nAgent)
+
+    def turn(self, value, nAgent=None):
+        return self._sendMotionCommand('turn', value, nAgent)
 
 
 class RobustObserver:
@@ -417,9 +449,13 @@ class RobustObserver:
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
-                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid']
+                        'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList',
+                        'getNonSolidBlocks', 'getBlockFromBigGrid',
+                        'getControlledMobs']
+
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
-                          'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid']
+                          'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid',
+                          'getControlledMobs']
 
         self.events = ['getChat', 'getHumanInputs', 'getBlockFromBigGrid']
 
@@ -567,7 +603,7 @@ class RobustObserver:
         time.sleep(1)
         nonsolid_blocks = self.remove_mcprefix_rec(self.waitNotNoneObserve('getNonSolidBlocks', False))
         return nonsolid_blocks
-    
+
     def __get_cached_time(self, method):
         if method in self.events:
             tm = self.cached[method][-1][1]

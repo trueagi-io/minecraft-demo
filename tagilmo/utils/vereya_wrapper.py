@@ -10,7 +10,7 @@ import re
 import os
 import errno
 from collections import defaultdict
-from typing import Optional
+from typing import Optional, Any
 
 from tagilmo import VereyaPython as VP
 
@@ -89,6 +89,7 @@ class MCConnector:
         self.isAlive = [True] * agentIds
         self.frames = dict({n: None for n in range(agentIds)})
         self.segmentation_frames = dict({n: None for n in range(agentIds)})
+        self._last_obs = dict() # agent_host -> TimestampedString
 
     def getVersion(self, num=0) -> str:
         return self.agent_hosts[num].version
@@ -202,6 +203,9 @@ class MCConnector:
     def sendCommand(self, command, agentId=None):
         if agentId is None:
             agentId = self.agentId
+        if agentId not in self.agent_hosts:
+            logger.error(f"can't send command to {agentId}, it's not in agent_hosts")
+            return
         self.agent_hosts[agentId].sendCommand(command)
 
     def observeProc(self, agentId=None):
@@ -232,14 +236,18 @@ class MCConnector:
     def updateSegmentation(self, segmentation_frame: TimestampedVideoFrame, n: int) -> None:
         self.segmentation_frames[n] = segmentation_frame
 
-    def updateObservations(self, obs: Optional[TimestampedString], n: int) -> None:
+    def updateObservations(self, obs: Optional[TimestampedString], n: Any) -> None:
         if obs is None:
             self.observe[n] = None
+            return
+        agent_host = self.agent_hosts.get(n, None)
+        if agent_host is None or obs == self._last_obs.get(agent_host, None):
             return
 
         data = json.loads(obs.text)
         self.observe[n] = data
         self._process_mobs(data, self.agent_hosts[n])
+        self._last_obs[n] = obs
 
     def _process_mobs(self, data, host):
         mobs = set()

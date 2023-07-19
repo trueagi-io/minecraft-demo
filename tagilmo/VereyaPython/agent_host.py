@@ -61,8 +61,8 @@ class AgentHost(ArgumentParser):
         self.current_mission_record: Optional[MissionRecord] = None
         self.rewards_policy = RewardsPolicy.SUM_REWARDS
         self.version: Optional[str] = None
-        self._onObservationCallback: Callable[[TimestampedString], None] = None
-        self._onNewFrameCallback: Callable[[TimestampedVideoFrame], None] = None
+        self._onObservationCallback: List[Callable[[TimestampedString], None]] = []
+        self._onNewFrameCallback: List[Callable[[TimestampedVideoFrame], None]] = []
 
     def startMission(self, mission: MissionSpec, client_pool: List[ClientInfo],
                      mission_record: MissionRecordSpec, role: int,
@@ -580,8 +580,8 @@ class AgentHost(ArgumentParser):
                 self.world_state.video_frames.append(message)
             self.world_state.number_of_video_frames_since_last_state += 1
 
-        if self._onNewFrameCallback is not None:
-            self._onNewFrameCallback(message)
+        for callback in self._onNewFrameCallback:
+            callback(message)
 
     def listenForRewards(self, port: int) -> None:
         if not self.rewards_server or ( port != 0 and self.rewards_server.getPort() != port ):
@@ -632,8 +632,8 @@ class AgentHost(ArgumentParser):
 
             self.world_state.number_of_observations_since_last_state += 1
 
-        if self._onObservationCallback is not None:
-            self._onObservationCallback(message)
+        for callback in self._onObservationCallback:
+            callback(message)
 
     def closeRecording(self):
         pass
@@ -670,10 +670,14 @@ class AgentHost(ArgumentParser):
             self.world_state.rewards.append(reward)
         self.world_state.number_of_rewards_since_last_state += 1
 
-    def setOnObservationCallback(self, callback: Callable[[TimestampedString], None]):
-        self._onObservationCallback = callback
+    def addOnObservationCallback(self, callback: Callable[[TimestampedString], None]):
+        if callback in self._onObservationCallback:
+            return
+        self._onObservationCallback.append(callback)
 
-    def setOnNewFrameCallback(self, callback: Callable[[TimestampedVideoFrame], None]):
+    def addOnNewFrameCallback(self, callback: Callable[[TimestampedVideoFrame], None]):
         logger.debug('setting new frame callback to %s', str(callback))
-        self._onNewFrameCallback = callback
+        if callback in self._onNewFrameCallback:
+            return
+        self._onNewFrameCallback.append(callback)
 

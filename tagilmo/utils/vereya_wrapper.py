@@ -64,6 +64,7 @@ class MCConnector:
         self.mission_record = None
         self.prev_mobs = defaultdict(set) # host -> set mapping
         self.agentId = 0
+        self._data_lock = threading.RLock()
         self.setUp(VP, missionXML, serverIp=serverIp)
 
     def setUp(self, module, missionXML, serverIp='127.0.0.1'):
@@ -90,6 +91,7 @@ class MCConnector:
         self.frames = dict({n: None for n in range(agentIds)})
         self.segmentation_frames = dict({n: None for n in range(agentIds)})
         self._last_obs = dict() # agent_host -> TimestampedString
+
 
     def getVersion(self, num=0) -> str:
         return self.agent_hosts[num].version
@@ -245,9 +247,11 @@ class MCConnector:
             return
 
         data = json.loads(obs.text)
-        self.observe[n] = data
-        self._process_mobs(data, self.agent_hosts[n])
-        self._last_obs[n] = obs
+
+        with self._data_lock:
+            self.observe[n] = data
+            self._process_mobs(data, self.agent_hosts[n])
+            self._last_obs[agent_host] = obs
 
     def _process_mobs(self, data, host):
         mobs = set()
@@ -261,12 +265,12 @@ class MCConnector:
             mobs.add(key)
         missing = self.prev_mobs[host] - mobs
         for m in missing:
+            logger.info(f"removing mob {m}")
             self.observe.pop(m)
             self.agent_hosts.pop(m)
             self.frames.pop(m)
             self.segmentation_frames.pop(m)
             self.frames.pop(m)
-            logger.info(f"removing mob {m}")
         self.prev_mobs[host] = mobs
         self._all_mobs = set().union(*self.prev_mobs.values())
 
@@ -488,8 +492,8 @@ class RobustObserver:
         self.thread = None
         self.lock = threading.RLock()
         self._time_sleep = 0.05
-        self.mc.agent_hosts[self.agentId].setOnObservationCallback(self.onObservationChanged)
-        self.mc.agent_hosts[self.agentId].setOnNewFrameCallback(self.onNewFrameCallback)
+        self.mc.agent_hosts[self.agentId].addOnObservationCallback(self.onObservationChanged)
+        self.mc.agent_hosts[self.agentId].addOnNewFrameCallback(self.onNewFrameCallback)
 
     def updatePassableBlocks(self):
         nonsolidblocks = self.__getNonSolidBlocks()
@@ -788,12 +792,11 @@ class RobustObserver:
         time.sleep(0.2)
 
     def stopMove(self):
-        self.sendCommand("move 0")
-        self.sendCommand("turn 0")
-        self.sendCommand("pitch 0")
-        self.sendCommand("jump 0")
-        self.sendCommand("strafe 0")
-        # self.sendCommand("attack 0")
+        self.mc.move("0", self.agentId)
+        self.mc.turn("0", self.agentId)
+        self.mc.pitch("0", self.agentId)
+        self.mc.jump("0", self.agentId)
+        self.mc.strafe("0", self.agentId)
 
     def filterInventoryItem(self, item, observeReq=True):
         inv = self.waitNotNoneObserve('getInventory', True, observeReq=observeReq)

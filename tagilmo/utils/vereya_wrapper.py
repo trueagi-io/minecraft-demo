@@ -62,15 +62,15 @@ class MCConnector:
         self.mission = None
         self.mission_record = None
         self.prev_mobs = set()
-        self.nAgent = 0
+        self.agentId = 0
         self.setUp(VP, missionXML, serverIp=serverIp)
 
     def setUp(self, module, missionXML, serverIp='127.0.0.1'):
         self.serverIp = serverIp
         self.setMissionXML(missionXML, module)
-        nAgents = len(missionXML.agentSections)
+        agentIds = len(missionXML.agentSections)
         self.agent_hosts = dict()
-        self.agent_hosts.update({n: module.AgentHost() for n in range(nAgents)})
+        self.agent_hosts.update({n: module.AgentHost() for n in range(agentIds)})
         self.agent_hosts[0].parse( sys.argv )
         if self.receivedArgument('recording_dir'):
             recordingsDirectory = get_recordings_directory(self.agent_hosts[0])
@@ -81,13 +81,13 @@ class MCConnector:
             if self.agent_hosts[0].receivedArgument("record_video"):
                 self.mission_record.recordMP4(24, 2000000)
         self.client_pool = module.ClientPool()
-        for x in range(10000, 10000 + nAgents):
+        for x in range(10000, 10000 + agentIds):
             self.client_pool.add( module.ClientInfo(serverIp, x) )
-        self.worldStates = [None] * nAgents
-        self.observe = {k: None for k in range(nAgents)}
-        self.isAlive = [True] * nAgents
-        self.frames = dict({n: None for n in range(nAgents)})
-        self.segmentation_frames = dict({n: None for n in range(nAgents)})
+        self.worldStates = [None] * agentIds
+        self.observe = {k: None for k in range(agentIds)}
+        self.isAlive = [True] * agentIds
+        self.frames = dict({n: None for n in range(agentIds)})
+        self.segmentation_frames = dict({n: None for n in range(agentIds)})
 
     def getVersion(self, num=0) -> str:
         return self.agent_hosts[num].version
@@ -194,17 +194,17 @@ class MCConnector:
         mc.safeStart()
         return mc
 
-    def is_mission_running(self, nAgent=0):
-        world_state = self.agent_hosts[nAgent].getWorldState()
+    def is_mission_running(self, agentId=0):
+        world_state = self.agent_hosts[agentId].getWorldState()
         return world_state.is_mission_running
 
-    def sendCommand(self, command, nAgent=None):
-        if nAgent is None:
-            nAgent = self.nAgent
-        self.agent_hosts[nAgent].sendCommand(command)
+    def sendCommand(self, command, agentId=None):
+        if agentId is None:
+            agentId = self.agentId
+        self.agent_hosts[agentId].sendCommand(command)
 
-    def observeProc(self, nAgent=None):
-        r = range(len(self.agent_hosts)) if nAgent is None else range(nAgent, nAgent+1)
+    def observeProc(self, agentId=None):
+        r = range(len(self.agent_hosts)) if agentId is None else range(agentId, agentId+1)
         for n in r:
             self.worldStates[n] = self.agent_hosts[n].getWorldState()
             self.isAlive[n] = self.worldStates[n].is_mission_running
@@ -259,33 +259,33 @@ class MCConnector:
             self.frames.pop(m)
         self.prev_mobs = mobs
 
-    def getImageFrame(self, nAgent=0):
-        return self.frames[nAgent]
+    def getImageFrame(self, agentId=0):
+        return self.frames[agentId]
 
-    def getSegmentationFrame(self, nAgent=0):
-        return self.segmentation_frames[nAgent]
+    def getSegmentationFrame(self, agentId=0):
+        return self.segmentation_frames[agentId]
 
-    def getImage(self, nAgent=0):
-        if self.frames[nAgent] is not None:
-            return numpy.frombuffer(self.frames[nAgent].pixels, dtype=numpy.uint8)
+    def getImage(self, agentId=0):
+        if self.frames[agentId] is not None:
+            return numpy.frombuffer(self.frames[agentId].pixels, dtype=numpy.uint8)
         return None
 
-    def getSegmentation(self, nAgent=0):
-        if self.segmentation_frames[nAgent] is not None:
-            return numpy.frombuffer(self.segmentation_frames[nAgent].pixels, dtype=numpy.uint8)
+    def getSegmentation(self, agentId=0):
+        if self.segmentation_frames[agentId] is not None:
+            return numpy.frombuffer(self.segmentation_frames[agentId].pixels, dtype=numpy.uint8)
         return None
 
-    def getAgentPos(self, nAgent=None):
-        if nAgent is None: nAgent = self.nAgent
-        data = self.observe.get(nAgent, None)
+    def getAgentPos(self, agentId=None):
+        if agentId is None: agentId = self.agentId
+        data = self.observe.get(agentId, None)
         if (data is not None) and ('XPos' in data):
             return [data[key] for key in ['XPos', 'YPos', 'ZPos', 'Pitch', 'Yaw']]
         return None
 
-    def getControlledMobs(self, nAgent=None):
-        return self.getParticularObservation('ControlledMobs', nAgent)
+    def getControlledMobs(self, agentId=None):
+        return self.getParticularObservation('ControlledMobs', agentId)
 
-    def getFullStat(self, key, nAgent=None):
+    def getFullStat(self, key, agentId=None):
         """
             Dsc: this function was intended to return observations from full stats.
                  However, full stats don't have a dedicated key, but are placed directly
@@ -298,10 +298,10 @@ class MCConnector:
                 keys (new)     : 'input_type', 'isPaused'
         """
 
-        return self.getParticularObservation(key, nAgent)
+        return self.getParticularObservation(key, agentId)
 
-    def getLineOfSights(self, nAgent=None):
-        data = self.getParticularObservation('LineOfSight', nAgent)
+    def getLineOfSights(self, agentId=None):
+        data = self.getParticularObservation('LineOfSight', agentId)
         if data is None:
             return None
         los = data.get('LineOfSight', None)
@@ -310,13 +310,13 @@ class MCConnector:
             return los
         return None
 
-    def getLineOfSight(self, key, nAgent=None):
+    def getLineOfSight(self, key, agentId=None):
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
-        los = self.getLineOfSights(nAgent)
+        los = self.getLineOfSights(agentId)
         return los[key] if los is not None and key in los else None
 
-    def getNearEntities(self, nAgent=None):
-        data = self.getParticularObservation('ents_near' , nAgent)
+    def getNearEntities(self, agentId=None):
+        data = self.getParticularObservation('ents_near' , agentId)
         if data is None:
             return
 
@@ -326,8 +326,8 @@ class MCConnector:
                 e['name'] = name.lower().replace(' ', '_')
         return data
 
-    def getNearPickableEntities(self, nAgent=None):
-        entities = self.getNearEntities(nAgent)
+    def getNearPickableEntities(self, agentId=None):
+        entities = self.getNearEntities(agentId)
         if entities is None:
             return None
         pickableEntities = []
@@ -336,47 +336,47 @@ class MCConnector:
                 pickableEntities.append(ent)
         return pickableEntities
 
-    def getNearGrid(self, nAgent=None):
-        return self.getParticularObservation('grid_near', nAgent)
+    def getNearGrid(self, agentId=None):
+        return self.getParticularObservation('grid_near', agentId)
 
-    def getLife(self, nAgent=None):
-        return self.getParticularObservation('Life', nAgent)
+    def getLife(self, agentId=None):
+        return self.getParticularObservation('Life', agentId)
 
-    def getAir(self, nAgent=None):
-        return self.getParticularObservation('Air', nAgent)
+    def getAir(self, agentId=None):
+        return self.getParticularObservation('Air', agentId)
 
-    def getChat(self, nAgent=None):
-        return self.getParticularObservation('Chat', nAgent)
+    def getChat(self, agentId=None):
+        return self.getParticularObservation('Chat', agentId)
 
-    def getParticularObservation(self, observation_name, nAgent=None):
-        if nAgent is None: nAgent = self.nAgent
-        obs = self.observe.get(nAgent, None)
+    def getParticularObservation(self, observation_name, agentId=None):
+        if agentId is None: agentId = self.agentId
+        obs = self.observe.get(agentId, None)
         if obs is not None:
             return obs.get(observation_name, None)
 
-    def getItemList(self, nAgent=None):
-        return self.getParticularObservation('item_list', nAgent)
+    def getItemList(self, agentId=None):
+        return self.getParticularObservation('item_list', agentId)
 
-    def getBlocksDropsList(self, nAgent=None):
-        return self.getParticularObservation('block_item_tool_triple', nAgent)
+    def getBlocksDropsList(self, agentId=None):
+        return self.getParticularObservation('block_item_tool_triple', agentId)
 
-    def getBlockFromBigGrid(self, nAgent=None):
-        return self.getParticularObservation('block_pos_big_grid', nAgent)
+    def getBlockFromBigGrid(self, agentId=None):
+        return self.getParticularObservation('block_pos_big_grid', agentId)
 
-    def getNonSolidBlocks(self, nAgent=None):
-        return self.getParticularObservation('nonsolid_blocks', nAgent)
+    def getNonSolidBlocks(self, agentId=None):
+        return self.getParticularObservation('nonsolid_blocks', agentId)
 
-    def getRecipeList(self, nAgent=None):
-        return self.getParticularObservation('recipes', nAgent)
+    def getRecipeList(self, agentId=None):
+        return self.getParticularObservation('recipes', agentId)
 
-    def getInventory(self, nAgent=None):
-        return self.getParticularObservation('inventory', nAgent)
+    def getInventory(self, agentId=None):
+        return self.getParticularObservation('inventory', agentId)
 
-    def getGridBox(self, nAgent=None):
-        return self.missionDesc.agentSections[nAgent].agenthandlers.observations.gridNear
+    def getGridBox(self, agentId=None):
+        return self.missionDesc.agentSections[agentId].agenthandlers.observations.gridNear
 
-    def gridIndexToPos(self, index, nAgent=None):
-        gridBox = self.getGridBox(nAgent)
+    def gridIndexToPos(self, index, agentId=None):
+        gridBox = self.getGridBox(agentId)
         gridSz = [gridBox[i][1]-gridBox[i][0]+1 for i in range(3)]
         y = index // (gridSz[0] * gridSz[2])
         index -= y * (gridSz[0] * gridSz[2])
@@ -406,33 +406,33 @@ class MCConnector:
         if idx < len(self.agent_hosts):
             self.agent_hosts[idx].stop()
 
-    def getHumanInputs(self, nAgent=None):
-        return self.getParticularObservation('input_events', nAgent)
+    def getHumanInputs(self, agentId=None):
+        return self.getParticularObservation('input_events', agentId)
 
-    def placeBlock(self, x: int, y: int, z: int, block_name: str, placement: str, nAgent=0):
-        self.agent_hosts[nAgent].sendCommand("placeBlock {} {} {} {} {}".format(x, y, z, block_name, placement))
+    def placeBlock(self, x: int, y: int, z: int, block_name: str, placement: str, agentId=0):
+        self.agent_hosts[agentId].sendCommand("placeBlock {} {} {} {} {}".format(x, y, z, block_name, placement))
 
-    def _sendMotionCommand(self, command, value, nAgent=None):
-        if nAgent is None: nAgent = self.nAgent
-        if nAgent in self.prev_mobs:
-            self.sendCommand(f'{command} {nAgent} {value}', nAgent)
+    def _sendMotionCommand(self, command, value, agentId=None):
+        if agentId is None: agentId = self.agentId
+        if agentId in self.prev_mobs:
+            self.sendCommand(f'{command} {agentId} {value}', agentId)
         else:
-            self.sendCommand(f'{command} {value}', nAgent)
+            self.sendCommand(f'{command} {value}', agentId)
 
-    def strafe(self, value, nAgent=None):
-        return self._sendMotionCommand('strafe', value, nAgent)
+    def strafe(self, value, agentId=None):
+        return self._sendMotionCommand('strafe', value, agentId)
 
-    def move(self, value, nAgent=None):
-        return self._sendMotionCommand('move', value, nAgent)
+    def move(self, value, agentId=None):
+        return self._sendMotionCommand('move', value, agentId)
 
-    def jump(self, value, nAgent=None):
-        return self._sendMotionCommand('jump', value, nAgent)
+    def jump(self, value, agentId=None):
+        return self._sendMotionCommand('jump', value, agentId)
 
-    def pitch(self, value, nAgent=None):
-        return self._sendMotionCommand('pitch', value, nAgent)
+    def pitch(self, value, agentId=None):
+        return self._sendMotionCommand('pitch', value, agentId)
 
-    def turn(self, value, nAgent=None):
-        return self._sendMotionCommand('turn', value, nAgent)
+    def turn(self, value, agentId=None):
+        return self._sendMotionCommand('turn', value, agentId)
 
 
 class RobustObserver:
@@ -442,10 +442,10 @@ class RobustObserver:
     explicitlyPoseChangingCommands = ['move', 'jump', 'pitch', 'turn']
     implicitlyPoseChangingCommands = ['attack']
 
-    def __init__(self, mc, nAgent = 0):
+    def __init__(self, mc, agentId = 0):
         self.mc = mc
         self.passableBlocks = []
-        self.nAgent = nAgent
+        self.agentId = agentId
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
@@ -477,23 +477,23 @@ class RobustObserver:
         self.thread = None
         self.lock = threading.RLock()
         self._time_sleep = 0.05
-        self.mc.agent_hosts[self.nAgent].setOnObservationCallback(self.onObservationChanged)
-        self.mc.agent_hosts[self.nAgent].setOnNewFrameCallback(self.onNewFrameCallback)
+        self.mc.agent_hosts[self.agentId].setOnObservationCallback(self.onObservationChanged)
+        self.mc.agent_hosts[self.agentId].setOnNewFrameCallback(self.onNewFrameCallback)
 
     def updatePassableBlocks(self):
         nonsolidblocks = self.__getNonSolidBlocks()
         self.passableBlocks = nonsolidblocks
 
     def onObservationChanged(self, obs: TimestampedString) -> None:
-        self.mc.updateObservations(obs, self.nAgent)
+        self.mc.updateObservations(obs, self.agentId)
         self._observeProcCached()
 
     def onNewFrameCallback(self, frame: TimestampedVideoFrame) -> None:
         if frame.frametype == FrameType.COLOUR_MAP:
-            self.mc.updateSegmentation(frame, self.nAgent)
+            self.mc.updateSegmentation(frame, self.agentId)
             self._update_cache('getSegmentationFrame')
         else:
-            self.mc.updateFrame(frame, self.nAgent)
+            self.mc.updateFrame(frame, self.agentId)
             assert self.mc.getImageFrame() is not None
             self._update_cache('getImageFrame')
 
@@ -546,7 +546,7 @@ class RobustObserver:
 
     def _update_cache(self, method):
         t_new = time.time()
-        v_new = getattr(self.mc, method)(self.nAgent)
+        v_new = getattr(self.mc, method)(self.agentId)
         outdated = False
         with self.lock:
             if method not in self.events:
@@ -666,10 +666,10 @@ class RobustObserver:
         if isinstance(command, str):
             cmd = command.split(' ')
             self.addCommandsToBuffer(cmd)
-            self.mc.sendCommand(command, self.nAgent)
+            self.mc.sendCommand(command, self.agentId)
         else:
             self.addCommandsToBuffer(command)
-            self.mc.sendCommand(' '.join(command), self.nAgent)
+            self.mc.sendCommand(' '.join(command), self.agentId)
 
     # ===== specific methods =====
 
@@ -692,14 +692,14 @@ class RobustObserver:
         return self.blockCenterFromPos([los['x'], los['y'], los['z']])
 
     def gridIndexToAbsPos(self, index, observeReq=True):
-        [x, y, z] = self.mc.gridIndexToPos(index, self.nAgent)
+        [x, y, z] = self.mc.gridIndexToPos(index, self.agentId)
         pos = self.waitNotNoneObserve('getAgentPos', observeReq=observeReq)
         # TODO? Round to the center of the block (0.5)?
         return [x + pos[0], y + pos[1], z + pos[2]]
 
     def getNearGrid3D(self, observeReq=True):
         grid = self.waitNotNoneObserve('getNearGrid', observeReq=observeReq)
-        gridBox = self.mc.getGridBox(self.nAgent)
+        gridBox = self.mc.getGridBox(self.agentId)
         gridSz = [gridBox[i][1]-gridBox[i][0]+1 for i in range(3)]
         return [[grid[(z+y*gridSz[2])*gridSz[0]:(z+1+y*gridSz[2])*gridSz[0]] \
                  for z in range(gridSz[2])] for y in range(gridSz[1])]
@@ -829,8 +829,8 @@ class RobustObserver:
 
 
 class RobustObserverWithCallbacks(RobustObserver):
-    def __init__(self, mc, nAgent=0):
-        super().__init__(mc, nAgent)
+    def __init__(self, mc, agentId=0):
+        super().__init__(mc, agentId)
         # name, on_change, function triples
         self.callbacks = []
         # future -> name, cb pairs

@@ -31,8 +31,8 @@ class TestMotionMob(TestMotion):
         time.sleep(3)
         key = None
         for key in mc.getControlledMobs():
-            mc.nAgent = key
-            obs.nAgent = key
+            mc.agentId = key
+            obs.agentId = key
         assert key is not None
 
 

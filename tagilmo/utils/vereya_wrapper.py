@@ -9,6 +9,7 @@ import logging
 import re
 import os
 import errno
+from collections import defaultdict
 from typing import Optional
 
 from tagilmo import VereyaPython as VP
@@ -61,7 +62,7 @@ class MCConnector:
         self.missionDesc = None
         self.mission = None
         self.mission_record = None
-        self.prev_mobs = set()
+        self.prev_mobs = defaultdict(set) # host -> set mapping
         self.agentId = 0
         self.setUp(VP, missionXML, serverIp=serverIp)
 
@@ -250,14 +251,16 @@ class MCConnector:
                 self.segmentation_frames[key] = None
                 self.frames[key] = None
             mobs.add(key)
-        missing = self.prev_mobs - mobs
+        missing = self.prev_mobs[host] - mobs
         for m in missing:
             self.observe.pop(m)
             self.agent_hosts.pop(m)
             self.frames.pop(m)
             self.segmentation_frames.pop(m)
             self.frames.pop(m)
-        self.prev_mobs = mobs
+            logger.info(f"removing mob {m}")
+        self.prev_mobs[host] = mobs
+        self._all_mobs = set().union(*self.prev_mobs.values())
 
     def getImageFrame(self, agentId=0):
         return self.frames[agentId]
@@ -414,7 +417,7 @@ class MCConnector:
 
     def _sendMotionCommand(self, command, value, agentId=None):
         if agentId is None: agentId = self.agentId
-        if agentId in self.prev_mobs:
+        if agentId in self._all_mobs:
             self.sendCommand(f'{command} {agentId} {value}', agentId)
         else:
             self.sendCommand(f'{command} {value}', agentId)

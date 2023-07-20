@@ -316,14 +316,11 @@ class MCConnector:
         return self.getParticularObservation(key, agentId)
 
     def getLineOfSights(self, agentId=None):
-        data = self.getParticularObservation('LineOfSight', agentId)
-        if data is None:
-            return None
-        los = data.get('LineOfSight', None)
+        los = self.getParticularObservation('LineOfSight', agentId)
         if los is not None and los['hitType'] != 'MISS':
             los['type'] = los['type'].replace("minecraft:", "")
             return los
-        return None
+        return los
 
     def getLineOfSight(self, key, agentId=None):
         # keys: 'hitType', 'x', 'y', 'z', 'type', 'prop_snowy', 'inRange', 'distance'
@@ -388,6 +385,8 @@ class MCConnector:
         return self.getParticularObservation('inventory', agentId)
 
     def getGridBox(self, agentId=None):
+        if agentId is None:
+            agentId = self.agentId
         return self.missionDesc.agentSections[agentId].agenthandlers.observations.gridNear
 
     def gridIndexToPos(self, index, agentId=None):

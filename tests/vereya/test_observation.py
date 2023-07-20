@@ -43,14 +43,28 @@ class TestData(BaseTest):
         else:
             self.assertTrue(visible['inRange'])
 
-    def test_observation_from_ray(self):
+    def _observation_from_ray(self, getter):
         self.mc.sendCommand('chat /tp @p -123 72 76')
-        visible = self.getDist()
-        self.dist_test_function(visible)
         time.sleep(1)
-        visible = self.getDist()
+        visible = self.getDist(getter)
         dist = visible['distance']
         self.dist_test_function(visible)
+        # random rotation
+        self.mc.pitch(random.random() - 0.5)
+        self.mc.turn(random.random() - 0.5)
+        time.sleep(1)
+        self.mc.pitch(0)
+        self.mc.turn(0)
+        visible = self.getDist(getter)
+        dist1 = visible['distance']
+        self.dist_test_function(visible)
+        self.assertNotEqual(dist, dist1, f"Distance {dist} != {dist1}")
+
+    def test_observation_from_ray(self):
+        return self._observation_from_ray(lambda: self.mc.getFullStat('LineOfSight'))
+
+    def test_observation_from_ray_cached(self):
+        return self._observation_from_ray(lambda: self.rob.getCachedObserve('getLineOfSights'))
 
     def test_observation_from_chat(self):
         logger.info("send chat ")
@@ -146,7 +160,7 @@ class TestData(BaseTest):
         self.assertTrue(self.mc.getFullStat(key="isPaused") is not None)
         self.assertTrue(self.mc.getFullStat(key="input_type") is not None)
 
-    def getDist(self):
+    def getDist(self, getter):
         mc = self.mc
         c = 0
         prev_pitch = None

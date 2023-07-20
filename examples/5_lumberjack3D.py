@@ -475,7 +475,7 @@ class LJAgent(TAgent):
         for targ in target:
             t = self.mlogy.get_otype(targ)
             t_list = [var['type'] for var in self.mlogy.get_target_variants(targ, True)]
-            ray = self.rob.cached['getLineOfSights'][0]
+            ray = self.rob.getCachedObserve('getLineOfSights')
             if (ray['hitType'] != 'MISS'):
                 if self.mlogy.matchEntity(ray, targ):
                     if ray['inRange']:
@@ -610,8 +610,8 @@ class LJAgent(TAgent):
             # '/say @p get stone_pickaxe'
             # '/say @p stop'
             # '/say @p terminate'
-            chat = self.rob.cached['getChat'][0]
-            if chat is not None:
+            chat = self.rob.getCachedObserve('getChat')[0]
+            if chat is not None and chat[0] is not None:
                 print("Receive chat: ", chat[0])
                 words = chat[0].split(' ')
                 if words[-2] == 'get':

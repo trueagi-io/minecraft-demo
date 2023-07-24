@@ -49,7 +49,7 @@ class TestData(BaseTest):
         dist = visible['distance']
         self.dist_test_function(visible)
         # random rotation
-        self.mc.pitch(random.random() - 0.5)
+        self.mc.pitch((random.random() - 0.6)/10)
         self.mc.turn(random.random() - 0.5)
         time.sleep(1)
         self.mc.pitch(0)

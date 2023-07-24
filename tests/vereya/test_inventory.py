@@ -87,14 +87,19 @@ class TestCraft(unittest.TestCase):
         time.sleep(2)
         
         pickaxe = getInvSafe(obs, 'wooden_pickaxe')
+        oak_planks = getInvSafe(obs, 'wooden_pickaxe')
+        print(oak_planks)
         print(pickaxe)
+        pixidx = pickaxe[0]['index']
+        oakidx = oak_planks[0]['index']
 
         mc.observeProc()
         inv1 = mc.getInventory()
-        mc.sendCommand('swapInventoryItems 0 ' + str(pickaxe[0]['index']))
+        mc.sendCommand('swapInventoryItems {pixidx} {oakidx}')
         time.sleep(2)
         pickaxe = getInvSafe(obs, 'wooden_pickaxe')
-        self.assertEquals(pickaxe[0]['index'], 0)
+        print(pickaxe)
+        self.assertEquals(pickaxe[0]['index'], oakidx)
 
         
 def main():

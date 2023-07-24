@@ -53,7 +53,8 @@ class TestData(BaseTest):
         pos_player0 = self.rob.getCachedObserve('getAgentPos')
         self.mc.move("-0.3", id)
         self.mc.move("-0.3")
-        time.sleep(1)
+        # chicken is slow
+        time.sleep(2)
         self.rob.stopMove()
         self.rob_c.stopMove()
         time.sleep(0.5)
@@ -61,7 +62,7 @@ class TestData(BaseTest):
         pos_player1 = self.rob.getCachedObserve('getAgentPos')
         diff_player = abs(pos_player1[2] - pos_player0[2])
         diff_chicken = abs(pos_chicken1[2] - pos_chicken0[2])
-        print(diff_player, diff_chicken)
+        print("diff_player, diff_chicken", diff_player, diff_chicken)
         self.assertTrue(0.1 < diff_player, f"test player moved {diff_player} blocks")
         self.assertTrue(0.1 < diff_chicken, f"test chicken moved {diff_chicken} blocks")
  

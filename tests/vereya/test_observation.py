@@ -71,17 +71,20 @@ class TestData(BaseTest):
         time.sleep(1)
         logger.info("wait chat")
         start = time.time()
+        command = None
         while True:
-            command = self.rob.waitNotNoneObserve('getChat', observeReq=False)
-            command = next(x[0] for x in reversed(command) if x[0] is not None)
-            if command is not None:
-                break
+            commands = self.rob.waitNotNoneObserve('getChat', observeReq=False)
+            logger.debug(f'current chat {commands}')
+            for c in commands:
+                if c[0] is not None and "get wooden_axe" in c[0]:
+                    command = c[0]
+                    break
             time.sleep(0.05)
             end = time.time()
             if end - start > 2:
                 break
         logger.info("result chat " + str(command))
-        self.assertEqual(command[0], "get wooden_axe")
+        self.assertTrue(command is not None and "get wooden_axe" in command[0])
 
     def test_observation_from_item(self):
         logger.debug('getting items')

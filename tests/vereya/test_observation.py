@@ -38,7 +38,7 @@ class TestData(BaseTest):
     def dist_test_function(self, visible):
         print(visible)
         dist = visible['distance']
-        if 4 < dist:
+        if 4.5 < dist:
             self.assertFalse(visible['inRange'])
         else:
             self.assertTrue(visible['inRange'])

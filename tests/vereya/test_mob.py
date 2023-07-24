@@ -20,8 +20,9 @@ class TestData(BaseTest):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = (-126, 7.0)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], seed='43', forceReset=True)
+        start = (-151.0, -213.0)
+        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], forceReset='true', seed='43')
+
 
         cls.mc = mc
         cls.rob = obs

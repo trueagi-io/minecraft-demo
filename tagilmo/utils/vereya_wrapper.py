@@ -91,6 +91,7 @@ class MCConnector:
         self.frames = dict({n: None for n in range(agentIds)})
         self.segmentation_frames = dict({n: None for n in range(agentIds)})
         self._last_obs = dict() # agent_host -> TimestampedString
+        self._all_mobs = set()
 
 
     def getVersion(self, num=0) -> str:

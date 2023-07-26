@@ -220,6 +220,7 @@ class MCConnector:
             if obs:
                 self.updateObservations(obs[-1], n)
             else:
+                logger.debug("observation is None in observeProc")
                 self.updateObservations(None, n)
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
@@ -385,6 +386,9 @@ class MCConnector:
     def getInventory(self, agentId=None):
         return self.getParticularObservation('inventory', agentId)
 
+    def getOnGround(self, agentId=None):
+        return self.getParticularObservation('onGround', agentId)
+
     def getGridBox(self, agentId=None):
         if agentId is None:
             agentId = self.agentId
@@ -466,7 +470,7 @@ class RobustObserver:
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
                         'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList',
                         'getNonSolidBlocks', 'getBlockFromBigGrid',
-                        'getControlledMobs']
+                        'getControlledMobs', 'getOnGround', 'getFullStat']
 
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
                           'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid',

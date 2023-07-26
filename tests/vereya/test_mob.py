@@ -48,9 +48,16 @@ class TestData(BaseTest):
         id = list(controlled.keys())[0]
         self.rob_c.agentId = id
         self.rob_c.clear()
-        time.sleep(1)
+        for i in range(10):
+            logger.info("waiting until mob is on ground")
+            onGround = self.rob_c.getCachedObserve("getOnGround")
+            if onGround:
+                break
+            time.sleep(1)
         pos_chicken0 = self.rob_c.getCachedObserve('getAgentPos')
+        logger.info(f'pos_chicken0 {pos_chicken0}')
         pos_player0 = self.rob.getCachedObserve('getAgentPos')
+        logger.info(f'pos_player0 {pos_player0}')
         self.mc.move("-0.3", id)
         self.mc.move("-0.3")
         # chicken is slow
@@ -59,12 +66,14 @@ class TestData(BaseTest):
         self.rob_c.stopMove()
         time.sleep(0.5)
         pos_chicken1 = self.rob_c.getCachedObserve('getAgentPos')
+        logger.info(f'pos_chicken1 {pos_chicken1}')
         pos_player1 = self.rob.getCachedObserve('getAgentPos')
+        logger.info(f'pos_player1 {pos_player1}')
         diff_player = abs(pos_player1[2] - pos_player0[2])
         diff_chicken = abs(pos_chicken1[2] - pos_chicken0[2])
         print("diff_player, diff_chicken", diff_player, diff_chicken)
-        self.assertTrue(0.1 < diff_player, f"test player moved {diff_player} blocks")
-        self.assertTrue(0.1 < diff_chicken, f"test chicken moved {diff_chicken} blocks")
+        self.assertTrue(1 < diff_player, f"test player moved {diff_player} blocks")
+        self.assertTrue(1 < diff_chicken, f"test chicken moved {diff_chicken} blocks")
  
 
 def main():

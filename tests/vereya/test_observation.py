@@ -158,7 +158,10 @@ class TestData(BaseTest):
         self.mc.sendCommand("chat /setblock {} {} {} minecraft:air".format(diamond_x, diamond_y, diamond_z))
 
     def test_game_state(self):
-        self.mc.observeProc()
+        for i in range(10):
+            if self.mc.getFullStat(key="isPaused") is not None:
+                break
+            time.sleep(0.5)
         self.assertTrue(self.mc.getFullStat(key="isPaused") is not None)
         self.assertTrue(self.mc.getFullStat(key="input_type") is not None)
 
@@ -167,10 +170,9 @@ class TestData(BaseTest):
         c = 0
         prev_pitch = None
         while True:
-            mc.observeProc()
             pos = mc.getAgentPos()
             pitch = pos[3]
-            visible = mc.getFullStat('LineOfSight')
+            visible = getter() 
             if visible and 'distance' in visible :
                 print(visible)
                 return visible

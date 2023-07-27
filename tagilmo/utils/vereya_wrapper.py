@@ -470,7 +470,7 @@ class RobustObserver:
                         'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
                         'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList',
                         'getNonSolidBlocks', 'getBlockFromBigGrid',
-                        'getControlledMobs', 'getOnGround', 'getFullStat']
+                        'getControlledMobs', 'getOnGround']
 
         self.canBeNone = ['getLineOfSights', 'getChat', 'getHumanInputs', 'getItemList', 'getRecipeList',
                           'getNearPickableEntities', 'getBlocksDropsList', 'getNonSolidBlocks', 'getBlockFromBigGrid',

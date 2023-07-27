@@ -1,6 +1,8 @@
 """
 thin wrapper around tcp server
 """
+import os
+import os.path
 import asyncio
 from asyncio import AbstractEventLoop
 import logging
@@ -53,6 +55,8 @@ class StringServer:
         self.server.close()
 
     def record(self, path: str) -> 'StringServer':
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
         if self.writer is None:
             self.writer = TimestampedStringWriter()
         if self.writer.is_open():

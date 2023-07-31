@@ -14,6 +14,10 @@ from tagilmo.utils.mathutils import *
 
 from examples.knowledge_lists import *
 
+
+logger = logging.getLogger(__name__)
+
+
 class MoveForward:
 
     def __init__(self, rob):
@@ -418,6 +422,7 @@ class MineAround:
         for obj in self.objs:
             self.target = self.rob.nearestFromGrid(obj, observeReq=False)
             if self.target is not None:
+                logger.info(f"MineAround: setting target ApproachXZPos({self.target})")
                 self.approach = ApproachXZPos(self.rob, self.target)
                 break
 
@@ -428,6 +433,7 @@ class MineAround:
         acts = []
         if self.mine is not None:
             if self.mine.finished():
+                logger.info(f'MineAround: stopping {self.mine}')
                 acts += self.mine.stop()
                 self.mine = None
                 self._set_target()
@@ -435,9 +441,11 @@ class MineAround:
                 return acts + self.mine.act()
         if self.approach is not None:
             if self.approach.finished():
+                logger.info('MineAround: stopping {self.approach}')
                 acts += self.approach.stop()
                 self.approach = None
                 self.mine = MineAtSight(self.rob)
+                logger.info('MineAround: set {self.mine}')
             else:
                 return acts + self.approach.act()
         return acts
@@ -458,6 +466,16 @@ class LJAgent(TAgent):
     def __init__(self, mc, visualizer=None):
         super().__init__(mc, visualizer)
         self.mlogy = None
+        self._skill = None
+
+    @property
+    def skill(self):
+        return self._skill
+
+    @skill.setter
+    def skill(self, sk):
+        logger.info(f'LJAgent: setting skill to {sk}')
+        self._skill = sk
 
     def set_mlogy(self, mlogy):
         self.mlogy = mlogy
@@ -475,7 +493,7 @@ class LJAgent(TAgent):
         for targ in target:
             t = self.mlogy.get_otype(targ)
             t_list = [var['type'] for var in self.mlogy.get_target_variants(targ, True)]
-            ray = self.rob.cached['getLineOfSights'][0]
+            ray = self.rob.getCachedObserve('getLineOfSights')
             if (ray['hitType'] != 'MISS'):
                 if self.mlogy.matchEntity(ray, targ):
                     if ray['inRange']:
@@ -610,8 +628,8 @@ class LJAgent(TAgent):
             # '/say @p get stone_pickaxe'
             # '/say @p stop'
             # '/say @p terminate'
-            chat = self.rob.cached['getChat'][0]
-            if chat is not None:
+            chat = self.rob.getCachedObserve('getChat')[0]
+            if chat is not None and chat[0] is not None:
                 print("Receive chat: ", chat[0])
                 words = chat[0].split(' ')
                 if words[-2] == 'get':
@@ -696,7 +714,11 @@ if __name__ == '__main__':
     miss.serverSection.initial_conditions.time_start = "1000"
     miss.setWorld(mb.defaultworld(forceReset="true"))
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
-    agent = LJAgent(MCConnector(miss), visualizer=visualizer)
+    mc = MCConnector(miss)
+    mc.mission_record.setDestination('./observations/')
+    mc.mission_record.is_recording_observations = True
+
+    agent = LJAgent(mc, visualizer=visualizer)
 
     # initialize minelogy
     item_list, recipes = agent.rob.getItemsAndRecipesLists()

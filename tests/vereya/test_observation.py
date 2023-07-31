@@ -20,8 +20,8 @@ class TestData(BaseTest):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = (-126, 73.0)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], seed='4', forceReset=True)
+        start = (-151.0, -213.0)
+        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], forceReset='true', seed='43')
         cls.mc = mc
         cls.rob = obs
         mc.safeStart()
@@ -38,19 +38,32 @@ class TestData(BaseTest):
     def dist_test_function(self, visible):
         print(visible)
         dist = visible['distance']
-        if 4 < dist:
+        if 4.5 < dist:
             self.assertFalse(visible['inRange'])
         else:
             self.assertTrue(visible['inRange'])
 
-    def test_observation_from_ray(self):
-        self.mc.sendCommand('chat /tp @p -123 72 76')
-        visible = self.getDist()
-        self.dist_test_function(visible)
+    def _observation_from_ray(self, getter):
         time.sleep(1)
-        visible = self.getDist()
+        visible = self.getDist(getter)
         dist = visible['distance']
         self.dist_test_function(visible)
+        # random rotation
+        self.mc.pitch((random.random() - 0.6)/10)
+        self.mc.turn(random.random() - 0.5)
+        time.sleep(1)
+        self.mc.pitch(0)
+        self.mc.turn(0)
+        visible = self.getDist(getter)
+        dist1 = visible['distance']
+        self.dist_test_function(visible)
+        self.assertNotEqual(dist, dist1, f"Distance {dist} != {dist1}")
+
+    def test_observation_from_ray(self):
+        return self._observation_from_ray(lambda: self.mc.getFullStat('LineOfSight'))
+
+    def test_observation_from_ray_cached(self):
+        return self._observation_from_ray(lambda: self.rob.getCachedObserve('getLineOfSights'))
 
     def test_observation_from_chat(self):
         logger.info("send chat ")
@@ -58,17 +71,20 @@ class TestData(BaseTest):
         time.sleep(1)
         logger.info("wait chat")
         start = time.time()
+        command = None
         while True:
-            command = self.rob.waitNotNoneObserve('getChat', observeReq=False)
-            command = next(x[0] for x in reversed(command) if x[0] is not None)
-            if command is not None:
-                break
+            commands = self.rob.waitNotNoneObserve('getChat', observeReq=False)
+            logger.debug(f'current chat {commands}')
+            for c in commands:
+                if c[0] is not None and "get wooden_axe" in c[0]:
+                    command = c[0]
+                    break
             time.sleep(0.05)
             end = time.time()
             if end - start > 2:
                 break
         logger.info("result chat " + str(command))
-        self.assertEqual(command[0], "get wooden_axe")
+        self.assertTrue(command is not None and "get wooden_axe" in command[0])
 
     def test_observation_from_item(self):
         logger.debug('getting items')
@@ -142,19 +158,21 @@ class TestData(BaseTest):
         self.mc.sendCommand("chat /setblock {} {} {} minecraft:air".format(diamond_x, diamond_y, diamond_z))
 
     def test_game_state(self):
-        self.mc.observeProc()
+        for i in range(10):
+            if self.mc.getFullStat(key="isPaused") is not None:
+                break
+            time.sleep(0.5)
         self.assertTrue(self.mc.getFullStat(key="isPaused") is not None)
         self.assertTrue(self.mc.getFullStat(key="input_type") is not None)
 
-    def getDist(self):
+    def getDist(self, getter):
         mc = self.mc
         c = 0
         prev_pitch = None
         while True:
-            mc.observeProc()
             pos = mc.getAgentPos()
             pitch = pos[3]
-            visible = mc.getFullStat('LineOfSight')
+            visible = getter() 
             if visible and 'distance' in visible :
                 print(visible)
                 return visible

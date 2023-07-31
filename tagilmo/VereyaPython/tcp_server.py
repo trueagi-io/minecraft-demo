@@ -109,10 +109,13 @@ class TCPServer:
 
     def close(self):
         assert self.server is not None
-        if not self.server.is_serving():
+        if not self.server.is_serving() or self.closing:
             return
         self.closing = True
-        self.server.close()
+        try:
+            self.server.close()
+        except TypeError as e:
+            logger.error(f"error on stopping server {self}", exc_info=e)
         asyncio.run_coroutine_threadsafe(self.server.wait_closed(), self.io_service).result()
         for writer in self.writer:
             logger.debug(f'closing {writer}')

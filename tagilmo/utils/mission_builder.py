@@ -125,7 +125,7 @@ class ServerSection:
 class Commands:
 
     def __init__(self, bAll=True, bContinuous=None, bDiscrete=None, bInventory=None,
-                 bSimpleCraft=None, bChat=None, bPlaceBlock=None):
+                 bSimpleCraft=None, bChat=None, bPlaceBlock=None, bControlMob=None):
         self.bAll = bAll
         self.bContinuous = bContinuous
         self.bDiscrete = bDiscrete
@@ -133,6 +133,7 @@ class Commands:
         self.bSimpleCraft = bSimpleCraft
         self.bChat = bChat
         self.bPlaceBlock = bPlaceBlock
+        self.bControlMob = bControlMob
 
     def xml(self):
         _xml = ""
@@ -148,6 +149,8 @@ class Commands:
             _xml += "<ChatCommands />\n"
         if self.bAll or self.bPlaceBlock:
             _xml += "<BlockPlaceCommands />\n"
+        if self.bAll or self.bControlMob:
+            _xml += "<CommandForWheeledRobotNavigationMob/>"
         #<AbsoluteMovementCommands /> --
         #<MissionQuitCommands /> --
         #<HumanLevelCommands/> --
@@ -227,6 +230,7 @@ class Observations:
 </ObservationFromFindBlock>'''
         if (self.bAll or self.bChat) and not (self.bChat == False):
             _xml += "<ObservationFromChat />\n"
+
         #<ObservationFromRecentCommands/>
         #<ObservationFromDiscreteCell/>
         #<ObservationFromSubgoalPositionList>

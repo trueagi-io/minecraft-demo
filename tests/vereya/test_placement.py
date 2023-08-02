@@ -11,7 +11,7 @@ class TestPlacement(BaseTest):
     def setUpClass(cls, *args, **kwargs):
         start = (-125.0, 73)
         mc, obs = init_mission(None, start_x=start[0], start_y=start[1], seed=4,
-                               forceReset='false', forceReuse='true')
+                               forceReset='true')
         cls.mc = mc
         cls.rob = obs
         mc.safeStart()

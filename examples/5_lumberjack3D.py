@@ -628,23 +628,26 @@ class LJAgent(TAgent):
             # '/say @p get stone_pickaxe'
             # '/say @p stop'
             # '/say @p terminate'
-            chat = self.rob.getCachedObserve('getChat')[0]
-            if chat is not None and chat[0] is not None:
-                print("Receive chat: ", chat[0])
-                words = chat[0].split(' ')
-                if words[-2] == 'get':
-                    target = {'type': words[-1]}
-                else:
-                    if words[-1] == 'stop':
-                        target = None
-                        self.skill = None
-                        self.rob.sendCommand('move 0')
-                        self.rob.sendCommand('jump 0')
-                        self.rob.sendCommand('attack 0')
-                    elif words[-1] == 'terminate':
-                        break
-                self.rob.cached['getChat'] = (None, self.rob.cached['getChat'][1])
-
+            commands = self.rob.getCachedObserve('getChat')
+            for command in reversed(commands):
+                chat = command[0]
+                if chat is not None:
+                    print("Receive chat: ", chat[0])
+                    words = chat[0].split(' ')
+                    if words[-2] == 'get':
+                        target = {'type': words[-1]}
+                    else:
+                        if words[-1] == 'stop':
+                            target = None
+                            self.skill = None
+                            self.rob.sendCommand('move 0')
+                            self.rob.sendCommand('jump 0')
+                            self.rob.sendCommand('attack 0')
+                        elif words[-1] == 'terminate':
+                            target = 'terminate'
+                    break
+            if target == 'terminate':
+                continue
             if self.skill is not None:
                 if self.ccycle():
                     continue

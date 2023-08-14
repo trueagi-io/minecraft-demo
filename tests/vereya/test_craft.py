@@ -6,6 +6,7 @@ from tagilmo import VereyaPython
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from base_test import BaseTest
+from common import count_items
 
 
 def init_mission(mc, start_x=None, start_y=None):
@@ -53,14 +54,6 @@ def init_mission(mc, start_x=None, start_y=None):
 
 def test_basic_motion():
     pass 
-
-
-def count_items(inv, name):
-    result = 0
-    for elem in inv:
-        if elem['type'] == name:
-            result += elem['quantity']
-    return result
 
 
 class TestCraft(BaseTest):

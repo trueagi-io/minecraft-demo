@@ -36,12 +36,6 @@ def init_mission(mc, start_x=None, start_y=None):
              agenthandlers=agent_handlers,
                                       #    depth
              agentstart=mb.AgentStart([start_x, 74.0, start_y, 1]))])
-    flat_json = {"biome":"minecraft:plains",
-                 "layers":[{"block":"minecraft:diamond_block","height":1}],
-                 "structures":{"structures": {"village":{}}}}
-
-    flat_param = "3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake"
-    flat_json = json.dumps(flat_json).replace('"', "%ESC")
     world = mb.defaultworld(
         seed='5',
         forceReset="false",
@@ -65,9 +59,8 @@ class TestQuit(BaseTest):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = 316.5, 5375.5
         start = (-108.0, -187.0)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1]) 
+        mc, obs = init_mission(None, start_x=start[0], start_y=start[1])
         cls.mc = mc
         assert mc.safeStart()
         time.sleep(3)

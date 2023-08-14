@@ -17,12 +17,10 @@ HEIGHT = 240
 
 
 def start_mission():
-    miss = mb.MissionXML()
     colourmap_producer = mb.ColourMapProducer(width=WIDTH, height=HEIGHT)
     video_producer = mb.VideoProducer(width=WIDTH, height=HEIGHT, want_depth=False)
 
     obs = mb.Observations(bNearby=True, bRecipes=True)
-    agent_handlers = mb.AgentHandlers(observations=obs)
 
     agent_handlers = mb.AgentHandlers(observations=obs,
         colourmap_producer=colourmap_producer,
@@ -40,9 +38,6 @@ def start_mission():
         forceReset="false",
         forceReuse="true")
 
-    world1 = mb.flatworld("3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake",
-            seed='43',
-            forceReset="false")
     miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     # uncomment to disable passage of time:

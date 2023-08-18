@@ -19,8 +19,8 @@ class TestCraft(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = (-108.0, 78, -187.0)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], start_z=start[2], seed='5', forceReset='true')
+        start = (-108.0, -187.0)
+        mc, obs = init_mission(None, start_x=start[0], start_z=start[1], seed='5', forceReset='true')
         cls.mc = mc
         cls.obs = obs
         assert mc.safeStart()

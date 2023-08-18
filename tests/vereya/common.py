@@ -9,7 +9,7 @@ from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from base_test import BaseTest
 
 
-def init_mission(mc, start_x, start_y, seed, forceReset="false", forceReuse="false", start_z=78):
+def init_mission(mc, start_x, start_z, seed, forceReset="false", forceReuse="false", start_y=78):
     want_depth = False
     video_producer = mb.VideoProducer(width=320 * 4,
                                       height=240 * 4, want_depth=want_depth)

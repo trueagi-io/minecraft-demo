@@ -17,8 +17,8 @@ class TestConsistency(BaseTest):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = (-151.0, 78, -213)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], start_z=start[2], forceReset='true', seed='0145371047')
+        start = (-151.0, -213)
+        mc, obs = init_mission(None, start_x=start[0], start_z=start[1], forceReset='true', seed='0145371047')
         cls.mc = mc
         cls.rob = obs
         assert mc.safeStart()

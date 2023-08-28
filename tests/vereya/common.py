@@ -9,7 +9,7 @@ from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from base_test import BaseTest
 
 
-def init_mission(mc, start_x, start_y, seed, forceReset="false", forceReuse="false"):
+def init_mission(mc, start_x, start_z, seed, forceReset="false", forceReuse="false", start_y=78):
     want_depth = False
     video_producer = mb.VideoProducer(width=320 * 4,
                                       height=240 * 4, want_depth=want_depth)
@@ -27,7 +27,7 @@ def init_mission(mc, start_x, start_y, seed, forceReset="false", forceReuse="fal
                          agentSections=[mb.AgentSection(name='Cristina',
              agenthandlers=agent_handlers,
                                       #    depth
-             agentstart=mb.AgentStart([start_x, 78.0, start_y, 1]))])
+             agentstart=mb.AgentStart([start_x, start_y, start_z, 1]))])
     flat_json = {"biome":"minecraft:plains",
                  "layers":[{"block":"minecraft:diamond_block","height":1}],
                  "structures":{"structures": {"village":{}}}}
@@ -54,3 +54,10 @@ def init_mission(mc, start_x, start_y, seed, forceReset="false", forceReuse="fal
     else:
         mc.setMissionXML(miss)
     return mc, obs
+
+def count_items(inv, name):
+    result = 0
+    for elem in inv:
+        if elem['type'] == name:
+            result += elem['quantity']
+    return result

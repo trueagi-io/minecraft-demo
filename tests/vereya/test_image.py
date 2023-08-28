@@ -20,7 +20,7 @@ class TestData(BaseTest):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         start = (-126, 73.0)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], seed='4', forceReset='true')
+        mc, obs = init_mission(None, start_x=start[0], start_z=start[1], seed='4', forceReset='true')
         cls.mc = mc
         cls.rob = obs
         mc.safeStart()

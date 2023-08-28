@@ -6,28 +6,19 @@ from tagilmo import VereyaPython
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from base_test import BaseTest
-from common import init_mission
+from common import init_mission, count_items
 
 
 def test_basic_motion():
     pass
-
-
-def count_items(inv, name):
-    result = 0
-    for elem in inv:
-        if elem['type'] == name:
-            result += elem['quantity']
-    return result
-
 
 class TestConsistency(BaseTest):
     mc = None
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = (-151.0, -213.0)
-        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], forceReset='true', seed='0145371047')
+        start = (-151.0, -213)
+        mc, obs = init_mission(None, start_x=start[0], start_z=start[1], forceReset='true', seed='0145371047')
         cls.mc = mc
         cls.rob = obs
         assert mc.safeStart()

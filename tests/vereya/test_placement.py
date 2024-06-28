@@ -9,13 +9,12 @@ class TestPlacement(BaseTest):
 
     @classmethod
     def setUpClass(cls, *args, **kwargs):
-        start = (-125.0, 73)
-        mc, obs = init_mission(None, start_x=start[0], start_z=start[1], seed=4,
-                               forceReset='true')
+        start = (-108.0, -187.0)
+        mc, obs = init_mission(None, start_x=start[0], start_z=start[1], seed='5', forceReset='true')
         cls.mc = mc
         cls.rob = obs
-        mc.safeStart()
-        time.sleep(1)
+        assert mc.safeStart()
+        time.sleep(4)
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):

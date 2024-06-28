@@ -66,7 +66,7 @@ class TestData(BaseTest):
         return self._observation_from_ray(lambda: self.rob.getCachedObserve('getLineOfSights'))
 
     def test_observation_from_chat(self):
-        logger.info("send chat ")
+        logger.info("send chat")
         self.mc.sendCommand("chat get wooden_axe")
         time.sleep(1)
         logger.info("wait chat")

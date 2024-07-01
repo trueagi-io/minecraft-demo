@@ -548,7 +548,7 @@ class AgentHost(ArgumentParser):
                     return
                 assert self.current_mission_record is not None
                 if self.current_mission_record.isRecording():
-                    missionEndedXML = open(self.current_mission_record.getMissionEndedPath(), 'aw')
+                    missionEndedXML = open(self.current_mission_record.getMissionEndedPath(), 'w')
                     missionEndedXML.write(xml.text)
                     missionEndedXML.close()
                 self.close()

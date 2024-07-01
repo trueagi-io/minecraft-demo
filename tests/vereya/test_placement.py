@@ -25,8 +25,8 @@ class TestPlacement(BaseTest):
         mc = self.mc
         rob = self.rob
         time.sleep(1)
+        pos = rob.waitNotNoneObserve('getAgentPos')
         grid = rob.getCachedObserve('getNearGrid')
-        pos = rob.getCachedObserve('getAgentPos')
         x, y, z = [int(_) for _ in pos[:3]]
         mc.sendCommand(f"placeBlock {x} {y + 2} {z} minecraft:dirt replace")
         time.sleep(1)

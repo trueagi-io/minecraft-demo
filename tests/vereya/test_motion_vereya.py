@@ -19,7 +19,7 @@ class TestMotion(BaseTest):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         start = (-151.0, -213.0)
-        mc, obs = init_mission(None, start_x=start[0],start_z=start[1], forceReset='true', seed='43')
+        mc, obs = init_mission(None, start_x=start[0], start_z=start[1], start_y=66, forceReset='true', seed='43')
         cls.mc = mc
         cls.obs = obs
         assert mc.safeStart()
@@ -75,8 +75,8 @@ class TestMotion(BaseTest):
         super().tearDown()
 
     def setUp(self):
-        self.obs.stopMove()
         super().setUp()
+        self.obs.stopMove()
 
     @classmethod
     def tearDownClass(cls, *args, **kwargs):

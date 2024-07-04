@@ -548,9 +548,10 @@ class AgentHost(ArgumentParser):
                     return
                 assert self.current_mission_record is not None
                 if self.current_mission_record.isRecording():
-                    missionEndedXML = open(self.current_mission_record.getMissionEndedPath(), 'w')
-                    missionEndedXML.write(xml.text)
-                    missionEndedXML.close()
+                    if self.current_mission_record.getMissionEndedPath():
+                        missionEndedXML = open(self.current_mission_record.getMissionEndedPath(), 'w')
+                        missionEndedXML.write(xml.text)
+                        missionEndedXML.close()
                 self.close()
             elif root_node_name == "ping":
                 # The mod is pinging us to check we are still around - do nothing.

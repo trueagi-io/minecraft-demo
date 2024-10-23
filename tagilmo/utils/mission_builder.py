@@ -89,16 +89,17 @@ def fileworld(uri2save, forceReset="false"):
 class ServerHandlers:
     
     def __init__(self, worldgenerator_xml=defaultworld(), alldecorators_xml=None,
-                 bQuitAnyAgent=False, timeLimitsMs_string=None):
+                 bQuitAnyAgent=False, timeLimitsMs_string=None, drawingdecorator_xml = None):
         self.worldgenerator = worldgenerator_xml
         self.alldecorators = alldecorators_xml
         self.bQuitAnyAgent = bQuitAnyAgent
         self.timeLimitsMs = timeLimitsMs_string
-
+        self.drawingdecorator = drawingdecorator_xml
+        
     def xml(self):
         _xml = '<ServerHandlers>\n' + self.worldgenerator + '\n'
-        #if self.drawingdecorator:
-        #    _xml += '<DrawingDecorator>\n' + self.drawingdecorator + '\n</DrawingDecorator>\n'
+        if self.drawingdecorator:
+           _xml += '<DrawingDecorator>\n' + self.drawingdecorator + '\n</DrawingDecorator>\n'
         #<BuildBattleDecorator> --
         #<MazeDecorator> --
         if self.alldecorators:

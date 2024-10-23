@@ -1,5 +1,3 @@
-import sys
-sys.path.insert(1, '../minecraft-demo')
 from tagilmo.utils.vereya_wrapper import MCConnector
 import tagilmo.utils.mission_builder as mb
 

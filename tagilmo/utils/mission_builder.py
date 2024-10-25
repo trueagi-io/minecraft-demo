@@ -89,16 +89,17 @@ def fileworld(uri2save, forceReset="false"):
 class ServerHandlers:
     
     def __init__(self, worldgenerator_xml=defaultworld(), alldecorators_xml=None,
-                 bQuitAnyAgent=False, timeLimitsMs_string=None):
+                 bQuitAnyAgent=False, timeLimitsMs_string=None, drawingdecorator = None):
         self.worldgenerator = worldgenerator_xml
         self.alldecorators = alldecorators_xml
         self.bQuitAnyAgent = bQuitAnyAgent
         self.timeLimitsMs = timeLimitsMs_string
-
+        self.drawingdecorator = drawingdecorator
+        
     def xml(self):
         _xml = '<ServerHandlers>\n' + self.worldgenerator + '\n'
-        #if self.drawingdecorator:
-        #    _xml += '<DrawingDecorator>\n' + self.drawingdecorator + '\n</DrawingDecorator>\n'
+        if self.drawingdecorator:
+           _xml += '<DrawingDecorator>\n' + self.drawingdecorator.xml() + '</DrawingDecorator>\n'
         #<BuildBattleDecorator> --
         #<MazeDecorator> --
         if self.alldecorators:
@@ -121,6 +122,141 @@ class ServerSection:
     def xml(self):
         return '<ServerSection>\n'+self.initial_conditions.xml()+self.handlers.xml()+'</ServerSection>\n'
 
+
+class DrawingDecorator:
+    def __init__(self, decorators = []):
+        """
+            Draw all given Draw objects
+
+            Parameters:
+                decorators (List[Union[DrawBlock, DrawCuboid, DrawItem, DrawLine]]) : a list of objects to be drawn.\nEach object can be one of the following types:
+                    - DrawBlock: represents a block.
+                    - DrawCuboid: represents a cuboid.
+                    - DrawItem: represents an item.
+                    - DrawLine: represents a line between two points.
+        """
+        self.decorators = decorators
+
+    def xml(self):
+        _xml = ""
+        for decorator in self.decorators:
+            _xml += decorator.xml()
+        return _xml
+
+
+class DrawBlock:
+    def __init__(self, x, y, z, blockType):
+        """
+            Draw a block in world.
+
+            Parameters:
+                x (int | str): x coordinate.
+                y (int | str): y coordinate.
+                z (int | str): z coordinate.
+                blockType (str): block that will be used.
+        """
+        self.x = x
+        self.y = y
+        self.z = z
+        self.blockType = blockType
+
+    def xml(self):
+        return f'<DrawBlock x="{self.x}" y="{self.y}" z="{self.z}" type="{self.blockType}"/>\n'
+    
+
+class DrawCuboid:
+    def __init__(self, x1, y1, z1, x2, y2, z2, blockType):
+        """
+            Draw a cuboid in world.
+
+            Parameters:
+                x1 (int | str): x coordinate of the first corner.
+                y1 (int | str): y coordinate of the first corner.
+                z1 (int | str): z coordinate of the first corner.
+                x2 (int | str): x coordinate of the second corner.
+                y2 (int | str): y coordinate of the second corner.
+                z2 (int | str): z coordinate of the second corner.
+                blockType (str): block that will be used.
+        """
+        self.x1 = x1
+        self.y1 = y1
+        self.z1 = z1
+        self.x2 = x2
+        self.y2 = y2
+        self.z2 = z2
+        self.blockType = blockType
+
+    def xml(self):
+        return f'<DrawCuboid x1="{self.x1}" y1="{self.y1}" z1="{self.z1}" x2="{self.x2}" y2="{self.y2}" z2="{self.z2}" type="{self.blockType}"/>\n'
+
+
+class DrawLine:
+    def __init__(self, x1, y1, z1, x2, y2, z2, blockType):
+        """
+            Draw a line of blocks in world.
+
+            Parameters:
+                x1 (int | str): x coordinate of the first point.
+                y1 (int | str): y coordinate of the first point.
+                z1 (int | str): z coordinate of the first point.
+                x2 (int | str): x coordinate of the second point.
+                y2 (int | str): y coordinate of the second point.
+                z2 (int | str): z coordinate of the second point.
+                blockType (str): block that will be used.
+        """
+        self.x1 = x1
+        self.y1 = y1
+        self.z1 = z1
+        self.x2 = x2
+        self.y2 = y2
+        self.z2 = z2
+        self.blockType = blockType
+
+    def xml(self):
+        return f'<DrawLine x1="{self.x1}" y1="{self.y1}" z1="{self.z1}" x2="{self.x2}" y2="{self.y2}" z2="{self.z2}" type="{self.blockType}"/>\n'
+
+
+class DrawItem:
+    def __init__(self, x, y, z, itemType):
+        """
+            Draw an item in world.
+
+            Parameters:
+                x (int | str): x coordinate.
+                y (int | str): y coordinate.
+                z (int | str): z coordinate.
+                itemType (str): item that will be used.
+        """
+        self.x = x
+        self.y = y
+        self.z = z
+        self.itemType = itemType
+
+    def xml(self):
+        return f'<DrawItem x="{self.x}" y="{self.y}" z="{self.z}" type="{self.itemType}"/>\n'
+
+
+class DrawSphere:
+    def __init__(self, x, y, z, radius, blockType):
+        """
+            Draw a block in world.
+
+            Parameters:
+                x (int | str): x coordinate.
+                y (int | str): y coordinate.
+                z (int | str): z coordinate.
+                radius (int | str): radius.
+                blockType (str): block that will be used.
+        """
+        self.x = x
+        self.y = y
+        self.z = z
+        self.radius = radius
+        self.blockType = blockType
+
+    def xml(self):
+        return f'<DrawBlock x="{self.x}" y="{self.y}" z="{self.z}" radius="{self.radius}" type="{self.blockType}"/>\n'
+    
 
 class Commands:
 

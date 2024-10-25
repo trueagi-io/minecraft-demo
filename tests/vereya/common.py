@@ -4,12 +4,12 @@ from tagilmo import VereyaPython
 import json
 import time
 import os
+import warnings
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from base_test import BaseTest
 
-
-def init_mission(mc, start_x, start_z, seed, forceReset="false", forceReuse="false", start_y=78):
+def init_mission(mc, start_x, start_z, seed, forceReset="false", forceReuse="false", start_y=78, worldType = "default"):
     want_depth = False
     video_producer = mb.VideoProducer(width=320 * 4,
                                       height=240 * 4, want_depth=want_depth)
@@ -34,10 +34,22 @@ def init_mission(mc, start_x, start_z, seed, forceReset="false", forceReuse="fal
 
     flat_param = "3;7,25*1,3*3,2;1;stronghold,biome_1,village,decoration,dungeon,lake,mineshaft,lava_lake"
     flat_json = json.dumps(flat_json).replace('"', "%ESC")
-    world = mb.defaultworld(
-        seed=seed,
-        forceReset=forceReset,
-        forceReuse=forceReuse)
+    match worldType:
+        case "default":
+            world = mb.defaultworld(
+                seed=seed,
+                forceReset=forceReset,
+                forceReuse=forceReuse)
+        case "flat":
+            world = mb.flatworld("",
+                                seed=seed,
+                                forceReset=forceReset)
+        case _:
+            warnings.warn("World type " + worldType + " is not supported, setting up default world")
+            world = mb.defaultworld(
+                seed=seed,
+                forceReset=forceReset,
+                forceReuse=forceReuse)
     miss.setWorld(world)
     miss.serverSection.initial_conditions.allowedmobs = "Pig Sheep Cow Chicken Ozelot Rabbit Villager"
     # uncomment to disable passage of time:

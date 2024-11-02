@@ -45,11 +45,13 @@ class MissionInitXML:
     minecraft_server: MinecraftServer
     client_agent_connection: ClientAgentConnection
 
-    def __init__(self, xml_text=None):
+    def __init__(self, xml_text=None, client_role=0, minecraft_server=None):
         self.client_agent_connection = ClientAgentConnection()
-        self.minecraft_server = MinecraftServer()
+        if minecraft_server is None:
+            minecraft_server = MinecraftServer()
+        self.minecraft_server = minecraft_server
         self.mission = None
-        self.client_role = 0
+        self.client_role = client_role
         self.schema_version = ''
         self.platform_version = ''
         self.experiment_uid = ''

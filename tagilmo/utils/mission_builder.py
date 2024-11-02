@@ -1,3 +1,5 @@
+from xml.sax.saxutils import quoteattr
+from typing import Optional
 #skipped:
 #<ModSettings>
 #    <MsPerTick>10</MsPerTick>
@@ -21,7 +23,7 @@ class About:
 
 
 class ServerInitialConditions:
-    
+
     def __init__(self, day_always=False, time_start_string=None, time_pass_string=None,
                  weather_string=None, spawning_string="true", allowedmobs_string=None):
         self.day_always = day_always
@@ -62,7 +64,8 @@ class ServerInitialConditions:
 
 
 def flatworld(generatorString, forceReset="false", seed=''):
-    return '<FlatWorldGenerator generatorString="' + generatorString + '" forceReset="' + forceReset + '" seed="' + seed + '"/>'
+    return '<FlatWorldGenerator generatorString=' + quoteattr(generatorString) + ' forceReset=' + quoteattr(forceReset) + ' seed=' + quoteattr(seed) + '/>'
+
 
 def defaultworld(seed=None, forceReset=False, forceReuse=False):
     if isinstance(forceReset, bool):
@@ -87,7 +90,7 @@ def fileworld(uri2save, forceReset="false"):
 
 
 class ServerHandlers:
-    
+
     def __init__(self, worldgenerator_xml=defaultworld(), alldecorators_xml=None,
                  bQuitAnyAgent=False, timeLimitsMs_string=None, drawingdecorator = None):
         self.worldgenerator = worldgenerator_xml
@@ -493,6 +496,15 @@ class AgentSection:
         return False
 
 
+class MinecraftServerConnection:
+    def __init__(self, address:Optional[str]=None, port:int=0):
+        self.address = address
+        self.port = port
+
+    def xml(self):
+        return '<MinecraftServerConnection address="{0}" port="{1}" />'
+
+
 class MissionXML:
 
     def __init__(self, about=About(), serverSection=ServerSection(), agentSections=[AgentSection()], namespace=None):
@@ -500,7 +512,7 @@ class MissionXML:
         self.about = about
         self.serverSection = serverSection
         self.agentSections = agentSections
-    
+
     def hasVideo(self):
         for section in self.agentSections:
             if section.hasVideo():
@@ -515,13 +527,13 @@ class MissionXML:
 
     def setSummary(self, summary_string):
         self.about.summary = summary_string
-    
+
     def setWorld(self, worldgenerator_xml):
         self.serverSection.handlers.worldgenerator = worldgenerator_xml
-    
+
     def setTimeLimit(self, timeLimitMs):
         self.serverSection.handlers.timeLimitMs = str(timeLimitMs)
-        
+
     def addAgent(self, nCount=1, agentSections=None):
         if agentSections:
             self.agentSections += agentSections
@@ -536,7 +548,7 @@ class MissionXML:
                 ag.agenthandlers.observations = observations
         else:
             self.agentSections[nAgent].agenthandlers.observations = observations
-    
+
     def getAgentNames(self):
         return [ag.name for ag in self.agentSections]
 

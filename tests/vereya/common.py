@@ -28,7 +28,7 @@ def init_mission(mc, start_x, start_z, seed, forceReset="false", forceReuse="fal
              agenthandlers=agent_handlers,
                                       #    depth
              agentstart=mb.AgentStart([start_x, start_y, start_z, 1]))],
-             serverSection=mb.ServerSection(handlers=mb.ServerHandlers(drawing_decorator)))
+             serverSection=mb.ServerSection(handlers=mb.ServerHandlers(drawingdecorator=drawing_decorator)))
     flat_json = {"biome":"minecraft:plains",
                  "layers":[{"block":"minecraft:diamond_block","height":1}],
                  "structures":{"structures": {"village":{}}}}

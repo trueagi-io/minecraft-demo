@@ -2,6 +2,7 @@ import unittest
 import logging
 import json
 import time
+from math import floor
 from tagilmo import VereyaPython
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
@@ -20,7 +21,8 @@ class TestCraft(BaseTest):
         cls.block = mb.DrawBlock((start[0] + 2), -60, start[1] + 2, "cobblestone")
         cls.cuboid = mb.DrawCuboid(start[0]-2, -61, start[1]-1, start[0]-2, -58, start[1]-2, "diamond_block")
         cls.line = mb.DrawLine(start[0] - 2, -62, start[1]-2, start[1] + 2, -62, start[1]+ 2, "redstone_block")
-        draw = mb.DrawingDecorator([cls.cuboid, cls.line, cls.block,])
+        cls.item = mb.DrawItem(start[0] + 1, -60, start[1], "diamond")
+        draw = mb.DrawingDecorator([cls.cuboid, cls.line, cls.block, cls.item])
         mc, obs = init_mission(None, start_x=start[0], start_z=start[1], seed='4', forceReset="true", start_y=-60, worldType="flat", drawing_decorator=draw)
         cls.mc = mc
         cls.obs = obs
@@ -93,7 +95,18 @@ class TestCraft(BaseTest):
         needed_blocks = [line.blockType] * (steps + 1)
         self.assertEqual(needed_blocks, real_blocks)
         time.sleep(1)
-        
+
+    def test_draw_item(self):
+        mc = self.mc
+        print('send ochat')
+        real_entity = mc.getNearEntities()[0] #there is only one entity in this test (agent does not count)
+        entity = self.item
+        real_entity_type = real_entity['name']
+        #entities spawn at center of the block surface when summoned via /summon command
+        self.assertEqual([entity.x, entity.y, entity.z], [floor(real_entity['x']), floor(real_entity['y']), floor(real_entity['z'])])
+        self.assertEqual(entity.itemType, real_entity_type)
+        time.sleep(1)
+
 def main():
     VereyaPython.setupLogger()
     unittest.main()

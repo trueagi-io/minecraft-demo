@@ -36,6 +36,7 @@ class Tester(TAgent):
         for act in acts:
             self.rob.sendCommand(act)
 
+
 class TestAgent(BaseTest):
     mc = None
 
@@ -78,6 +79,18 @@ class TestAgent(BaseTest):
         mc.observeProc()
         inv = mc.getInventory()
         self.assertEqual(count_items(inv, item_to_obtain), 1, msg=f"check if {item_to_obtain} was crafted")
+
+
+class TestAgentServer(TestAgent):
+    @classmethod
+    def setUpClass(self, *args, **kwargs):
+        start = (4.0, 69.0, 68)
+        mc, obs = init_mission(None, start_x=start[0], start_y=start[1], start_z=start[2], forceReset='false', forceReuse=True, seed='2', serverIp='127.0.0.1', serverPort=25565)
+        self.mc = mc
+        self.rob = obs
+        assert mc.safeStart()
+        time.sleep(4)
+
 
 def main():
     VereyaPython.setupLogger()

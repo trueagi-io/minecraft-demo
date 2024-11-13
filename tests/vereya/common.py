@@ -31,11 +31,10 @@ def init_mission(mc, start_x, start_z, seed, forceReset="false",
         start = None
     #miss = mb.MissionXML(namespace="ProjectMalmo.microsoft.com",
     miss = mb.MissionXML(
-                         agentSections=[mb.AgentSection(name='Cristina',
-             agenthandlers=agent_handlers,
-                                      #    depth
-             agentstart=mb.AgentStart(start))],
-             serverSection=mb.ServerSection(handlers=mb.ServerHandlers(drawingdecorator=drawing_decorator)))
+                    agentSections=[mb.AgentSection(name='Cristina',
+                        agenthandlers=agent_handlers,
+                        agentstart=mb.AgentStart(start))],
+                    serverSection=mb.ServerSection(handlers=mb.ServerHandlers(drawingdecorator=drawing_decorator)))
     flat_json = {"biome":"minecraft:plains",
                  "layers":[{"block":"minecraft:diamond_block","height":1}],
                  "structures":{"structures": {"village":{}}}}

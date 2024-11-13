@@ -80,6 +80,7 @@ def defaultworld(seed=None, forceReset=False, forceReuse=False):
     world_str += '/>'
     return world_str
 
+
 def fileworld(uri2save, forceReset="false"):
     str = '<FileWorldGenerator '
     str += 'src="' + uri2save + '" '

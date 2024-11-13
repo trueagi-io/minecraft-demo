@@ -76,7 +76,7 @@ def defaultworld(seed=None, forceReset=False, forceReuse=False):
     if forceReset:
         world_str += 'forceReset="' + forceReset + '" '
     if forceReuse:
-        world_str += 'forceReuse="' + forceReuse + '" '
+        world_str += 'forceReuse="' + str(forceReuse).lower() + '" '
     world_str += '/>'
     return world_str
 

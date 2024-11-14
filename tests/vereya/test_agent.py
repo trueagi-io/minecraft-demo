@@ -85,7 +85,7 @@ class TestAgentServer(TestAgent):
     @classmethod
     def setUpClass(self, *args, **kwargs):
         start = (4.0, 69.0, 68)
-        mc, obs = init_mission(None, start_x=None, start_y=None, start_z=None, forceReset='false', forceReuse=True, seed='2', serverIp='127.0.0.1', serverPort=25565)
+        mc, obs = init_mission(None, start_x=-4.5, start_y=110, start_z=-8.5, forceReset='false', forceReuse=True, seed='2', serverIp='127.0.0.1', serverPort=25565)
         self.mc = mc
         self.rob = obs
         assert mc.safeStart()

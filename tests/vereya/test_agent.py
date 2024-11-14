@@ -42,7 +42,7 @@ class TestAgent(BaseTest):
 
     @classmethod
     def setUpClass(self, *args, **kwargs):
-        start = (4.0, 69.0, 68)
+        start = (21.0, 135.0, 21)
         mc, obs = init_mission(None, start_x=start[0], start_y=start[1], start_z=start[2], forceReset='true', seed='2')
         self.mc = mc
         self.rob = obs
@@ -84,8 +84,7 @@ class TestAgent(BaseTest):
 class TestAgentServer(TestAgent):
     @classmethod
     def setUpClass(self, *args, **kwargs):
-        start = (4.0, 69.0, 68)
-        mc, obs = init_mission(None, start_x=-4.5, start_y=110, start_z=-8.5, forceReset='false', forceReuse=True, seed='2', serverIp='127.0.0.1', serverPort=25565)
+        mc, obs = init_mission(None, start_x=-34, start_y=104, start_z=16, forceReset='false', forceReuse=True, seed='2', serverIp='127.0.0.1', serverPort=25565)
         self.mc = mc
         self.rob = obs
         assert mc.safeStart()

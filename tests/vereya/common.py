@@ -9,7 +9,7 @@ import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
 from base_test import BaseTest
 
-def init_mission(mc, start_x, start_z, seed, forceReset="false", forceReuse="false", start_y=78, worldType = "default"):
+def init_mission(mc, start_x, start_z, seed, forceReset="false", forceReuse="false", start_y=78, worldType = "default", drawing_decorator = None):
     want_depth = False
     video_producer = mb.VideoProducer(width=320 * 4,
                                       height=240 * 4, want_depth=want_depth)
@@ -27,7 +27,8 @@ def init_mission(mc, start_x, start_z, seed, forceReset="false", forceReuse="fal
                          agentSections=[mb.AgentSection(name='Cristina',
              agenthandlers=agent_handlers,
                                       #    depth
-             agentstart=mb.AgentStart([start_x, start_y, start_z, 1]))])
+             agentstart=mb.AgentStart([start_x, start_y, start_z, 1]))],
+             serverSection=mb.ServerSection(handlers=mb.ServerHandlers(drawingdecorator=drawing_decorator)))
     flat_json = {"biome":"minecraft:plains",
                  "layers":[{"block":"minecraft:diamond_block","height":1}],
                  "structures":{"structures": {"village":{}}}}

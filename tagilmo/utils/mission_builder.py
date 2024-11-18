@@ -503,9 +503,10 @@ class AgentSection:
 
 class MissionXML:
 
-    def __init__(self, about=About(), serverSection=ServerSection(), agentSections=[AgentSection()], namespace=None):
+    def __init__(self, about=About(), modSettings = ModSettings(), serverSection=ServerSection(), agentSections=[AgentSection()], namespace=None):
         self.namespace = namespace
         self.about = about
+        self.modSettings = modSettings
         self.serverSection = serverSection
         self.agentSections = agentSections
     
@@ -556,6 +557,7 @@ class MissionXML:
 <Mission xmlns="http://{0}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 '''.format(namespace)
         _xml += self.about.xml()
+        _xml += self.modSettings.xml()
         _xml += self.serverSection.xml()
         for agentSection in self.agentSections:
             _xml += agentSection.xml()

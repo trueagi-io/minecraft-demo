@@ -1,9 +1,3 @@
-#skipped:
-#<ModSettings>
-#    <MsPerTick>10</MsPerTick>
-#</ModSettings>
-
-
 class About:
 
     def __init__(self, summary_string=None):
@@ -18,6 +12,20 @@ class About:
         _xml += '\n</About>\n'
         return _xml
 
+
+class ModSettings:
+
+    def __init__(self, ms_per_tick=None):
+        self.ms_per_tick = ms_per_tick
+
+    def xml(self):
+        _xml = '<ModSettings>\n'
+        if self.ms_per_tick:
+            _xml += "<MsPerTick>"+self.ms_per_tick+"</MsPerTick>"
+        else:
+            _xml += "<MsPerTick/>"
+        _xml += '\n<ModSettings>'
+        return _xml
 
 
 class ServerInitialConditions:

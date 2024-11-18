@@ -24,7 +24,7 @@ class ModSettings:
             _xml += "<MsPerTick>"+self.ms_per_tick+"</MsPerTick>"
         else:
             _xml += "<MsPerTick/>"
-        _xml += '\n<ModSettings>'
+        _xml += '\n<ModSettings>\n'
         return _xml
 
 

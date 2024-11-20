@@ -413,7 +413,7 @@ class Block:
     def __init__(self, reward=None, blockType=None, behaviour=None):
         self.reward = reward
         self.blockType = blockType
-        self.behaviuor = behaviour
+        self.behaviour = behaviour
 
     def xml(self):
         _xml = "<Block"

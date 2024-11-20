@@ -430,23 +430,31 @@ class RewardForTouchingBlockType:
         return _xml
 
 
+class RewardForSendingCommand:
+    def __init__(self, reward):
+        self.reward = reward
+        
+    def xml(self):
+        return f'<RewardForSendingCommand reward="{self.reward}"/>\n'
 
 
 class AgentHandlers:
 
     def __init__(self, commands=Commands(), observations=Observations(),
-                 all_str='', video_producer=None, colourmap_producer=None, rewardForTouchingBlockType = None):
+                 all_str='', video_producer=None, colourmap_producer=None, rewardForTouchingBlockType = None, rewardForSendingCommand=None):
         self.commands = commands
         self.observations = observations
         self.all_str = all_str
         self.video_producer = video_producer
         self.colourmap_producer = colourmap_producer
         self.rewardForTouchingBlockType = rewardForTouchingBlockType
+        self.rewardForSendingCommand = rewardForSendingCommand
 
     def xml(self):
         _xml = '<AgentHandlers>\n'
         _xml += self.commands.xml()
         _xml += '' if self.rewardForTouchingBlockType is None else self.rewardForTouchingBlockType.xml()
+        _xml += '' if self.rewardForSendingCommand is None else self.rewardForSendingCommand.xml()
         _xml += self.observations.xml()
         _xml += self.all_str
         _xml += '' if self.video_producer is None else self.video_producer.xml()

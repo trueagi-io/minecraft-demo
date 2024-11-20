@@ -74,3 +74,32 @@ def str2xml(xml: str) -> Element:
         _, _, el.tag = el.tag.rpartition('}') # strip ns
     root = it.root
     return root
+
+
+def remove_namespaces(el):
+    if el.tag.startswith('{'):
+        el.tag = el.tag.split('}', 1)[1]
+    for child in el:
+        remove_namespaces(child)
+
+
+def xml_to_dict(el):
+    result = {}
+    
+    if el.attrib:
+        result.update({k: v for k, v in el.attrib.items()})
+
+    for child in el:
+        child_dict = xml_to_dict(child)
+        if child.tag in result:
+            if isinstance(result[child.tag], list):
+                result[child.tag].append(child_dict)
+            else:
+                result[child.tag] = [result[child.tag], child_dict]
+        else:
+            result[child.tag] = child_dict
+
+    if el.text and el.text.strip():
+        result['text'] = el.text.strip()
+
+    return result

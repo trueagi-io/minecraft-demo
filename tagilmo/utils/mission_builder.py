@@ -410,16 +410,16 @@ class ColourMapProducer:
 
 
 class Block:
-    def __init__(self, reward=None, blockType=None, behavior=None):
+    def __init__(self, reward=None, blockType=None, behaviour=None):
         self.reward = reward
         self.blockType = blockType
-        self.behavior = behavior
+        self.behaviuor = behaviour
 
     def xml(self):
         _xml = "<Block"
         _xml += '' if self.reward is None else f' reward="{self.reward}"'
         _xml += '' if self.blockType is None else f' type="{self.blockType}"'
-        _xml += '' if self.behavior is None else f' behavior="{self.behavior}"'
+        _xml += '' if self.behaviour is None else f' behaviour="{self.behaviour}"'
         _xml += "/>\n"
         return _xml
 

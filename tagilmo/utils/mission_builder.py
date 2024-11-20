@@ -431,7 +431,7 @@ class RewardForTouchingBlockType:
         _xml = "<RewardForTouchingBlockType>\n"
         for rewardBlock in self.rewardBlocks:
             _xml += rewardBlock.xml()
-        _xml += "/RewardForTouchingBlockType>\n"
+        _xml += "</RewardForTouchingBlockType>\n"
         return _xml
 
 

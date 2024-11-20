@@ -445,13 +445,14 @@ class RewardForSendingCommand:
 
 class AgentQuitFromTouchingBlockType:
     def __init__(self, quitBlocks = []):
-        self.quitBlocks = []
+        self.quitBlocks = quitBlocks
         
     def xml(self):
         _xml = "<AgentQuitFromTouchingBlockType>\n"
         for quitBlock in self.quitBlocks:
             _xml += quitBlock.xml()
-        _xml += "</AgentQuitFromTouchinBlockType>\n"
+        _xml += "</AgentQuitFromTouchingBlockType>\n"
+        return _xml
 
 
 class AgentHandlers:

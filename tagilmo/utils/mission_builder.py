@@ -409,14 +409,19 @@ class ColourMapProducer:
                 </ColourMapProducer>'.format(width=self.width, height=self.height)
 
 
-class RewardBlock:
-    def __init__(self, reward, blockType, behavior):
+class Block:
+    def __init__(self, reward=None, blockType=None, behavior=None):
         self.reward = reward
         self.blockType = blockType
         self.behavior = behavior
 
     def xml(self):
-        return f'<Block reward="{self.reward}" type="{self.blockType}" behavior="{self.behavior}"/>\n'
+        _xml = "<Block"
+        _xml += '' if self.reward is None else f' reward="{self.reward}"'
+        _xml += '' if self.blockType is None else f' type="{self.blockType}"'
+        _xml += '' if self.behavior is None else f' behavior="{self.behavior}"'
+        _xml += "/>\n"
+        return _xml
 
 class RewardForTouchingBlockType:
     def __init__(self, rewardBlocks = []):

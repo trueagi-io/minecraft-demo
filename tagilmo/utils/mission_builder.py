@@ -409,20 +409,44 @@ class ColourMapProducer:
                 </ColourMapProducer>'.format(width=self.width, height=self.height)
 
 
+class RewardBlock:
+    def __init__(self, reward, blockType, behavior):
+        self.reward = reward
+        self.blockType = blockType
+        self.behavior = behavior
+
+    def xml(self):
+        return f'<Block reward="{self.reward}" type="{self.blockType}" behavior="{self.behavior}"/>\n'
+
+class RewardForTouchingBlockType:
+    def __init__(self, rewardBlocks = []):
+        self.rewardBlocks = rewardBlocks
+
+    def xml(self):
+        _xml = "<RewardForTouchingBlockType>\n"
+        for rewardBlock in self.rewardBlocks:
+            _xml += rewardBlock.xml()
+        _xml += "/RewardForTouchingBlockType>\n"
+        return _xml
+
+
+
 
 class AgentHandlers:
 
     def __init__(self, commands=Commands(), observations=Observations(),
-                 all_str='', video_producer=None, colourmap_producer=None):
+                 all_str='', video_producer=None, colourmap_producer=None, rewardForTouchingBlockType = None):
         self.commands = commands
         self.observations = observations
         self.all_str = all_str
         self.video_producer = video_producer
         self.colourmap_producer = colourmap_producer
+        self.rewardForTouchingBlockType = rewardForTouchingBlockType
 
     def xml(self):
         _xml = '<AgentHandlers>\n'
         _xml += self.commands.xml()
+        _xml += '' if self.rewardForTouchingBlockType is None else self.rewardForTouchingBlockType.xml()
         _xml += self.observations.xml()
         _xml += self.all_str
         _xml += '' if self.video_producer is None else self.video_producer.xml()

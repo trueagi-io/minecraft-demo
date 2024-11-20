@@ -78,7 +78,7 @@ def str2xml(xml: str) -> Element:
 
 def remove_namespaces(el):
     if el.tag.startswith('{'):
-        el.tag = el.tag.split('}', 1)[1]
+        _, _, el.tag = el.tag.rpartition('}')
     for child in el:
         remove_namespaces(child)
 

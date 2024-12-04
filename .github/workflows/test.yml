@@ -20,9 +20,8 @@ jobs:
       - name: checkout vereya
         uses: actions/checkout@v3
         with:
-          repository: noSkill/Vereya
+          repository: trueagi-io/Vereya
           path: Vereya
-          ref: server
           clean: false
       - name: install vereya
         run: rm /home/tester/.minecraft/mods/* ; ls && cd $GITHUB_WORKSPACE/Vereya/ &&

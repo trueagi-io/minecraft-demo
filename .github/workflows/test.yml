@@ -22,7 +22,6 @@ jobs:
         with:
           repository: trueagi-io/Vereya
           path: Vereya
-          ref: server
           clean: false
       - name: install vereya
         run: rm /home/tester/.minecraft/mods/* ; ls && cd $GITHUB_WORKSPACE/Vereya/ &&

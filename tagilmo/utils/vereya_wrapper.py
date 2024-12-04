@@ -58,33 +58,39 @@ class MCConnector:
         self.mission = module.MissionSpec(missionXML.xml(), True)
         self.mission_record = module.MissionRecordSpec()
 
-    def __init__(self, missionXML, serverIp='127.0.0.1'):
+    def __init__(self, missionXML, clientIp='127.0.0.1', agentId=0, setupAll=False, serverIp=None, serverPort=None):
         self.missionDesc = None
         self.mission = None
         self.mission_record = None
         self.prev_mobs = defaultdict(set) # host -> set mapping
-        self.agentId = 0
+        self.agentId = agentId
+        self.setupAll = setupAll
         self._data_lock = threading.RLock()
-        self.setUp(VP, missionXML, serverIp=serverIp)
-
-    def setUp(self, module, missionXML, serverIp='127.0.0.1'):
         self.serverIp = serverIp
-        self.setMissionXML(missionXML, module)
+        self.serverPort = serverPort
+        self.setUp(VP, missionXML, clientIp=clientIp)
+
+    def setUp(self, module, missionXML, clientIp='127.0.0.1'):
+        self.clientIp = clientIp
+        self.setMissionXML(missionXML, module )
         agentIds = len(missionXML.agentSections)
         self.agent_hosts = dict()
-        self.agent_hosts.update({n: module.AgentHost() for n in range(agentIds)})
-        self.agent_hosts[0].parse( sys.argv )
+        if self.setupAll:
+            self.agent_hosts.update({n: module.AgentHost() for n in range(agentIds)})
+        else:
+            self.agent_hosts[self.agentId] = module.AgentHost()
+        self.agent_hosts[self.agentId].parse( sys.argv )
         if self.receivedArgument('recording_dir'):
-            recordingsDirectory = get_recordings_directory(self.agent_hosts[0])
+            recordingsDirectory = get_recordings_directory(self.agent_hosts[self.agentId])
             self.mission_record.recordRewards()
             self.mission_record.recordObservations()
             self.mission_record.recordCommands()
             self.mission_record.setDestination(recordingsDirectory + "//" + "lastRecording.tgz")
-            if self.agent_hosts[0].receivedArgument("record_video"):
+            if self.agent_hosts[self.agentId].receivedArgument("record_video"):
                 self.mission_record.recordMP4(24, 2000000)
         self.client_pool = module.ClientPool()
         for x in range(10000, 10000 + agentIds):
-            self.client_pool.add( module.ClientInfo(serverIp, x) )
+            self.client_pool.add( module.ClientInfo(clientIp, x) )
         self.worldStates = [None] * agentIds
         self.observe = {k: None for k in range(agentIds)}
         self.isAlive = [True] * agentIds
@@ -93,23 +99,34 @@ class MCConnector:
         self._last_obs = dict() # agent_host -> TimestampedString
         self._all_mobs = set()
 
-
-    def getVersion(self, num=0) -> str:
+    def getVersion(self, num=None) -> str:
+        if num is None:
+            num = self.agentId
         return self.agent_hosts[num].version
 
-    def receivedArgument(self, arg):
-        return self.agent_hosts[0].receivedArgument(arg)
+    def receivedArgument(self, arg, num=None):
+        if num is None:
+            num = self.agentId
+        return self.agent_hosts[num].receivedArgument(arg)
 
     def safeStart(self):
         # starting missions
         expId = str(uuid.uuid4()) # will not work for multithreading, distributed agents, etc. (should be same for all agents to join the same server/mission)
-        for role in range(len(self.agent_hosts)):
+        # chosen with fair dice
+        expId = '4'
+        if self.setupAll:
+            r = self.agent_hosts.keys()
+        else:
+            r = [self.agentId]
+        for role in r:
             used_attempts = 0
             max_attempts = 5
             while True:
                 try:
                     # Attempt start:
-                    self.agent_hosts[role].startMission(self.mission, self.client_pool, self.mission_record, role, expId)
+                    self.agent_hosts[role].startMission(self.mission, self.client_pool,
+                                                        self.mission_record, role, expId,
+                                                        self.serverIp, self.serverPort)
                     #self.agent_hosts[role].startMission(self.mission, self.mission_record)
                     break
                 except (VP.MissionException) as e:
@@ -199,7 +216,9 @@ class MCConnector:
         mc.safeStart()
         return mc
 
-    def is_mission_running(self, agentId=0):
+    def is_mission_running(self, agentId=None):
+        if agentId is None:
+            agentId = self.agentId
         world_state = self.agent_hosts[agentId].getWorldState()
         return world_state.is_mission_running
 
@@ -212,7 +231,9 @@ class MCConnector:
         self.agent_hosts[agentId].sendCommand(command)
 
     def observeProc(self, agentId=None):
-        r = range(len(self.agent_hosts)) if agentId is None else range(agentId, agentId+1)
+        r = self.agent_hosts.keys()
+        if agentId is not None:
+            r = [agentId]
         for n in r:
             self.worldStates[n] = self.agent_hosts[n].getWorldState()
             self.isAlive[n] = self.worldStates[n].is_mission_running
@@ -276,18 +297,26 @@ class MCConnector:
         self.prev_mobs[host] = mobs
         self._all_mobs = set().union(*self.prev_mobs.values())
 
-    def getImageFrame(self, agentId=0):
+    def getImageFrame(self, agentId=None):
+        if agentId is None:
+            agentId = self.agentId
         return self.frames[agentId]
 
-    def getSegmentationFrame(self, agentId=0):
+    def getSegmentationFrame(self, agentId=None):
+        if agentId is None:
+            agentId = self.agentId
         return self.segmentation_frames[agentId]
 
-    def getImage(self, agentId=0):
+    def getImage(self, agentId=None):
+        if agentId is None:
+            agentId = self.agentId
         if self.frames[agentId] is not None:
             return numpy.frombuffer(self.frames[agentId].pixels, dtype=numpy.uint8)
         return None
 
-    def getSegmentation(self, agentId=0):
+    def getSegmentation(self, agentId=None):
+        if agentId is None:
+            agentId = self.agentId
         if self.segmentation_frames[agentId] is not None:
             return numpy.frombuffer(self.segmentation_frames[agentId].pixels, dtype=numpy.uint8)
         return None
@@ -314,7 +343,6 @@ class MCConnector:
                                  'MobsKilled', 'PlayersKilled', 'DamageTaken', 'DamageDealt'
                 keys (new)     : 'input_type', 'isPaused'
         """
-
         return self.getParticularObservation(key, agentId)
 
     def getLineOfSights(self, agentId=None):
@@ -428,7 +456,9 @@ class MCConnector:
     def getHumanInputs(self, agentId=None):
         return self.getParticularObservation('input_events', agentId)
 
-    def placeBlock(self, x: int, y: int, z: int, block_name: str, placement: str, agentId=0):
+    def placeBlock(self, x: int, y: int, z: int, block_name: str, placement: str, agentId=None):
+        if agentId is None:
+            agentId = self.agentId
         self.agent_hosts[agentId].sendCommand("placeBlock {} {} {} {} {}".format(x, y, z, block_name, placement))
 
     def _sendMotionCommand(self, command, value, agentId=None):
@@ -461,7 +491,7 @@ class RobustObserver:
     explicitlyPoseChangingCommands = ['move', 'jump', 'pitch', 'turn']
     implicitlyPoseChangingCommands = ['attack']
 
-    def __init__(self, mc, agentId = 0):
+    def __init__(self, mc, agentId=0):
         self.mc = mc
         self.passableBlocks = []
         self.agentId = agentId

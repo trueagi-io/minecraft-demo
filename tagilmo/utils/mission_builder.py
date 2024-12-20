@@ -24,7 +24,7 @@ class ModSettings:
             _xml += "<MsPerTick>"+self.ms_per_tick+"</MsPerTick>"
         else:
             _xml += "<MsPerTick/>"
-        _xml += '\n<ModSettings>\n'
+        _xml += '\n</ModSettings>\n'
         return _xml
 
 
@@ -608,7 +608,7 @@ class MissionXML:
 <Mission xmlns="http://{0}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 '''.format(namespace)
         _xml += self.about.xml()
-        # _xml += self.modSettings.xml()
+        _xml += self.modSettings.xml()
         _xml += self.serverSection.xml()
         for agentSection in self.agentSections:
             _xml += agentSection.xml()

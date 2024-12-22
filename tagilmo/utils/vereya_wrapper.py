@@ -441,6 +441,16 @@ class MCConnector:
     def strafe(self, value, agentId=None):
         return self._sendMotionCommand('strafe', value, agentId)
 
+    def discreteMove(self, value, agentId=None):
+        """Moves the agent one block along one of the cardinal directions.
+
+        Args:
+            value (string): "west" | "east" | "north" | "south"
+            
+            agentId (int, optional): id of an agent
+        """
+        return self._sendMotionCommand('move'+value, 1, agentId)
+
     def move(self, value, agentId=None):
         return self._sendMotionCommand('move', value, agentId)
 

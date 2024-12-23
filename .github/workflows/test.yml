@@ -1,22 +1,19 @@
-# Automatically build the project and run any configured tests for every push
-# and submitted pull request. This can help catch issues that only occur on
-# certain platforms or Java versions, and provides a first line of defence
-# against bad commits.
-
+---
 name: build and test
-on: [pull_request, push]
+on:
+  - pull_request
+  - push
 defaults:
   run:
     shell: bash -l {0}
-
 jobs:
   build:
     name: build
     runs-on: self-hosted
     strategy:
       matrix:
-        # Use these Java versions
-        java: [ 21, ]  # Current Java LTS & minimum supported by Minecraft
+        java:
+          - 21
     steps:
       - name: lock file
         run: lockfile /tmp/minecraft-test-lock
@@ -27,9 +24,13 @@ jobs:
           path: Vereya
           clean: false
       - name: install vereya
-        run: rm /home/tester/.minecraft/mods/* ; ls && cd $GITHUB_WORKSPACE/Vereya/ && ./gradlew build && cp $GITHUB_WORKSPACE/Vereya/build/libs/* /home/tester/.minecraft/mods/
+        run: rm /home/tester/.minecraft/mods/* ; ls && cd $GITHUB_WORKSPACE/Vereya/ &&
+          ./gradlew build && cp $GITHUB_WORKSPACE/Vereya/build/libs/* /home/tester/.minecraft/mods/ &&
+          mkdir $GITHUB_WORKSPACE/Vereya/server/mods/ ;
+          cp $GITHUB_WORKSPACE/Vereya/build/libs/* $GITHUB_WORKSPACE/Vereya/server/mods/
       - name: install fabric
-        run: rsync -v $GITHUB_WORKSPACE/Vereya/fabric/* /home/tester/.minecraft/mods/
+        run: rsync -v $GITHUB_WORKSPACE/Vereya/fabric/* /home/tester/.minecraft/mods/ &&
+          cp $GITHUB_WORKSPACE/Vereya/fabric/* $GITHUB_WORKSPACE/Vereya/server/mods/
       - name: checkout tagilmo
         uses: actions/checkout@v3
         with:
@@ -42,12 +43,15 @@ jobs:
         env:
           DISPLAY: :99
           GITHUB_WORKSPACE: $GITHUB_WORKSPACE
+      - name: start minecraft server
+        run: cd Vereya/server && ./launch.sh &
+        env:
+          GITHUB_WORKSPACE: $GITHUB_WORKSPACE
       - name: run test
         run: |
           ps a|grep [j]ava &&
           conda activate py31 && cd $GITHUB_WORKSPACE/tests/vereya &&
           python run_tests.py
-
       - name: save java logs
         if: always()
         uses: actions/upload-artifact@v3

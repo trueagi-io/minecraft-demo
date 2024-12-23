@@ -66,7 +66,7 @@ class AgentHost(ArgumentParser):
 
     def startMission(self, mission: MissionSpec, client_pool: List[ClientInfo],
                      mission_record: MissionRecordSpec, role: int,
-                     unique_experiment_id: str):
+                     unique_experiment_id: str, serverIp=None, serverPort=0):
         logger.debug('startMission')
         self.world_state.clear()
         self.testSchemasCompatible()
@@ -86,32 +86,30 @@ class AgentHost(ArgumentParser):
 
         if self.world_state.is_mission_running:
             raise MissionException("A mission is already running.", MissionErrorCode.MISSION_ALREADY_RUNNING)
-        self.initializeOurServers( mission, mission_record, role, unique_experiment_id )
+        self.initializeOurServers( mission, mission_record, role,
+                                  unique_experiment_id,
+                                  serverIp, serverPort)
 
         pool = None
-        if role == 0:
-            logger.info("creating mission")
-            # We are the agent responsible for the integrated server.
-            # If we are part of a multi-agent mission, our mission should have been started before any of the others are attempted.
-            # This means we are in a position to reserve clients in the client pool:
-            reservedAgents = asyncio.run_coroutine_threadsafe(self.reserveClients(client_pool,
-                                                                                  mission.getNumberOfAgents()),
-                                                              self.io_service).result()
 
-            if len(reservedAgents) != mission.getNumberOfAgents():
-                # Not enough clients available - go no further.
-                logger.error("Failed to reserve sufficient clients - throwing MissionException.")
-                if (mission.getNumberOfAgents() == 1):
-                    raise MissionException("Failed to find an available client for self.mission - tried all the clients in the supplied client pool.", MissionErrorCode.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE)
-                else:
-                    raise MissionException("There are not enough clients available in the ClientPool to start self." + str(mission.getNumberOfAgents()) + " agent mission.", MissionErrorCode.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE)
-            pool = reservedAgents
-        else:
-            logger.info(f"our role {role}, joining existing mission")
+        logger.info("creating mission")
+        # assume each agent is run by it's own AgentHost
+        reservedAgents = asyncio.run_coroutine_threadsafe(self.reserveClients(client_pool,
+                                                                                1),
+                                                            self.io_service).result()
+
+        if len(reservedAgents) != 1:
+            # Not enough clients available - go no further.
+            logger.error("Failed to reserve sufficient clients - throwing MissionException.")
+            if (mission.getNumberOfAgents() == 1):
+                raise MissionException("Failed to find an available client for self.mission - tried all the clients in the supplied client pool.", MissionErrorCode.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE)
+            else:
+                raise MissionException("There are not enough clients available in the ClientPool to start self." + str(mission.getNumberOfAgents()) + " agent mission.", MissionErrorCode.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE)
+        pool = reservedAgents
         assert self.current_mission_init is not None
-        if( mission.getNumberOfAgents() > 1 and role > 0 \
-            and not self.current_mission_init.hasMinecraftServerInformation()):
-            raise NotImplementedError("role > 0 is not implemented yet")
+        #if( mission.getNumberOfAgents() > 1 and role > 0 \
+        #    and not self.current_mission_init.hasMinecraftServerInformation()):
+        #    raise NotImplementedError("role > 0 is not implemented yet")
 
         # work through the client pool until we find a client to run our mission for us
         assert pool
@@ -147,6 +145,7 @@ class AgentHost(ArgumentParser):
             logger.info("Reserving client, received reply from " + str(item.ip_address) + ": " + reply)
             malmo_reservation_prefix = "MALMOOK"
             malmo_mismatch = "MALMOERRORVERSIONMISMATCH"
+            malmo_busy = "MALMOBUSY"
             if reply.startswith(malmo_reservation_prefix):
                 # Successfully reserved self.client.
                 reservedClients.add(item)
@@ -223,7 +222,6 @@ class AgentHost(ArgumentParser):
                                 tried all the clients in the \
                                 supplied client pool.", MissionErrorCode.MISSION_INSUFFICIENT_CLIENTS_AVAILABLE )
 
-
     def peekWorldState(self) -> WorldState:
         with self.world_state_mutex:
             # Copy while holding lock.
@@ -243,10 +241,11 @@ class AgentHost(ArgumentParser):
 
     def initializeOurServers(self, mission: MissionSpec,
                              mission_record: MissionRecordSpec, role: int,
-                             unique_experiment_id: str) -> None:
+                             unique_experiment_id: str, serverIp: Optional[str], serverPort:int) -> None:
         logging.debug("Initialising servers...")
         # make a MissionInit structure with default settings
-        self.current_mission_init = MissionInitSpec.from_param(mission, unique_experiment_id, role)
+        self.current_mission_init = MissionInitSpec.from_param(mission, unique_experiment_id, role,
+                                                               serverIp, serverPort)
         self.current_mission_record = MissionRecord(mission_record)
         self.current_role = role
         self.listenForMissionControlMessages(self.current_mission_init.getAgentMissionControlPort())

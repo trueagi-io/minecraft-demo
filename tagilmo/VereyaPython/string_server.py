@@ -24,7 +24,7 @@ class StringServer:
         self.handle_string = handle_string
         self.log_name = log_name
         self.server = TCPServer(self.io_service, self.port, self.__cb, self.log_name)
-        self.writer = None
+        self.writer: TimestampedStringWriter = None
 
     def start(self) -> None:
         fut = asyncio.run_coroutine_threadsafe(self.server.startAccept(), self.io_service)

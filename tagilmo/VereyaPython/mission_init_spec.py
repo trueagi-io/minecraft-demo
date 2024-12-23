@@ -7,10 +7,12 @@ from .version import *
 
 @dataclass(slots=True, frozen=True)
 class MissionInitSpec:
-    mission_init: MissionInitXML = field(default_factory=MissionInitXML)
-    
+    mission_init: MissionInitXML = field(
+        default_factory=lambda: MissionInitXML()
+    )
+
     @staticmethod
-    def from_param(mission_spec: MissionSpec, unique_experiment_id: str, role: int) -> 'MissionInitSpec':
+    def from_param(mission_spec: MissionSpec, unique_experiment_id: str, role: int, server_ip: str=None, server_port: int=0) -> 'MissionInitSpec':
         self = MissionInitSpec()
         # construct a default MissionInit using the provided MissionSpec
         self.mission_init.client_agent_connection.client_ip_address = "127.0.0.1"
@@ -29,6 +31,8 @@ class MissionInitSpec:
         self.mission_init.experiment_uid = unique_experiment_id
         self.mission_init.mission = mission_spec.mission
         self.mission_init.platform_version = MALMO_VERSION
+        self.mission_init.minecraft_server.connection_address = server_ip
+        self.mission_init.minecraft_server.connection_port = server_port
         return self
 
     @staticmethod

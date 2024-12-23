@@ -22,6 +22,7 @@ class MissionSpec:
                     elif what == 'w':
                         tmp = vid.find('./{*}Width')
                         assert tmp is not None
+                        assert tmp.text is not None
                         return int(tmp.text)
                     elif what == 'h':
                         tmp = vid.find('./{*}Height')

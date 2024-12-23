@@ -68,6 +68,47 @@ class TestMotion(BaseTest):
         pos2 = obs.getCachedObserve('getAgentPos')
         self.assertNotEqual(pos2[PY], pos1[PY])
         self.assertEqual(pos2[XYZ], pos0[XYZ])
+        
+    def test_discrete_motion(self):
+        obs = self.obs
+        mc = self.mc
+        pos0 = obs.getCachedObserve('getAgentPos')
+        logger.info('position ' + str(pos0))
+        print('sending command movenorth 1')
+        mc.discreteMove("north")
+        time.sleep(1)
+
+        pos_move = obs.getCachedObserve('getAgentPos')
+        logger.info('position ' + str(pos_move))
+        #check if the z-coordinate has changed (-1)
+        self.assertEqual(pos0[2] - 1, pos_move[2], 'movenorth 1 sent but position is the same')
+        pos0 = pos_move
+        print('sending command movesouth 1')
+        mc.discreteMove("south")
+        time.sleep(1)
+
+        pos_move = obs.getCachedObserve('getAgentPos')
+        logger.info('position ' + str(pos_move))
+        #check if the z-coordinate has changed (+1)
+        self.assertEqual(pos0[2] + 1, pos_move[2], 'movesouth 1 sent but position is the same')
+        pos0 = pos_move
+        print('sending command movewest 1')
+        mc.discreteMove("west")
+        time.sleep(1)
+
+        pos_move = obs.getCachedObserve('getAgentPos')
+        logger.info('position ' + str(pos_move))
+        #check if the x-coordinate has changed (-1)
+        self.assertEqual(pos0[0] - 1, pos_move[0], 'movewest 1 sent but position is the same')
+        pos0 = pos_move
+        print('sending command moveeast 1')
+        mc.discreteMove("east")
+        time.sleep(1)
+        
+        pos_move = obs.getCachedObserve('getAgentPos')
+        logger.info('position ' + str(pos_move))
+        #check if the z-coordinate has changed (+1)
+        self.assertEqual(pos0[0] + 1, pos_move[0], 'moveeast 1 sent but position is the same')
 
 
     def teadDown(self):

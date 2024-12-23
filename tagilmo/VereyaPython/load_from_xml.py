@@ -2,163 +2,215 @@ import xml.etree.ElementTree as ET
 import tagilmo.utils.mission_builder as mb
 from .xml_util import xml_to_dict, remove_namespaces
 
-def _createAbout(aboutDict):
-    return mb.About(summary_string=aboutDict['Summary']['text'])
+def _createAbout(aboutRoot = None):
+    about = mb.About()
+    if aboutRoot is None or len(list(aboutRoot)) == 0:
+        return about
+    summary = aboutRoot.find("Summary")
+    if summary is not None:
+        about.summary = summary.text
+    return about
 
 
-def _createModSettings(msDict):
-    return mb.ModSettings(ms_per_tick=msDict['MsPerTick']['text'])
+def _createModSettings(msRoot = None):
+    ms = mb.ModSettings()
+    if msRoot is None or len(list(msRoot)) == 0:
+        return ms
+    
+    msTick = msRoot.find("MsPerTick")
+    if msTick is not None:
+        ms.ms_per_tick = msTick.text
+    return ms
 
 
-def _createServerInitialConditions(initConditionsDict):
-    initial_conditions = mb.ServerInitialConditions(time_start_string=initConditionsDict['Time']['StartTime']['text'],
-                                                    time_pass_string=initConditionsDict['Time']['AllowPassageOfTime']['text'],
-                                                    weather_string=initConditionsDict['Weather']['text'],
-                                                    spawning_string=initConditionsDict['AllowSpawning']['text'])
+def _createTime(timeRoot = None):
+    if timeRoot is None or len(list(timeRoot)) == 0:
+        return None, None
+    
+    time_start = None
+    if timeRoot.find("StartTime") is not None:
+        time_start = timeRoot.find("StartTime").text
+
+    time_pass = None
+    if timeRoot.find("AllowPassageOfTime") is not None:
+        time_pass = timeRoot.find("AllowPassageOfTime").text
+        
+    return time_start, time_pass
+    
+    
+def _createServerInitialConditions(initConditionsRoot = None):
+    if initConditionsRoot is None or len(list(initConditionsRoot)) == 0:
+        return mb.ServerInitialConditions()
+    
+    time_start, time_pass = _createTime(initConditionsRoot.find("Time"))
+    
+    weather = None
+    if initConditionsRoot.find("Weather") is not None:
+        weather = initConditionsRoot.find("Weather").text
+        
+    allow_spawning = "true"
+    if initConditionsRoot.find("AllowSpawning") is not None:
+        allow_spawning = initConditionsRoot.find("AllowSpawning").text
+    
+    initial_conditions = mb.ServerInitialConditions(time_start_string=time_start,
+                                                    time_pass_string=time_pass,
+                                                    weather_string=weather,
+                                                    spawning_string=allow_spawning)
     return initial_conditions
 
-
-def _createServerHandlers(handlersDict):
-    serverHandlers = mb.ServerHandlers()
-    
-    if 'FlatWorldGenerator' in handlersDict:
-        world_generator = mb.flatworld(handlersDict['FlatWorldGenerator']['generatorString'])
-    serverHandlers.worldgenerator = world_generator
+def _createDrawingDecorator(drawingDecoratorRoot = None):
+    if drawingDecoratorRoot is None or len(list(drawingDecoratorRoot)) == 0:
+        return mb.DrawingDecorator()
     decorators = []
-    drawing_elements = handlersDict['DrawingDecorator']
-    for drawing_element in drawing_elements:
-        els = drawing_elements[drawing_element]
-        if isinstance(els, dict):
-            els = [els]
-        for el in els:
-            match drawing_element:
-                case 'DrawCuboid':
-                    decorators.append(mb.DrawCuboid(x1=el['x1'], y1=el['y1'], z1=el['z1'],
-                                                        x2=el['x2'], y2=el['y2'], z2=el['z2'],
-                                                        blockType=el['type']))
-                    
-                case 'DrawBlock':
-                    decorators.append(mb.DrawBlock(x=el['x'], y=el['y'], z=el['z'],
-                                                        blockType=el['type']))
-                    
-                case 'DrawLine':
-                    decorators.append(mb.DrawLine(x1=el['x1'], y1=el['y1'], z1=el['z1'],
-                                                        x2=el['x2'], y2=el['y2'], z2=el['z2'],
-                                                        blockType=el['type']))
-
-                case 'DrawItem':
-                    decorators.append(mb.DrawItem(x=el['x'], y=el['y'], z=el['z'], itemType=el['type']))    
+    drawing_elements = list(drawingDecoratorRoot)
+    for el in drawing_elements:
+        match el.tag:
+            case "DrawCuboid":
+                decorators.append(mb.DrawCuboid(el.attrib["x1"], el.attrib["y1"], el.attrib["z1"], 
+                                                el.attrib["x2"], el.attrib["y2"], el.attrib["z2"],
+                                                el.attrib["type"]))
+            case "DrawBlock":
+                decorators.append(mb.DrawBlock(el.attrib["x"], el.attrib["y"], el.attrib["z"],
+                                               el.attrib["type"]))
+            case "DrawLine":
+                decorators.append(mb.DrawLine(el.attrib["x1"], el.attrib["y1"], el.attrib["z1"], 
+                                                el.attrib["x2"], el.attrib["y2"], el.attrib["z2"],
+                                                el.attrib["type"]))
+            case "DrawItem":
+                decorators.append(mb.DrawItem(el.attrib["x"], el.attrib["y"], el.attrib["z"],
+                                               el.attrib["type"]))
+            case _:
+                continue
+    return mb.DrawingDecorator(decorators)
                 
-    serverHandlers.drawingdecorator = mb.DrawingDecorator(decorators)
-    if 'ServerQuitFromTimeUp' in handlersDict:
-        serverHandlers.timeLimitsMs = handlersDict['ServerQuitFromTimeUp']['timeLimitMs']
+
+def _createServerHandlers(handlersRoot = None):
+    serverHandlers = mb.ServerHandlers()
+    if handlersRoot is None or len(list(handlersRoot)) == 0:
+        return serverHandlers
+    
+    world_generator = mb.defaultworld()
+    flat_gen = handlersRoot.find("FlatWorldGenerator")
+    if flat_gen is not None:
+        world_generator = mb.flatworld(flat_gen.attrib["generatorString"])
+    serverHandlers.worldgenerator = world_generator
+    
+    serverHandlers.drawingdecorator = _createDrawingDecorator(handlersRoot.find("DrawingDecorator"))
+    
+    time_limit = None
+    if handlersRoot.find("ServerQuitFromTimep") is not None:
+        time_limit = handlersRoot.find("ServerQuitFromTimep").attrib["timeLimitMs"]
+    serverHandlers.timeLimitsMs = time_limit
         
     return serverHandlers
 
 
-def _createServerSection(serverSectionDict):
-    init_conditions = _createServerInitialConditions(serverSectionDict['ServerInitialConditions'])
-    handlers = _createServerHandlers(serverSectionDict['ServerHandlers'])
+def _createServerSection(serverSectionRoot = None):
+    init_conditions = _createServerInitialConditions(serverSectionRoot.find("ServerInitialConditions"))
+    handlers = _createServerHandlers(serverSectionRoot.find('ServerHandlers'))
     return mb.ServerSection(handlers=handlers, initial_conditions=init_conditions)
 
 
-def _createCommands(commandsDict = None):
-    if not commandsDict:
+def _createCommands(commandsRoot= None):
+    if commandsRoot is None:
         return mb.Commands()
+    # TODO: parsing non-empty root
+    return mb.Commands()
     
 
-def _createRewardForTouchingBlockType(rewardForTouchingBlockTypeDict):
+def _createRewardForTouchingBlockType(rewardForTouchingBlockTypeRoot = None):
+    if rewardForTouchingBlockTypeRoot is None or len(list(rewardForTouchingBlockTypeRoot)) == 0:
+        return mb.RewardForTouchingBlockType()
     rewards = []
-    for block_element in rewardForTouchingBlockTypeDict:
-        rwrds = rewardForTouchingBlockTypeDict[block_element]
-        if isinstance(rwrds, dict):
-            rwrds = [rwrds]
-        for rwrd in rwrds:
-            rewards.append(mb.Block(reward=rwrd['reward'], blockType=rwrd['type'], behaviour=rwrd['behaviour']))
+    reward_blocks = rewardForTouchingBlockTypeRoot.findall("Block")
+    for block in reward_blocks:
+            rewards.append(mb.Block(reward=block.attrib['reward'], 
+                                    blockType=block.attrib['type'], 
+                                    behaviour=block.attrib['behaviour']))
     return mb.RewardForTouchingBlockType(rewards)
 
 
-def _createAgentQuitFromTouchingBlockType(agentQuitFromTouchingBlockType):
+def _createAgentQuitFromTouchingBlockType(agentQuitFromTouchingBlockType = None):
+    if agentQuitFromTouchingBlockType is None or len(list(agentQuitFromTouchingBlockType)) == 0:
+        return mb.AgentQuitFromTouchingBlockType()
     quit_blocks = []
-    for block_element in agentQuitFromTouchingBlockType:
-        qt_blcks = agentQuitFromTouchingBlockType[block_element]
-        if isinstance(qt_blcks, dict):
-            qt_blcks = [qt_blcks]
-        for blk in qt_blcks:
-            quit_blocks.append(mb.Block(blockType=blk['type']))
+    blocks = agentQuitFromTouchingBlockType.findall("Block")
+    for block in blocks:
+        quit_blocks.append(mb.Block(blockType=block.attrib['type']))
     return mb.AgentQuitFromTouchingBlockType(quit_blocks)
 
 
-def _createAgentHandlers(agentHandlersDict = None):
-    if not agentHandlersDict:
+def _createAgentHandlers(agentHandlersRoot = None):
+    if agentHandlersRoot is None:
         return mb.AgentHandlers()
-    
-    obs = mb.Observations(bFullStats=('ObservationFromFullStats' in agentHandlersDict))
+    obsFullStats = None
+    if agentHandlersRoot.find("ObservationFromFullStats") is not None:
+        obsFullStats = True
+    obs = mb.Observations(bFullStats=obsFullStats)
     video_producer = mb.VideoProducer()
-    if 'VideoProducer' in agentHandlersDict:
-        producer = agentHandlersDict['VideoProducer']
-        video_producer = mb.VideoProducer(height=producer['Height']['text'], width=producer['Width']['text'], want_depth=producer['want_depth'])
-    else:
-        video_producer = mb.VideoProducer()
+    if agentHandlersRoot.find("VideoProducer") is not None:
+        producer = agentHandlersRoot.find("VideoProducer")
+        video_producer = mb.VideoProducer(height=int(producer.find("Height").text), 
+                                          width=int(producer.find("Width").text), 
+                                          want_depth=producer.attrib["want_depth"] == "true")
     commands = _createCommands()
     
     rewards_for_touching = None
-    if 'RewardForTouchingBlockType' in agentHandlersDict:
-        rewards_for_touching = _createRewardForTouchingBlockType(agentHandlersDict['RewardForTouchingBlockType'])
+    if agentHandlersRoot.find("RewardForTouchingBlockType") is not None:
+        rewards_for_touching = _createRewardForTouchingBlockType(agentHandlersRoot.find("RewardForTouchingBlockType"))
         
     reward_for_sending_command = None
-    if 'RewardForSendingCommand' in agentHandlersDict:
-        reward_for_command = agentHandlersDict['RewardForSendingCommand']
-        reward_for_sending_command = mb.RewardForSendingCommand(reward=reward_for_command['reward'])
+    if agentHandlersRoot.find("RewardForSendingCommand") is not None:
+        reward = agentHandlersRoot.find("RewardForSendingCommand").attrib['reward']
+        reward_for_sending_command = mb.RewardForSendingCommand(reward=reward)
         
     agent_quit = None
-    if 'AgentQuitFromTouchingBlockType' in agentHandlersDict:
-        agent_quit = _createAgentQuitFromTouchingBlockType(agentHandlersDict['AgentQuitFromTouchingBlockType'])
+    if agentHandlersRoot.find('AgentQuitFromTouchingBlockType') is not None:
+        agent_quit = _createAgentQuitFromTouchingBlockType(agentHandlersRoot.find('AgentQuitFromTouchingBlockType'))
         
-    return mb.AgentHandlers(commands=commands, observations=obs, video_producer=video_producer, rewardForTouchingBlockType=rewards_for_touching,
+    return mb.AgentHandlers(commands=commands, observations=obs, video_producer=video_producer, 
+                            rewardForTouchingBlockType=rewards_for_touching,
                             rewardForSendingCommand=reward_for_sending_command, agentQuitFromTouchingBlockType=agent_quit)
     
 
-def _createAgentSection(agentSectionDict = None):
-    if not agentSectionDict:
+def _createAgentSection(agentSectionRoot = None):
+    
+    if agentSectionRoot is None or len(agentSectionRoot) == 0:
         return [mb.AgentSection()]
     
     sections = []
-    if isinstance(agentSectionDict, dict):
-        agents = [agentSectionDict]
-    else:
-        agents = agentSectionDict
-    for agent in agents:
+    for agent in agentSectionRoot:
         agent_section = mb.AgentSection()
-        if 'mode' in agent:
-            agent_section.mode = agent['mode']
+        if agent.find("mode") is not None:
+            agent_section.mode = agent.attrib["mode"]
             
-        if 'Name' in agent:
-            agent_section.name = agent['Name']['text']
+        if agent.find("Name") is not None:
+            agent_section.name = agent.find("Name").text
             
-        if 'AgentStart' in agent:
-            xyzp = [float(v) for _,v in agent['AgentStart']['Placement'].items()][:4] #yaw is not in constructor
+        if agent.find("AgentStart") is not None:
+            xyzp = None
+            if agent.find("AgentStart").find("Placement") is not None:
+                placement = agent.find("AgentStart").find("Placement")
+                xyzp = [float(v) for _,v in placement.items()][:4] #yaw is not in constructor
             agent_start = mb.AgentStart(place_xyzp=xyzp)
             agent_section.agentstart = agent_start
             
-        if 'AgentHandlers' in agent:
-            agent_section.agenthandlers = _createAgentHandlers(agent['AgentHandlers'])
+        agent_section.agenthandlers = _createAgentHandlers(agent.find("AgentHandlers"))
             
         sections.append(agent_section)
         
     return sections
 
 
-def _createMissionXML(missionDict):
+def _createMissionXML(missionRoot):
     mission = mb.MissionXML()
-    if 'About' in missionDict:
-        mission.about = _createAbout(missionDict['About'])
-    if 'ModSettings' in missionDict:
-        mission.modSettings = _createModSettings(missionDict['ModSettings'])
-    if 'ServerSection' in missionDict:
-        mission.serverSection = _createServerSection(missionDict['ServerSection'])
-    if 'AgentSection' in missionDict:
-        mission.agentSections = _createAgentSection(missionDict['AgentSection'])
+    if missionRoot is None or len(list(missionRoot)) == 0:
+        return mission
+    
+    mission.about = _createAbout(missionRoot.find("About"))
+    mission.modSettings = _createModSettings(missionRoot.find("ModSettings"))
+    mission.serverSection = _createServerSection(missionRoot.find("ServerSection"))
+    mission.agentSections = _createAgentSection(missionRoot.findall("AgentSection"))
         
     return mission
 
@@ -167,6 +219,5 @@ def load_mission(path):
     tree = ET.parse(path)
     root = tree.getroot()
     remove_namespaces(root)
-    parsed_dict = xml_to_dict(root)
-    miss = _createMissionXML(parsed_dict)
+    miss = _createMissionXML(root)
     return miss

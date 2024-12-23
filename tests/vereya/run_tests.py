@@ -29,7 +29,9 @@ def main():
     test_files = ['test_motion_vereya', 'test_craft', 
                   'test_inventory', 'test_quit', 
                   'test_observation', 'test_placement', 'test_image',
-                  'test_consistency', 'test_motion_mob', 'test_mob', 'test_agent', 'test_flat_world', 'test_draw']
+                  'test_consistency', 'test_motion_mob', 'test_mob', 
+                  'test_agent', 'test_flat_world', 'test_draw',
+                  'test_discrete_motion']
     res = run_tests(test_files)
     if not res.wasSuccessful():
         sys.exit(1)

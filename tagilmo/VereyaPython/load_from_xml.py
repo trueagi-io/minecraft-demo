@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 import tagilmo.utils.mission_builder as mb
-from .xml_util import xml_to_dict, remove_namespaces
+from .xml_util import remove_namespaces
 
 def _createAbout(aboutRoot = None):
     about = mb.About()

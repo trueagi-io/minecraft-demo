@@ -74,3 +74,10 @@ def str2xml(xml: str) -> Element:
         _, _, el.tag = el.tag.rpartition('}') # strip ns
     root = it.root
     return root
+
+
+def remove_namespaces(el):
+    if el.tag.startswith('{'):
+        _, _, el.tag = el.tag.rpartition('}')
+    for child in el:
+        remove_namespaces(child)

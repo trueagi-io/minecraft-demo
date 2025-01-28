@@ -631,7 +631,8 @@ class AgentHandlers:
         
         rewards_for_touching = None
         if agentHandlersRoot.find("RewardForTouchingBlockType") is not None:
-            rewards_for_touching = RewardForTouchingBlockType().from_xml(agentHandlersRoot.find("RewardForTouchingBlockType"))
+            rewards_for_touching = RewardForTouchingBlockType()
+            rewards_for_touching.from_xml(agentHandlersRoot.find("RewardForTouchingBlockType"))
             self.rewardForTouchingBlockType = rewards_for_touching
             
         reward_for_sending_command = None
@@ -642,7 +643,8 @@ class AgentHandlers:
             
         agent_quit = None
         if agentHandlersRoot.find('AgentQuitFromTouchingBlockType') is not None:
-            agent_quit = AgentQuitFromTouchingBlockType().from_xml(agentHandlersRoot.find('AgentQuitFromTouchingBlockType'))
+            agent_quit = AgentQuitFromTouchingBlockType()
+            agent_quit.from_xml(agentHandlersRoot.find('AgentQuitFromTouchingBlockType'))
             self.agentQuitFromTouchingBlockType = agent_quit
 
     def hasVideo(self):

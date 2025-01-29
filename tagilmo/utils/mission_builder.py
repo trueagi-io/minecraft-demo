@@ -303,6 +303,18 @@ class DrawingDecorator:
                                                 el.attrib["type"]))
                 case _:
                     continue
+                
+    def drawBlock(self, x, y, z, blockType):
+        block = DrawBlock(x, y, z, blockType)
+        self.decorators.append(block)
+        
+    def drawItem(self, x, y, z, itemType):
+        it = DrawItem(x, y, z, itemType)
+        self.decorators.append(it)
+        
+    def drawLine(self, x1, y1, z1, x2, y2, z2, blockType):
+        line = DrawLine(x1, y1, z1, x2, y2, z2, blockType)
+        self.decorators.append(line)
 
 
 class ServerHandlers:
@@ -828,3 +840,12 @@ class MissionXML:
         self.modSettings.from_xml(missionRoot.find("ModSettings"))
         self.serverSection.from_xml(missionRoot.find("ServerSection"))
         self.agentSections = AgentSection().from_xml(missionRoot.findall("AgentSection"))
+        
+    def drawBlock(self, x, y, z, blockType):
+        self.serverSection.handlers.drawingdecorator.drawBlock(x, y, z, blockType)
+        
+    def drawItem(self, x, y, z, itemType):
+        self.serverSection.handlers.drawingdecorator.drawItem(x, y, z, itemType)
+        
+    def drawLine(self, x1, y1, z1, x2, y2, z2, blockType):
+        self.serverSection.handlers.drawingdecorator.drawLine(x1, y1, z1, x2, y2, z2, blockType)

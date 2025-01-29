@@ -262,7 +262,7 @@ class DrawSphere:
     def xml(self):
         return f'<DrawBlock x="{self.x}" y="{self.y}" z="{self.z}" radius="{self.radius}" type="{self.blockType}"/>\n'
 class DrawingDecorator:
-    def __init__(self, decorators = []):
+    def __init__(self, decorators = None):
         """
             Draw all given Draw objects
 
@@ -273,12 +273,16 @@ class DrawingDecorator:
                     - DrawItem: represents an item.
                     - DrawLine: represents a line between two points.
         """
-        self.decorators = decorators
+        if decorators is None:
+            self.decorators = []
+        else:
+            self.decorators = decorators
+            
 
     def xml(self):
         _xml = ""
-        for decorator in self.decorators:
-            _xml += decorator.xml()
+        for elem in self.decorators:
+            _xml += elem.xml()
         return _xml
     
     def from_xml(self, drawingDecoratorRoot = None):
@@ -288,19 +292,19 @@ class DrawingDecorator:
         for el in drawing_elements:
             match el.tag:
                 case "DrawCuboid":
-                    self.decorators.append(DrawCuboid(el.attrib["x1"], el.attrib["y1"], el.attrib["z1"], 
+                    self.addDrawCuboid(el.attrib["x1"], el.attrib["y1"], el.attrib["z1"], 
                                                     el.attrib["x2"], el.attrib["y2"], el.attrib["z2"],
-                                                    el.attrib["type"]))
+                                                    el.attrib["type"])
                 case "DrawBlock":
-                    self.decorators.append(DrawBlock(el.attrib["x"], el.attrib["y"], el.attrib["z"],
-                                                el.attrib["type"]))
+                    self.addDrawBlock(el.attrib["x"], el.attrib["y"], el.attrib["z"],
+                                                el.attrib["type"])
                 case "DrawLine":
-                    self.decorators.append(DrawLine(el.attrib["x1"], el.attrib["y1"], el.attrib["z1"], 
+                    self.addDrawLine(el.attrib["x1"], el.attrib["y1"], el.attrib["z1"], 
                                                     el.attrib["x2"], el.attrib["y2"], el.attrib["z2"],
-                                                    el.attrib["type"]))
+                                                    el.attrib["type"])
                 case "DrawItem":
-                    self.decorators.append(DrawItem(el.attrib["x"], el.attrib["y"], el.attrib["z"],
-                                                el.attrib["type"]))
+                    self.addDrawItem(el.attrib["x"], el.attrib["y"], el.attrib["z"],
+                                                el.attrib["type"])
                 case _:
                     continue
                 
@@ -316,6 +320,9 @@ class DrawingDecorator:
         line = DrawLine(x1, y1, z1, x2, y2, z2, blockType)
         self.decorators.append(line)
 
+    def addDrawCuboid(self, x1, y1, z1, x2, y2, z2, blockType):
+        line = DrawCuboid(x1, y1, z1, x2, y2, z2, blockType)
+        self.decorators.append(line)
 
 class ServerHandlers:
 
@@ -571,8 +578,11 @@ class RewardForSendingCommand:
 
 
 class AgentQuitFromTouchingBlockType:
-    def __init__(self, quitBlocks = []):
-        self.quitBlocks = quitBlocks
+    def __init__(self, quitBlocks = None):
+        if quitBlocks is None:
+            self.quitBlocks = []
+        else:
+            self.quitBlocks = quitBlocks
         
     def xml(self):
         if len(self.quitBlocks) == 0:

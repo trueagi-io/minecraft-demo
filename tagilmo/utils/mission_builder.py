@@ -589,6 +589,11 @@ class AgentQuitFromTouchingBlockType:
         blocks = agentQuitFromTouchingBlockType.findall("Block")
         for block in blocks:
             self.quitBlocks.append(Block(blockType=block.attrib['type']))
+            
+    def addQuitBlock(self, blockType):
+        block = Block(blockType=blockType)
+        self.quitBlocks.append(block)
+        
 
 
 class AgentHandlers:

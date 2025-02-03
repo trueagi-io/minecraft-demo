@@ -56,18 +56,18 @@ jobs:
           python run_tests.py
       - name: save java logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: JavaLogs
           path: Vereya/logs/app.log
       - name: save python logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: PythonLog
           path: tests/vereya/app.log
       - name: save test observations
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: TestObservations
           path: tests/vereya/observations/observations.txt

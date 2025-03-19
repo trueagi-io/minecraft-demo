@@ -422,6 +422,10 @@ class MCConnector:
             agentId = self.agentId
         return self.missionDesc.agentSections[agentId].agenthandlers.observations.gridNear
 
+    def getRewards(self, agentId=None):
+        id = 0 if agentId is None else agentId
+        return self.agent_hosts[id].getWorldState().rewards
+
     def gridIndexToPos(self, index, agentId=None):
         gridBox = self.getGridBox(agentId)
         gridSz = [gridBox[i][1]-gridBox[i][0]+1 for i in range(3)]

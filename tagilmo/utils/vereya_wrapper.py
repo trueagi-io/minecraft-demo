@@ -477,7 +477,12 @@ class MCConnector:
 
     def discreteMove(self, value, agentId=None):
         """Moves the agent one block along one of the cardinal directions.
-
+        
+        Directions:
+            "west" : negative X
+            "east" : positive X
+            "north" : negative Z
+            "south" : positive Z
         Args:
             value (string): "west" | "east" | "north" | "south"
             

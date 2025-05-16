@@ -19,12 +19,14 @@ class RewardXML:
 
     def parse_rewards(self, xml_text) -> None:
         logger.debug('parsing reward: \n %s', xml_text)
-        root = ET.fromstring(xml_text)
-        for child in root.findall("./Reward"):
-            if child.tag == "Value":
-                dimension = int(child.attrib.get("dimension"))
-                value = float(child.attrib.get("value"))
-                self.reward_values[dimension] = value
+        if isinstance(xml_text, str):
+            root = ET.fromstring(xml_text)
+        else:
+            root = xml_text
+        for child in root.findall("Value"):
+            dimension = int(child.attrib.get("dimension"))
+            value = float(child.attrib.get("value"))
+            self.reward_values[dimension] = value
 
     def add_rewards(self, reward_element: Element) -> None:
         if reward_element.tag == 'Rewards':

@@ -535,6 +535,8 @@ class Block:
         self.reward = reward
         self.blockType = blockType
         self.behaviour = behaviour
+        if self.behaviour is not None:
+            assert self.behaviour in ("onceOnly", "oncePerBlock", "oncePerTimeSpan", "constant")
 
     def xml(self):
         _xml = "<Block"

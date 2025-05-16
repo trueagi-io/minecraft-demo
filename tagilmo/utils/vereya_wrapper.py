@@ -422,6 +422,10 @@ class MCConnector:
             agentId = self.agentId
         return self.missionDesc.agentSections[agentId].agenthandlers.observations.gridNear
 
+    def getRewards(self, agentId=None):
+        id = 0 if agentId is None else agentId
+        return self.agent_hosts[id].getWorldState().rewards
+
     def gridIndexToPos(self, index, agentId=None):
         gridBox = self.getGridBox(agentId)
         gridSz = [gridBox[i][1]-gridBox[i][0]+1 for i in range(3)]
@@ -473,7 +477,12 @@ class MCConnector:
 
     def discreteMove(self, value, agentId=None):
         """Moves the agent one block along one of the cardinal directions.
-
+        
+        Directions:
+            "west" : negative X
+            "east" : positive X
+            "north" : negative Z
+            "south" : positive Z
         Args:
             value (string): "west" | "east" | "north" | "south"
             

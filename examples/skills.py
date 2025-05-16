@@ -759,7 +759,8 @@ class GridAnalyzer:
         DIST_CL = 9
         self.last_r2 = 0
         dy = self.target[1] - self.pa[1]
-        rd = math.hypot(self.dist, dy-1.66)
+        EYE_HEIGHT = 1.62
+        rd = math.hypot(self.dist, dy-EYE_HEIGHT)
         if rd < self.dist_thresh or (self.dist < self.dist_thresh and dy < 2.66 and dy > -0.99):
             return ['done', 0]
         if self.target[1] - self.pa[1] > 1.5+self.dist_thresh and self.dist < self.dist_thresh:

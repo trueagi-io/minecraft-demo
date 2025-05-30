@@ -85,6 +85,16 @@ class QLearning:
         else:
             a = np.argmax(self.QTable[*state])
         return a
+    
+    def getObs(self):
+        self.mc.observeProc()
+        x = self.mc.getFullStat("XPos")
+        z = self.mc.getFullStat("ZPos")
+        while x is None or z is None:
+            self.mc.observeProc()
+            x = self.mc.getFullStat("XPos")
+            z = self.mc.getFullStat("ZPos")
+        return [int(x), int(z)]
         
     def updateQTable(self, state, next_state, action, reward):
         old_Q = self.QTable[*state, action]
@@ -94,23 +104,11 @@ class QLearning:
         self.epsilon *= factor
     
     def step(self):
-        self.mc.observeProc()
-        obs = self.mc.getFullStat("XPos")
-        while obs is None:
-            self.mc.observeProc()     
-            obs = self.mc.getFullStat("XPos")
-            time.sleep(0.1)
-        current_s = [int(self.mc.getFullStat(key)) for key in self.statKeys]
+        current_s = self.getObs()
         action = self.choose_action(current_s, True)
         self.trajectory[*current_s, action] += 1
         self.act(action)
-        # self.mc.observeProc()  
-        new_obs = self.mc.getFullStat("XPos")
-        while new_obs is None:
-            self.mc.observeProc()     
-            new_obs = self.mc.getFullStat("XPos")
-            time.sleep(0.1)
-        next_s = [int(self.mc.getFullStat(key)) for key in self.statKeys]
+        next_s = self.getObs()
         time.sleep(0.5)
         try:
             rewards = self.mc.getRewards()[0].reward.reward_values
@@ -253,8 +251,8 @@ def main():
             
             # Perform Q-learning step
             _, reward = model.step()
-            sys.stdout.write(f"\rЭпизод: {current_episode + 1} | Последняя награда: {reward}")
-            sys.stdout.flush()
+            # sys.stdout.write(f"\rЭпизод: {current_episode + 1} | Последняя награда: {reward}")
+            # sys.stdout.flush()
             clock.tick(10)  
     
     pygame.quit()

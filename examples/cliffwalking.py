@@ -96,6 +96,14 @@ class QLearning:
             z = self.mc.getFullStat("ZPos")
         return [int(x), int(z)]
         
+    def getReward(self):
+        rewards = self.mc.getRewards()
+        try:
+            rewards = self.mc.getRewards()[0].reward.reward_values
+            reward = rewards[0]
+        except:
+            return None
+        return reward
     def updateQTable(self, state, next_state, action, reward):
         old_Q = self.QTable[*state, action]
         self.QTable[*state, action] = old_Q + self.alpha * (reward + self.gamma * np.max(self.QTable[*next_state]) - old_Q)
@@ -110,10 +118,8 @@ class QLearning:
         self.act(action)
         next_s = self.getObs()
         time.sleep(0.5)
-        try:
-            rewards = self.mc.getRewards()[0].reward.reward_values
-            reward = rewards[0]
-        except:
+        reward = self.getReward()
+        if reward is None:
             return next_s, None
         self.updateQTable(current_s, next_s, action, reward)
         if self.iter > 0 and self.iter % 10 == 0:

@@ -5,7 +5,7 @@ import time
 import random
 import pygame
 import sys
-
+from scipy.special import softmax
 class QLearning:
     def __init__(self, mission, qTable = None, epsilon = 1., 
                  alpha = 0.1, gamma = 1.0):
@@ -20,7 +20,6 @@ class QLearning:
         self.gamma = gamma
 
         self.actions = ["west", "east", "north", "south"]
-        self.offset = {"XPos" : 4, "ZPos" : 1}
         self.statKeys = ["XPos", "ZPos"]
         self.prev_s = None
         self.prev_a = None
@@ -42,7 +41,6 @@ class QLearning:
             world_state = self.mc.agent_hosts[0].getWorldState()
             for error in world_state.errors:
                 print("Error:",error.text)
-        print()
         return True
     
     def training(self):
@@ -52,7 +50,10 @@ class QLearning:
         self.train = False
         
     def act(self, action):
-        self.mc.discreteMove(self.actions[action])
+        if isinstance(action, str):
+            self.mc.discreteMove(action)
+        else:
+            self.mc.discreteMove(self.actions[action])
             
     def stop(self):
         self.reset()
@@ -67,8 +68,17 @@ class QLearning:
     def reset(self):
         self.prev_a = None
         self.prev_s = None
+    
+    def choose_softmax(self, state):
+        values = self.QTable[*state]
+        probs = softmax(values)
+        action = np.random.choice(len(self.actions), p=probs)
+        return action
         
-    def choose_action(self, state):
+    def choose_action(self, state, softmax):
+        if softmax:
+            return self.choose_softmax(state)
+        
         rnd = random.random()
         if rnd < self.epsilon:
             a = random.randint(0, len(self.actions) - 1)
@@ -90,25 +100,28 @@ class QLearning:
             self.mc.observeProc()     
             obs = self.mc.getFullStat("XPos")
             time.sleep(0.1)
-        current_s = [int(self.mc.getFullStat(key)) - self.offset[key] + 1 for key in self.statKeys]
-        action = self.choose_action(current_s)
+        current_s = [int(self.mc.getFullStat(key)) for key in self.statKeys]
+        action = self.choose_action(current_s, True)
         self.trajectory[*current_s, action] += 1
         self.act(action)
-        self.mc.observeProc()  
+        # self.mc.observeProc()  
         new_obs = self.mc.getFullStat("XPos")
         while new_obs is None:
             self.mc.observeProc()     
             new_obs = self.mc.getFullStat("XPos")
             time.sleep(0.1)
-        next_s = [int(self.mc.getFullStat(key)) - self.offset[key] + 1 for key in self.statKeys]
+        next_s = [int(self.mc.getFullStat(key)) for key in self.statKeys]
         time.sleep(0.5)
-        rewards = self.mc.getRewards()[0].reward.reward_values
-        reward = rewards[0]
-        print(reward)
+        try:
+            rewards = self.mc.getRewards()[0].reward.reward_values
+            reward = rewards[0]
+        except:
+            return next_s, None
         self.updateQTable(current_s, next_s, action, reward)
         if self.iter > 0 and self.iter % 10 == 0:
             self.update_epsilon()
         self.iter += 1
+        return next_s, reward
 
 class TableDisplayer:
     def __init__(self, blockWidth, blockHeight, blockSize = 20):
@@ -121,13 +134,16 @@ class TableDisplayer:
         self.screen = pygame.display.set_mode((self.width, self.height))  
         self.screen.fill((0,0,0))
 
+    def getRandomColor(self):
+        return (np.random.randint(100, 255), np.random.randint(100, 255), np.random.randint(100, 255))
+
     def drawGrid(self):
         for x in range(0, self.width, self.blockSize):
             pygame.draw.line(self.screen, self.gridColor, (x, 0), (x, self.height), width=1)
         for y in range(0, self.height, self.blockSize):
             pygame.draw.line(self.screen, self.gridColor, (0, y), (self.width, y), width=1)
 
-    def getColor(self, value, min_val=-150, max_val=100):
+    def getColor(self, value, min_val=-100, max_val=100):
         if min_val is None:
             min_val = np.min(value)
         if max_val is None:
@@ -138,21 +154,36 @@ class TableDisplayer:
         else:
             normalized = (value - min_val) / (max_val - min_val)
         
+        normalized = np.clip(normalized, 0, 1)
+        
         red = int(255 * (1 - normalized))
         green = int(255 * normalized)
         return (red, green, 0)
 
-    def drawQTable(self, QTable : np.ndarray, episode = None):
+    def markCell(self, state):
+        color = self.getRandomColor()
+        center = (0.5, 0.5)
+        x = (state[0] + center[0]) * self.blockSize
+        y = (state[1] + center[1]) * self.blockSize
+        pygame.draw.circle(self.screen,color,(x,y), radius=self.blockSize / 7)
+        pygame.display.update()
+
+
+    def drawQTable(self, QTable : np.ndarray, display_vals : bool, trajectory : np.ndarray = None, episode : int = None):
         self.drawGrid()
-        self.drawValues(QTable)
+        self.drawValues(QTable, display_vals, trajectory=trajectory)
         
         if episode is not None:
             font = pygame.font.SysFont('Arial', 16)
             episode_text = font.render(f"Episode: {episode}", True, (255, 255, 255))
             self.screen.blit(episode_text, (10, 10))
     
-    def drawValues(self, QTable : np.ndarray):
-        actions = {"west" : (0.4, 0), "east" : (-0.4, 0), "north" : (0, -0.4), "south" : (0, 0.4)}
+    def adjustByTrajectory(self, color, trajVal):
+        multiplier = min(1, trajVal / 1)
+        return (int(color[0] * multiplier), int(color[1] * multiplier), 0)
+    
+    def drawValues(self, QTable : np.ndarray, display_vals : bool, trajectory : np.ndarray):
+        actions = {"west" : (-0.3, 0), "east" : (0.3, 0), "north" : (0, -0.3), "south" : (0, 0.3)}
         center = (0.5, 0.5)
         for cell_x in range(QTable.shape[0]):
             pos_x = (cell_x + center[0]) * self.blockSize
@@ -162,8 +193,18 @@ class TableDisplayer:
                     diff = actions[action]
                     x = pos_x + diff[0] * self.blockSize
                     y = pos_y + diff[1] * self.blockSize
-                    color = self.getColor(QTable[cell_x, cell_y, action_idx])
-                    pygame.draw.circle(self.screen, color,(x,y), radius=self.blockSize / 6)
+                    val = QTable[cell_x, cell_y, action_idx]
+                    if display_vals:
+                        text = str(np.round(val, 1))
+                        font = pygame.font.SysFont('freesansbold.ttf', 20)
+                        text_surface = font.render(text, True, (255, 255, 255))
+                        self.screen.blit(text_surface, (x, y))
+                    else:
+                        color = self.getColor(val)
+                        if trajectory is not None:
+                            color = self.adjustByTrajectory(color, trajectory[cell_x, cell_y, action_idx])
+                        pygame.draw.circle(self.screen, color,(x,y), radius=self.blockSize / 6)
+        pygame.display.update()
 
 def main():
     np.random.seed(3)
@@ -171,8 +212,8 @@ def main():
     path = "D:/Downloads/Telegram Desktop/cliff_walking_1.xml"
     mission = mb.MissionXML(xml_path=path)
     model = QLearning(mission)
-    # drawer = TableDisplayer(model.QTable.shape[0], model.QTable.shape[1], blockSize=40)
-    # clock = pygame.time.Clock()
+    drawer = TableDisplayer(model.QTable.shape[0], model.QTable.shape[1], blockSize=60)
+    clock = pygame.time.Clock()
     
     model.training()
     episode_num = 100
@@ -184,8 +225,6 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-        
-        print(f"Starting episode {current_episode + 1}...")
         started = model.start()
         if not started:
             print("Episode did not start, retrying...")
@@ -197,16 +236,14 @@ def main():
                 if event.type == pygame.QUIT:
                     running = False
                     episode_running = False
-            
             if not running:
                 break
             
-            # drawer.drawQTable(model.QTable)
-            # pygame.display.flip()
+            drawer.drawQTable(model.QTable, trajectory=model.trajectory, display_vals=False)
+            pygame.display.flip()
             
             # Check mission status
             if not model.mc.is_mission_running():
-                print(f"Episode {current_episode + 1} ended")
                 model.stop()
                 episode_running = False
                 current_episode += 1 
@@ -215,8 +252,10 @@ def main():
                 break
             
             # Perform Q-learning step
-            model.step()
-            # clock.tick(10)  
+            _, reward = model.step()
+            sys.stdout.write(f"\rЭпизод: {current_episode + 1} | Последняя награда: {reward}")
+            sys.stdout.flush()
+            clock.tick(10)  
     
     pygame.quit()
     sys.exit()

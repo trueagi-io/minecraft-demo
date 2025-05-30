@@ -213,7 +213,7 @@ class TableDisplayer:
 def main():
     np.random.seed(3)
     pygame.init()
-    path = "D:/Downloads/Telegram Desktop/cliff_walking_1.xml"
+    path = "examples/missions/cliff_walking.xml"
     mission = mb.MissionXML(xml_path=path)
     model = QLearning(mission)
     drawer = TableDisplayer(model.QTable.shape[0], model.QTable.shape[1], blockSize=60)

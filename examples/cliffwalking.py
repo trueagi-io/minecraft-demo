@@ -8,7 +8,7 @@ import sys
 from scipy.special import softmax
 class QLearning:
     def __init__(self, mission, qTable = None, epsilon = 1., 
-                 alpha = 0.1, gamma = 1.0):
+                 alpha = 0.5, gamma = 1.0):
         self.mission = mission
         if qTable is not None:
             self.QTable = qTable
@@ -32,7 +32,7 @@ class QLearning:
         
         if not started:
             return False
-        time.sleep(5)
+        time.sleep(4)
         
         world_state = self.mc.agent_hosts[0].getWorldState()
         while not world_state.has_mission_begun:
@@ -103,11 +103,12 @@ class QLearning:
         self.trajectory[*current_s, action] += 1
         self.act(action)
         next_s = self.getObs()
-        time.sleep(0.5)
+        time.sleep(0.2)
         try:
             rewards = self.mc.getRewards()[0].reward.reward_values
             reward = rewards[0]
         except:
+            print("No reward")
             return next_s, None
         if reward is None:
             return next_s, None
@@ -127,6 +128,8 @@ class TableDisplayer:
         self.gridColor = (150, 150, 150)
         self.screen = pygame.display.set_mode((self.width, self.height))  
         self.screen.fill((0,0,0))
+        pygame.font.init()
+        self.font = pygame.font.SysFont("Arial", 20)
 
     def getRandomColor(self):
         return (np.random.randint(100, 255), np.random.randint(100, 255), np.random.randint(100, 255))
@@ -162,11 +165,24 @@ class TableDisplayer:
         pygame.draw.circle(self.screen,color,(x,y), radius=self.blockSize / 7)
         pygame.display.update()
 
+    def drawTopValues(self, QTable : np.ndarray, k = 40):
+        vals = QTable.flatten()
+        vals = np.sort(vals)[::-1]
+        vals = vals[:k]
+        vals = np.round(vals, 2)
+        x = 0
+        y = 0
+        y_offset = 20
+        for val in vals:
+            text = self.font.render(str(val), False, (255,255,255))
+            self.screen.blit(text, (x, y))
+            y += y_offset
 
     def drawQTable(self, QTable : np.ndarray, display_vals : bool, trajectory : np.ndarray = None, episode : int = None):
+        self.screen.fill((0,0,0))
         self.drawGrid()
         self.drawValues(QTable, display_vals, trajectory=trajectory)
-        
+        self.drawTopValues(QTable)
         if episode is not None:
             font = pygame.font.SysFont('Arial', 16)
             episode_text = font.render(f"Episode: {episode}", True, (255, 255, 255))

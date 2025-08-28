@@ -6,6 +6,8 @@ import random
 import pygame
 import sys
 from scipy.special import softmax
+
+
 class QLearning:
     def __init__(self, mission, qTable_path = None, traj_path = None, epsilon = 1., 
                  alpha = 0.1, gamma = 1.0):

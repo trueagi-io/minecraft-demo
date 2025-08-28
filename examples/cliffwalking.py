@@ -7,14 +7,14 @@ import pygame
 import sys
 from scipy.special import softmax
 class QLearning:
-    def __init__(self, mission, qTable = None, epsilon = 1., 
-                 alpha = 0.5, gamma = 1.0):
+    def __init__(self, mission, qTable_path = None, traj_path = None, epsilon = 1., 
+                 alpha = 0.1, gamma = 1.0):
         self.mission = mission
-        if qTable is not None:
-            self.QTable = qTable
+        if qTable_path is not None and traj_path is not None:
+            self.load(qTable_path, traj_path)
         else:
             self.QTable = np.zeros((6, 14, 4)) #width, length and action space
-        self.trajectory = np.zeros_like(self.QTable)
+            self.trajectory = np.zeros_like(self.QTable)
         self.epsilon = epsilon
         self.alpha = alpha
         self.gamma = gamma
@@ -23,8 +23,10 @@ class QLearning:
         self.statKeys = ["XPos", "ZPos"]
         self.prev_s = None
         self.prev_a = None
-        self.next_a = None
+        self.prev_r = None
+        self.START = [4,1]
         self.iter = 0
+        self.train = True
         
     def start(self):
         self.mc = MCConnector(self.mission)
@@ -56,12 +58,12 @@ class QLearning:
             self.mc.discreteMove(self.actions[action])
             
     def stop(self):
-        self.reset()
         self.mc.stop()
         
     def reset(self):
         self.prev_a = None
         self.prev_s = None
+        self.prev_r = None
     
     def choose_softmax(self, state):
         values = self.QTable[*state]
@@ -70,12 +72,15 @@ class QLearning:
         return action
         
     def choose_action(self, state, softmax):
-        if softmax:
-            return self.choose_softmax(state)
+        if not self.train:
+            return np.argmax(self.QTable[*state])
         
         rnd = random.random()
         if rnd < self.epsilon:
-            a = random.randint(0, len(self.actions) - 1)
+            if softmax:
+                a = self.choose_softmax(state)
+            else:
+                a = random.randint(0, len(self.actions) - 1)
         else:
             a = np.argmax(self.QTable[*state])
         return a
@@ -92,31 +97,50 @@ class QLearning:
         
     def updateQTable(self, state, next_state, action, reward):
         old_Q = self.QTable[*state, action]
-        self.QTable[*state, action] = old_Q + self.alpha * (reward + self.gamma * np.max(self.QTable[*next_state]) - old_Q)
+        if next_state == self.START:
+            next_value = 0.
+        else:
+            next_value = np.max(self.QTable[*next_state])
+        self.QTable[*state, action] = old_Q + self.alpha * (reward + self.gamma * next_value - old_Q)
+        if next_state == self.START:
+            self.reset()
     
     def update_epsilon(self, factor = 0.9):
         self.epsilon *= factor
     
     def step(self):
         current_s = self.getObs()
+        can_update = (self.prev_s is not None) and (self.prev_a is not None) and (self.prev_r is not None)
+        if can_update:
+            self.updateQTable(self.prev_s, current_s, self.prev_a, self.prev_r)
         action = self.choose_action(current_s, True)
         self.trajectory[*current_s, action] += 1
         self.act(action)
-        next_s = self.getObs()
+        self.prev_s = current_s
+        self.prev_a = action
         time.sleep(0.2)
         try:
             rewards = self.mc.getRewards()[0].reward.reward_values
             reward = rewards[0]
         except:
             print("No reward")
-            return next_s, None
+            self.prev_r = None
+            return current_s, None
+        self.prev_r = reward
         if reward is None:
-            return next_s, None
-        self.updateQTable(current_s, next_s, action, reward)
-        if self.iter > 0 and self.iter % 10 == 0:
+            return current_s, None
+        if self.iter > 0 and self.iter % 50 == 0:
             self.update_epsilon()
         self.iter += 1
-        return next_s, reward
+        return current_s, reward
+         
+    def save(self, qTable_filename="QTable.npy", traj_filename="trajectory.npy"):
+        np.save(qTable_filename, self.QTable)
+        np.save(traj_filename, self.trajectory)
+        
+    def load(self, qTable_filename="QTable.npy", traj_filename="trajectory.npy"):
+        self.QTable = np.load(qTable_filename)
+        self.trajectory = np.load(traj_filename)
 
 class TableDisplayer:
     def __init__(self, blockWidth, blockHeight, blockSize = 20):
@@ -168,7 +192,8 @@ class TableDisplayer:
     def drawTopValues(self, QTable : np.ndarray, k = 40):
         vals = QTable.flatten()
         vals = np.sort(vals)[::-1]
-        vals = vals[:k]
+        top_k = min(k, len(vals))
+        vals = vals[:top_k]
         vals = np.round(vals, 2)
         x = 0
         y = 0
@@ -182,7 +207,6 @@ class TableDisplayer:
         self.screen.fill((0,0,0))
         self.drawGrid()
         self.drawValues(QTable, display_vals, trajectory=trajectory)
-        self.drawTopValues(QTable)
         if episode is not None:
             font = pygame.font.SysFont('Arial', 16)
             episode_text = font.render(f"Episode: {episode}", True, (255, 255, 255))
@@ -257,16 +281,15 @@ def main():
                 model.stop()
                 episode_running = False
                 current_episode += 1 
-                model.reset() 
                 time.sleep(1) 
                 break
             
             # Perform Q-learning step
             _, reward = model.step()
-            # sys.stdout.write(f"\rЭпизод: {current_episode + 1} | Последняя награда: {reward}")
+            # sys.stdout.write(f"\rEpisode: {current_episode + 1} | Last reward: {reward}")
             # sys.stdout.flush()
             clock.tick(10)  
-    
+    model.save()
     pygame.quit()
     sys.exit()
     

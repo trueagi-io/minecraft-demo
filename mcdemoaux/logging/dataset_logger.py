@@ -1,6 +1,6 @@
-
 from mcdemoaux.vision.neural import *
 import json
+import datetime
 
 
 class DatasetLogger:
@@ -16,10 +16,22 @@ class DatasetLogger:
             return process_pixel_data(img_frame.pixels, resize, None)#scale)
         return None
 
-    def logImgActData(self, rob, filename, action):
+    def _generate_name(self):
+        now = datetime.datetime.now()
+        timestr = now.strftime("%Y%m%d-%H%M%S%f")
+        self.g_counter += 1
+        fname = timestr + '_' + str(self.g_counter)
+        return fname
+
+    def _save_files(self, rob, filename, action):
         SCALE = 4
         img = self._get_image(rob.getCachedObserve('getImageFrame'), SCALE, SCALE)
-        cv2.imwrite(self.pth_to_saved_data+filename+".jpg", img)
+        cv2.imwrite(self.pth_to_saved_data + filename + ".jpg", img)
         a = {filename: action}
-        with open(self.pth_to_saved_data+filename, "w") as fp:
+        with open(self.pth_to_saved_data + filename, "w") as fp:
             json.dump(a, fp)
+
+    def logImgActData(self, rob, action):
+        fname = self._generate_name()
+        self._save_files(rob, fname, action)
+

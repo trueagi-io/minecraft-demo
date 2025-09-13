@@ -1,23 +1,14 @@
 from examples.log import setup_logger
 from tagilmo import VereyaPython
 
-from time import sleep
-from tagilmo.utils.mathutils import *
-
 from mcdemoaux.vision.vis import Visualizer
 from examples.minelogy import Minelogy
 from examples.skills import *
-from mcdemoaux.agenttools.agent import TAgent
-from mcdemoaux.vision.neural import *
 from mcdemoaux.logging.dataset_logger import *
 
 from examples.knowledge_lists import *
 
 from importlib import import_module
-
-import datetime
-
-import os
 
 ex = import_module('7_explorer')
 
@@ -37,11 +28,7 @@ class ExplorerLogger(ex.Explorer):
             self.visualize()
             acts, running = self.goal.cycle()
             for act in acts:
-                now = datetime.datetime.now()
-                timestr = now.strftime("%Y%m%d-%H%M%S%f")
-                self.data_logger.g_counter += 1
-                fname = timestr + '_' + str(self.data_logger.g_counter)
-                self.data_logger.logImgActData(self.rob, fname, act)
+                self.data_logger.logImgActData(self.rob, act)
                 self.rob.sendCommand(act)
         acts = self.goal.stop()
         for act in acts:

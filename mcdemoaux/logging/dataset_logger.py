@@ -28,7 +28,7 @@ class DatasetLogger:
         img = self._get_image(rob.getCachedObserve('getImageFrame'), SCALE, SCALE)
         cv2.imwrite(self.pth_to_saved_data + filename + ".jpg", img)
         a = {filename: action}
-        with open(self.pth_to_saved_data + filename, "w") as fp:
+        with open(self.pth_to_saved_data + filename + ".json", "w") as fp:
             json.dump(a, fp)
 
     def logImgActData(self, rob, action):

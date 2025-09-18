@@ -4,13 +4,17 @@ from mcdemoaux.vision.vis import Visualizer
 
 from examples.skills import *
 from mcdemoaux.agenttools.agent import TAgent
+from mcdemoaux.logging.dataset_logger import DatasetLogger
 from examples.minelogy import Minelogy
 from examples.knowledge_lists import *
 
 class Achiever(TAgent):
 
-    def __init__(self, mc, visualizer=None, goal=None):
+    def __init__(self, mc, visualizer=None, goal=None, data_logger=None):
         super().__init__(mc, visualizer)
+        self.data_logger = data_logger
+        if goal is not None:
+            goal = goal[0](self, **goal[1])
         self.set_goal(goal)
 
     def set_goal(self, goal=None):
@@ -22,6 +26,9 @@ class Achiever(TAgent):
             acts, running = self.goal.cycle()
             for act in acts:
                 self.rob.sendCommand(act)
+            if self.data_logger is not None:
+                self.data_logger.logImgActData(self.rob,
+                    {'actions': acts})#, 'goal': repr(self.goal)})
             sleep(0.05)
             self.blockMem.updateBlocks(self.rob)
             self.visualize()
@@ -35,11 +42,12 @@ if __name__ == '__main__':
     setup_logger()
     visualizer = Visualizer()
     visualizer.start()
-    mc = MCConnector.connect(name='Robbo', video=True)
-    agent = Achiever(mc, visualizer=visualizer)
+    mc = MCConnector.connect(name='Robbo', video=True) #, seed='8823213')
+    agent = Achiever(mc, visualizer=visualizer) #, goal=(Obtain, {'items': [{'type': 'iron_pickaxe'}]}), data_logger=DatasetLogger())
     logging.info("Initializing the starting position")
     #those commands needed if we are reusing same world
     sleep(2)
+    agent.rob.stopMove()
     agent.rob.sendCommand("jump 1")
     sleep(0.1)
     agent.rob.sendCommand("jump 0")

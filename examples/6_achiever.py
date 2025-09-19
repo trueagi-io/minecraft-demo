@@ -27,8 +27,9 @@ class Achiever(TAgent):
             for act in acts:
                 self.rob.sendCommand(act)
             if self.data_logger is not None:
-                self.data_logger.logImgActData(self.rob,
-                    {'actions': acts})#, 'goal': repr(self.goal)})
+                j = self.goal.to_json()
+                j['actions'] = acts
+                self.data_logger.logImgActData(self.rob, j)
             sleep(0.05)
             self.blockMem.updateBlocks(self.rob)
             self.visualize()
@@ -43,7 +44,7 @@ if __name__ == '__main__':
     visualizer = Visualizer()
     visualizer.start()
     mc = MCConnector.connect(name='Robbo', video=True) #, seed='8823213')
-    agent = Achiever(mc, visualizer=visualizer) #, goal=(Obtain, {'items': [{'type': 'iron_pickaxe'}]}), data_logger=DatasetLogger())
+    agent = Achiever(mc, visualizer=visualizer)#, goal=(Obtain, {'items': [{'type': 'iron_pickaxe'}]}), data_logger=DatasetLogger())
     logging.info("Initializing the starting position")
     #those commands needed if we are reusing same world
     sleep(2)

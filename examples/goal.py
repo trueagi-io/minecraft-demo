@@ -7,6 +7,11 @@ class Goal:
         # any of them can be redefined to alter behavior
         self._delegate = delegate
 
+    def to_json(self):
+        return {'goal': self.__class__.__name__,
+                'delegate': 'None' if self._delegate is None else self._delegate.to_json()
+               }
+
     @property
     def delegate(self):
         return self._delegate
@@ -59,6 +64,11 @@ class GoalNode(Goal):
         super().__init__()
         self.subgoals = subgoals
 
+    def to_json(self):
+        result = super().to_json()
+        result['subgoals'] = [g.to_json() for g in self.subgoals]
+        return result
+
     def __str__(self):
         class_name = str(self.__class__).split('\'')[1]
         result = '(' + class_name
@@ -108,6 +118,11 @@ class SAnd(GoalNode):
     def __init__(self, subgoals):
         super().__init__(subgoals)
         self.current = 0
+
+    def to_json(self):
+        result = super().to_json()
+        result['current'] = self.current
+        return result
 
     def update(self):
         if not self.finished():

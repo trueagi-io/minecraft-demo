@@ -579,6 +579,13 @@ class Obtain(Switcher):
         self.items = items
         self.depthlimit = depthlimit
         self.rec_depth = rec_depth
+        if len(items) > 0:
+            agent.rob.sendCommand("chat Goal: obtain " + str(items[0]['type']))
+
+    def to_json(self):
+        result = super().to_json()
+        result['items'] = self.items
+        return result
 
     def __short_search__(self, item_to_obtain):
         short_obtain = Obtain(self.agent, item_to_obtain, 0, 10)

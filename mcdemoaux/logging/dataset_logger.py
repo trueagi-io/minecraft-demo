@@ -21,17 +21,18 @@ class DatasetLogger:
         timestr = now.strftime("%Y%m%d-%H%M%S%f")
         self.g_counter += 1
         fname = timestr + '_' + str(self.g_counter)
+        #fname = str(self.g_counter)
         return fname
 
-    def _save_files(self, rob, filename, action):
+    def _save_files(self, rob, filename, data):
         SCALE = 4
         img = self._get_image(rob.getCachedObserve('getImageFrame'), SCALE, SCALE)
         cv2.imwrite(self.pth_to_saved_data + filename + ".jpg", img)
-        a = {filename: action}
+        a = data
         with open(self.pth_to_saved_data + filename + ".json", "w") as fp:
             json.dump(a, fp)
 
-    def logImgActData(self, rob, action):
+    def logImgActData(self, rob, data):
         fname = self._generate_name()
-        self._save_files(rob, fname, action)
+        self._save_files(rob, fname, data)
 

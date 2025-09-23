@@ -13,7 +13,7 @@ from examples.knowledge_lists import *
 import examples.skills
 
 
-item_to_obtain = "stone_pickaxe"
+item_to_obtain = {'type': 'stone_pickaxe'}
 
 class Tester(TAgent):
 

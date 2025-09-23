@@ -28,8 +28,8 @@ class ExplorerLogger(ex.Explorer):
             self.visualize()
             acts, running = self.goal.cycle()
             for act in acts:
-                self.data_logger.logImgActData(self.rob, act)
                 self.rob.sendCommand(act)
+            self.data_logger.logImgActData(self.rob, acts)
         acts = self.goal.stop()
         for act in acts:
             self.rob.sendCommand(act)

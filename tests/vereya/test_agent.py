@@ -78,7 +78,7 @@ class TestAgent(BaseTest):
         agent.run()
         mc.observeProc()
         inv = mc.getInventory()
-        self.assertEqual(count_items(inv, item_to_obtain), 1, msg=f"check if {item_to_obtain} was crafted")
+        self.assertEqual(count_items(inv, item_to_obtain['type']), 1, msg=f"check if {item_to_obtain} was crafted {inv}")
 
 
 class TestAgentServer(TestAgent):

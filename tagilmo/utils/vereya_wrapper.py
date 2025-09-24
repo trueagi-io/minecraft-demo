@@ -341,7 +341,7 @@ class MCConnector:
                 keys (status)  : 'Life', 'Food', 'Air', 'IsAlive'
                 keys (more)    : 'XP', 'Score', 'Name', 'WorldTime', 'TotalTime', 'DistanceTravelled', 'TimeAlive',
                                  'MobsKilled', 'PlayersKilled', 'DamageTaken', 'DamageDealt'
-                keys (new)     : 'input_type', 'isPaused'
+                keys (new)     : 'input_type', 'isPaused', 'actionStatus'
         """
         return self.getParticularObservation(key, agentId)
 
@@ -425,6 +425,10 @@ class MCConnector:
     def getRewards(self, agentId=None):
         id = 0 if agentId is None else agentId
         return self.agent_hosts[id].getWorldState().rewards
+    
+    def getActionStatus(self, agentId=None):
+        id = 0 if agentId is None else agentId
+        return self.getParticularObservation('actionStatus', agentId)
 
     def gridIndexToPos(self, index, agentId=None):
         gridBox = self.getGridBox(agentId)

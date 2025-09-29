@@ -76,7 +76,7 @@ def init_mission(mc, start_x, start_z, seed, forceReset="false",
     return mc, obs
 
 
-class TestCraft(BaseTest):
+class TestReward(BaseTest):
     mc = None
 
     @classmethod

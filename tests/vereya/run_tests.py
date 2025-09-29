@@ -31,7 +31,7 @@ def main():
                   'test_observation', 'test_placement', 'test_image',
                   'test_consistency', 'test_motion_mob', 'test_mob', 
                   'test_agent', 'test_flat_world', 'test_draw',
-                  'test_discrete_motion', 'test_quit_from_touching_block', 'test_reward']
+                  'test_discrete_motion', 'test_quit_from_touching_block', 'test_reward', 'test_action_status']
     res = run_tests(test_files)
     if not res.wasSuccessful():
         sys.exit(1)

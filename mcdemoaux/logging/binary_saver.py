@@ -44,7 +44,7 @@ class ImageHDF5Saver:
 
 
 class ImageWithMetadataHDF5Saver:
-    def __init__(self, folder_path, image_size=(224, 224), image_exts=None):
+    def __init__(self, folder_path, image_size=None, image_exts=None):
         self.folder_path = folder_path
         self.image_size = image_size  # (width, height)
         self.image_exts = image_exts if image_exts else ('.jpg', '.jpeg', '.png')
@@ -76,7 +76,8 @@ class ImageWithMetadataHDF5Saver:
         if img is None:
             raise ValueError(f"Failed to read image: {path}")
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        # img = cv2.resize(img, self.image_size)
+        if self.image_size is not None:
+            img = cv2.resize(img, self.image_size)
         return img.astype(np.uint8)
 
     def _load_json(self, path):

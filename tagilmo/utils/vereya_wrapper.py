@@ -341,7 +341,6 @@ class MCConnector:
     def getDepth(self, agentId=None):
         if agentId is None:
            agentId = self.agentId
-        import pdb;pdb.set_trace()
         if self.depth_frames[agentId] is not None:
             return numpy.frombuffer(self.depth_frames[agentId].pixels, dtype=numpy.float16)
         return None

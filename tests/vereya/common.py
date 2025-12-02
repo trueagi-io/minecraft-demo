@@ -7,7 +7,6 @@ import os
 import warnings
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
-from base_test import BaseTest
 
 
 def init_mission(mc, start_x, start_z, seed, forceReset="false",
@@ -24,7 +23,6 @@ def init_mission(mc, start_x, start_z, seed, forceReset="false",
     depth_producer = mb.DepthProducer(width=video_producer.width,
                                       height=video_producer.height)
 
-    video_producer = None
     obs = mb.Observations()
     obs.gridNear = [[-2, 2], [-2, 2], [-2, 2]]
 

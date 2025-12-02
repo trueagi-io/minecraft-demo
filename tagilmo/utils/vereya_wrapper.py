@@ -250,7 +250,7 @@ class MCConnector:
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
             segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None
-            depths = self.worldStates[n].video_frames_depthmap if self.supportsDepth() else None
+            depths = self.worldStates[n].video_frames_depth if self.supportsDepth() else None
             if frames:
                 self.updateFrame(frames[0], n)
             else:

@@ -568,13 +568,17 @@ class AgentHost(ArgumentParser):
     def onVideo(self, message: TimestampedVideoFrame) -> None:
         with self.world_state_mutex:
             if self.video_policy == VideoPolicy.LATEST_FRAME_ONLY:
-                if (message.frametype == FrameType.COLOUR_MAP):
+                if message.frametype == FrameType.COLOUR_MAP:
                     self.world_state.video_frames_colourmap.clear()
+                elif message.frametype == FrameType.DEPTH_MAP:
+                    self.world_state.video_frames_depth.clear()
                 else:
                     self.world_state.video_frames.clear()
             else:
                 print('append')
-            if message.frametype == FrameType.COLOUR_MAP:
+            if message.frametype == FrameType.DEPTH_MAP:
+                self.world_state.video_frames_depth.append(message)
+            elif message.frametype == FrameType.COLOUR_MAP:
                 self.world_state.video_frames_colourmap.append(message)
             else:
                 self.world_state.video_frames.append(message)

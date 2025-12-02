@@ -96,6 +96,7 @@ class MCConnector:
         self.isAlive = [True] * agentIds
         self.frames = dict({n: None for n in range(agentIds)})
         self.segmentation_frames = dict({n: None for n in range(agentIds)})
+        self.depth_frames = dict({n: None for n in range(agentIds)})
         self._last_obs = dict() # agent_host -> TimestampedString
         self._all_mobs = set()
 
@@ -197,12 +198,15 @@ class MCConnector:
         return True
 
     @staticmethod
-    def connect(name=None, video=False, seed=None):
+    def connect(name=None, video=False, segmentation=False, seed=None, height=480, width=640):
+        args = dict()
         if video:
-            video_producer = mb.VideoProducer(want_depth=False)
-            agent_handlers = mb.AgentHandlers(video_producer=video_producer)
-        else:
-            agent_handlers = mb.AgentHandlers()
+            video_producer = mb.VideoProducer(want_depth=False, width=width, height=height)
+            args['video_producer'] = video_producer
+        if segmentation:
+            segmentation = mb.ColourMapProducer(width=width, height=height)
+            args['colourmap_producer'] = segmentation
+        agent_handlers = mb.AgentHandlers(**args)
         if name is not None:
             agent_section = mb.AgentSection(name=name,
                 agenthandlers=agent_handlers)
@@ -246,6 +250,7 @@ class MCConnector:
             # might need to wait for a new frame
             frames = self.worldStates[n].video_frames
             segments = self.worldStates[n].video_frames_colourmap if self.supportsSegmentation() else None
+            depths = self.worldStates[n].video_frames_depthmap if self.supportsDepth() else None
             if frames:
                 self.updateFrame(frames[0], n)
             else:
@@ -254,12 +259,19 @@ class MCConnector:
                 self.updateSegmentation(segments[0], n)
             else:
                 self.updateSegmentation(None, n)
+            if depths:
+                self.updateDepth(depths[0])
+            else:
+                self.updateDepth(None, n)
 
     def updateFrame(self, frame: TimestampedVideoFrame, n: int) -> None:
         self.frames[n] = frame
 
     def updateSegmentation(self, segmentation_frame: TimestampedVideoFrame, n: int) -> None:
         self.segmentation_frames[n] = segmentation_frame
+
+    def updateDepth(self, depth_frame: TimestampedVideoFrame, n: int) -> None:
+        self.depth_frames[n] = depth_frame
 
     def updateObservations(self, obs: Optional[TimestampedString], n: Any) -> None:
         if obs is None:
@@ -307,6 +319,11 @@ class MCConnector:
             agentId = self.agentId
         return self.segmentation_frames[agentId]
 
+    def getDepthFrame(self, agentId=None):
+        if agentId is None:
+            agentId = self.agentId
+        return self.depth_frames[agentId]
+
     def getImage(self, agentId=None):
         if agentId is None:
             agentId = self.agentId
@@ -319,6 +336,14 @@ class MCConnector:
             agentId = self.agentId
         if self.segmentation_frames[agentId] is not None:
             return numpy.frombuffer(self.segmentation_frames[agentId].pixels, dtype=numpy.uint8)
+        return None
+
+    def getDepth(self, agentId=None):
+        if agentId is None:
+           agentId = self.agentId
+        import pdb;pdb.set_trace()
+        if self.depth_frames[agentId] is not None:
+            return numpy.frombuffer(self.depth_frames[agentId].pixels, dtype=numpy.float16)
         return None
 
     def getAgentPos(self, agentId=None):
@@ -453,6 +478,9 @@ class MCConnector:
     def supportsSegmentation(self):
         return self.missionDesc.hasSegmentation()
 
+    def supportsDepth(self):
+        return self.missionDesc.hasDepth()
+
     def stop(self, idx=0):
         if idx < len(self.agent_hosts):
             self.agent_hosts[idx].stop()
@@ -477,7 +505,7 @@ class MCConnector:
 
     def discreteMove(self, value, agentId=None):
         """Moves the agent one block along one of the cardinal directions.
-        
+
         Directions:
             "west" : negative X
             "east" : positive X
@@ -485,7 +513,7 @@ class MCConnector:
             "south" : positive Z
         Args:
             value (string): "west" | "east" | "north" | "south"
-            
+
             agentId (int, optional): id of an agent
         """
         return self._sendMotionCommand('move'+value, 1, agentId)
@@ -516,7 +544,7 @@ class RobustObserver:
         self.agentId = agentId
         self.tick = 0.02
         self.methods = ['getNearEntities', 'getNearGrid', 'getAgentPos', 'getLineOfSights', 'getLife',
-                        'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getChat', 'getRecipeList',
+                        'getAir', 'getInventory', 'getImageFrame', 'getSegmentationFrame', 'getDepthFrame', 'getChat', 'getRecipeList',
                         'getItemList', 'getHumanInputs', 'getNearPickableEntities', 'getBlocksDropsList',
                         'getNonSolidBlocks', 'getBlockFromBigGrid',
                         'getControlledMobs', 'getOnGround']
@@ -531,6 +559,8 @@ class RobustObserver:
 
         if not self.mc.supportsVideo():
             self.canBeNone.append('getImageFrame')
+        if not self.mc.supportsDepth():
+            self.canBeNone.append('getDepthFrame')
         if not self.mc.supportsSegmentation():
             self.canBeNone.append('getSegmentationFrame')
         self.max_dt = 1.0
@@ -557,7 +587,10 @@ class RobustObserver:
         self._observeProcCached()
 
     def onNewFrameCallback(self, frame: TimestampedVideoFrame) -> None:
-        if frame.frametype == FrameType.COLOUR_MAP:
+        if frame.frametype == FrameType.DEPTH_MAP:
+            self.mc.updateDepth(frame, self.agentId)
+            self._update_cache('getDepthFrame')
+        elif frame.frametype == FrameType.COLOUR_MAP:
             self.mc.updateSegmentation(frame, self.agentId)
             self._update_cache('getSegmentationFrame')
         else:

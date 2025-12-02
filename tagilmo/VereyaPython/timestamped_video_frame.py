@@ -20,8 +20,8 @@ class Transform(IntEnum):
 
 class FrameType(IntEnum):
     _MIN_FRAME_TYPE = 0
-    VIDEO = _MIN_FRAME_TYPE     # !< Normal video, either 24bpp RGB or 32bpp RGBD
-    DEPTH_MAP=1                 # !< 32bpp float depthmap
+    VIDEO = _MIN_FRAME_TYPE     # !< Normal video, 24/32bpp colour (BGRA)
+    DEPTH_MAP=1                 # !< 16bpp depthmap (uint16 per pixel, 2 bytes)
     LUMINANCE=2                 # !< 8bpp greyscale bitmap
     COLOUR_MAP=3                # !< 24bpp colour map
     _MAX_FRAME_TYPE=4
@@ -88,4 +88,23 @@ class TimestampedVideoFrame:
 
     @property
     def pixels(self):
-        return np.flip(np.frombuffer(self._pixels, dtype="uint8").reshape((self.iHeight, self.iWidth, self.iCh))[:,:,:3],0)
+        """
+        Convert the raw byte payload into a numpy array, according to frame type:
+        - VIDEO / COLOUR_MAP: uint8 image (H, W, C) with C>=3, channels as sent (BGR/BGRA).
+        - DEPTH_MAP: uint16 depth image (H, W), little-endian, already vertically flipped to match RGB.
+        - LUMINANCE: uint8 grayscale (H, W).
+        """
+        if self.frametype == FrameType.DEPTH_MAP:
+            # Depth frames are sent as 2 bytes per pixel (uint16), little-endian.
+            arr = np.frombuffer(self._pixels, dtype="<u2").reshape((self.iHeight, self.iWidth))
+            return np.flip(arr, 0)
+
+        arr = np.frombuffer(self._pixels, dtype="uint8")
+        if self.iCh == 1:
+            # Luminance or single-channel grayscale.
+            img = arr.reshape((self.iHeight, self.iWidth))
+            return np.flip(img, 0)
+
+        # VIDEO or COLOUR_MAP: (H, W, C), keep channels as sent (BGR/BGRA).
+        img = arr.reshape((self.iHeight, self.iWidth, self.iCh))
+        return np.flip(img[:, :, :3], 0)

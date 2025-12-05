@@ -14,6 +14,7 @@ class WorldState:
     number_of_observations_since_last_state: int = 0
     video_frames: List[TimestampedVideoFrame] = field(default_factory=list)
     video_frames_colourmap: List[TimestampedVideoFrame] = field(default_factory=list)
+    video_frames_depth: List[TimestampedVideoFrame] = field(default_factory=list)
     rewards: List[TimestampedReward] = field(default_factory=list)
     observations: List[TimestampedString] = field(default_factory=list)
     mission_control_messages: List[TimestampedString] = field(default_factory=list)

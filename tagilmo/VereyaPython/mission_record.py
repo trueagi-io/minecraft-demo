@@ -12,6 +12,7 @@ class MissionRecord:
         self.commands_path = ''
         self.mission_ended_path = ''
         self.mp4_colourmap_path = ''
+        self.mp4_depth_path = ''
         if self.spec.destination:
             if self.spec.is_recording_observations:
                 self.observations_path = self.spec.destination + '/observations.txt'
@@ -54,3 +55,6 @@ class MissionRecord:
 
     def getMP4ColourMapPath(self) -> str:
         return self.mp4_colourmap_path
+
+    def getMP4DepthPath(self) -> str:
+        return self.mp4_depth_path

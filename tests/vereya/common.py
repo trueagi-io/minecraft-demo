@@ -7,22 +7,28 @@ import os
 import warnings
 import tagilmo.utils.mission_builder as mb
 from tagilmo.utils.vereya_wrapper import MCConnector, RobustObserver
-from base_test import BaseTest
 
 
 def init_mission(mc, start_x, start_z, seed, forceReset="false",
-                 forceReuse="false", start_y=78, worldType = "default", drawing_decorator=None, serverIp=None, serverPort=0):
+                 forceReuse="false", start_y=78, worldType = "default", drawing_decorator=None, serverIp=None, serverPort=0,
+                 want_depth=False):
 
 
-    want_depth = False
     video_producer = mb.VideoProducer(width=320 * 4,
                                       height=240 * 4, want_depth=want_depth)
+
+    colourmap_producer = mb.ColourMapProducer(width=video_producer.width,
+                                              height=video_producer.height)
+
+    depth_producer = mb.DepthProducer(width=video_producer.width,
+                                      height=video_producer.height)
 
     obs = mb.Observations()
     obs.gridNear = [[-2, 2], [-2, 2], [-2, 2]]
 
 
-    agent_handlers = mb.AgentHandlers(observations=obs, video_producer=video_producer)
+    agent_handlers = mb.AgentHandlers(observations=obs, depth_producer=depth_producer,
+                                      video_producer=video_producer, colourmap_producer=colourmap_producer)
 
     print('starting at ({0}, {1})'.format(start_x, start_y))
 

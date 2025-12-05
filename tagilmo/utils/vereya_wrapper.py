@@ -260,7 +260,7 @@ class MCConnector:
             else:
                 self.updateSegmentation(None, n)
             if depths:
-                self.updateDepth(depths[0])
+                self.updateDepth(depths[0], n)
             else:
                 self.updateDepth(None, n)
 
@@ -295,8 +295,10 @@ class MCConnector:
             self.observe[key] = value
             self.agent_hosts[key] = host
             if key not in self.segmentation_frames:
+                # Initialize frame buffers for new controlled mob IDs
                 self.segmentation_frames[key] = None
                 self.frames[key] = None
+                self.depth_frames[key] = None
             mobs.add(key)
         missing = self.prev_mobs[host] - mobs
         for m in missing:
@@ -305,7 +307,7 @@ class MCConnector:
             self.agent_hosts.pop(m)
             self.frames.pop(m)
             self.segmentation_frames.pop(m)
-            self.frames.pop(m)
+            self.depth_frames.pop(m)
         self.prev_mobs[host] = mobs
         self._all_mobs = set().union(*self.prev_mobs.values())
 
@@ -992,4 +994,3 @@ class RobustObserverWithCallbacks(RobustObserver):
             self._futures[future] = (name, cb)
             self._in_process.add(cb)
         future.add_done_callback(self.done_callback)
-
